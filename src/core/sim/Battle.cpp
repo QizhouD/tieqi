@@ -1,6 +1,7 @@
 #include "core/sim/Battle.h"
 
 #include "core/math/Geometry.h"
+#include "core/rules/Combat.h"
 #include "core/rules/Terrain.h"
 
 #include <algorithm>
@@ -66,6 +67,12 @@ float alignOf(bool cavalry, float diff) {
     return kInfantryAlignSlow;
 }
 
+Obb unitBox(const Unit &unit, float inflate) { return obb(unit.pos, unit.facing, unit.depth, unit.frontage, inflate); }
+
+bool isMoving(const Unit &unit) {
+    return fighting(unit) && (unit.order.type == Order::Type::Move || unit.order.type == Order::Type::Attack);
+}
+
 } // namespace
 
 Battle::Battle(const GameDefs &defs, const ScenarioDef &scenario, std::uint64_t seed, BattleOptions opts)
@@ -118,6 +125,7 @@ void Battle::step() {
             moveUnit(unit);
         }
     }
+    contactsStep();
     if (tick_ % 5 == 0) {
         // C4 补战斗结算。
     }
@@ -379,6 +387,10 @@ void Battle::moveUnit(Unit &unit) {
     unit.pos = unit.pos + Vec2{std::cos(unit.facing), std::sin(unit.facing)} * (travel * kTickSeconds);
     if (unit.charging) {
         unit.runDist += travel * kTickSeconds;
+        if (type.threeEyedGun && !unit.volleyDone && distance < kThreeEyedMeters && unit.order.target < units_.size()) {
+            unit.volleyDone = true;
+            mingVolley(unit, units_[unit.order.target]);
+        }
     }
     clampPos(unit);
 }
@@ -418,6 +430,194 @@ void Battle::clampPos(Unit &unit) const {
         unit.deploying ? scenario_.map.height + kSpawnOutsideMeters : scenario_.map.height - kInteriorMeters;
     unit.pos.x = std::clamp(unit.pos.x, outside, maxX);
     unit.pos.y = std::clamp(unit.pos.y, unit.deploying ? -kSpawnOutsideMeters : kInteriorMeters, maxY);
+}
+
+void Battle::contactsStep() {
+    std::vector<UnitId> live;
+    for (Unit &unit : units_) {
+        if (!alive(unit)) {
+            continue;
+        }
+        unit.contacts.clear();
+        live.push_back(unit.id);
+    }
+    for (std::size_t i = 0; i < live.size(); ++i) {
+        for (std::size_t j = i + 1; j < live.size(); ++j) {
+            Unit &first = units_[live[i]];
+            Unit &second = units_[live[j]];
+            if (!alive(first) || !alive(second)) {
+                continue;
+            }
+            const Vec2 delta = second.pos - first.pos;
+            if (dot(delta, delta) > kContactRange * kContactRange) {
+                continue;
+            }
+            if (first.side == second.side) {
+                if (first.state == UnitState::Routing || second.state == UnitState::Routing) {
+                    continue;
+                }
+                if (const std::optional<SatHit> hit = sat(unitBox(first, 0.f), unitBox(second, 0.f))) {
+                    const Vec2 push = hit->axis * (hit->overlap * kSeparateEven);
+                    first.pos = first.pos - push;
+                    second.pos = second.pos + push;
+                }
+                continue;
+            }
+            if (!sat(unitBox(first, kContactInflate), unitBox(second, kContactInflate))) {
+                continue;
+            }
+            if (first.charging && fastEnough(first, typeOf(first))) {
+                impact(first, second);
+            }
+            if (alive(first) && alive(second) && second.charging && fastEnough(second, typeOf(second))) {
+                impact(second, first);
+            }
+            if (!alive(first) || !alive(second)) {
+                continue;
+            }
+            first.contacts.push_back(second.id);
+            second.contacts.push_back(first.id);
+            if (const std::optional<SatHit> hit = sat(unitBox(first, 0.f), unitBox(second, 0.f))) {
+                float weight = kSeparateEven;
+                if (first.state == UnitState::Routing) {
+                    weight = kSeparateRout;
+                } else if (second.state == UnitState::Routing) {
+                    weight = kSeparateRoutOther;
+                } else if (isMoving(first) && !isMoving(second)) {
+                    weight = kSeparateMover;
+                } else if (isMoving(second) && !isMoving(first)) {
+                    weight = kSeparateHolder;
+                }
+                first.pos = first.pos - hit->axis * (hit->overlap * weight);
+                second.pos = second.pos + hit->axis * (hit->overlap * (1.f - weight));
+            }
+        }
+    }
+    for (Unit &unit : units_) {
+        if (alive(unit)) {
+            std::sort(unit.contacts.begin(), unit.contacts.end());
+        }
+    }
+    for (UnitId id : live) {
+        Unit &unit = units_[id];
+        if (!alive(unit)) {
+            continue;
+        }
+        if (unit.breaking && unit.contacts.empty()) {
+            unit.breaking = false;
+        }
+        if (unit.deploying && unit.side == Side::Ming && unit.pos.y > kDeployDoneY) {
+            unit.deploying = false;
+        }
+        clampPos(unit);
+        const Aabb &rect = scenario_.exit.rect;
+        if (exitOpen_ && unit.side == Side::Ming && !unit.deploying && fighting(unit) && unit.pos.x > rect.x &&
+            unit.pos.x < rect.x + rect.w && unit.pos.y < rect.y + rect.h) {
+            withdraw(unit);
+        }
+    }
+}
+
+void Battle::impact(Unit &attacker, Unit &target) {
+    const UnitType &attackerType = typeOf(attacker);
+    const UnitType &targetType = typeOf(target);
+    const ChargeDetail detail =
+        chargeCalc(attacker, attackerType, target, targetType, terrainAt(attacker.pos), terrainAt(target.pos), false);
+    const float ratio = detail.ratio;
+    stats_.impacts += 1;
+    const bool wasFighting = fighting(target);
+    if (wasFighting) {
+        stats_.bestImpact = std::max(stats_.bestImpact, ratio);
+    }
+    attacker.charging = false;
+    attacker.speed = 0.f;
+    attacker.runDist = 0.f;
+    attacker.recoverSec = attackerType.cls == UnitClass::Cavalry ? kRecoverCavalry : kRecoverInfantry;
+    if (wasFighting) {
+        target.morale -= detail.pikeFront ? kImpactPikeMorale : kImpactMorale + kImpactMoraleScale * ratio;
+    }
+    kill(target, kImpactKill * ratio * targetType.armor * targetType.men);
+    if (detail.pikeFront) {
+        kill(attacker, kImpactKillPike * attackerType.men);
+        attacker.morale -= kImpactPikeMoraleHit;
+        attacker.recoverSec = kImpactPikeRecover;
+    } else {
+        kill(attacker, kImpactKillSelf * attackerType.men / std::sqrt(std::max(ratio, kImpactRatioFloor)));
+    }
+    if (!detail.pikeFront && alive(target)) {
+        const float push = std::min(kImpactPushMax, kImpactPushBase + kImpactPushScale * ratio);
+        const float angle = std::atan2(target.pos.y - attacker.pos.y, target.pos.x - attacker.pos.x);
+        target.pos = target.pos + Vec2{std::cos(angle), std::sin(angle)} * push;
+        clampPos(target);
+    }
+    const bool breaks =
+        ratio >= kImpactBreak && !detail.pikeFront && wasFighting && alive(target) && !targetType.general;
+    Event event;
+    event.type = Event::Type::Impact;
+    event.tick = tick_;
+    event.a = attacker.id;
+    event.b = target.id;
+    event.pos = (attacker.pos + target.pos) * 0.5f;
+    event.value = ratio;
+    event.side = detail.side;
+    if (detail.pikeFront) {
+        event.flags = static_cast<std::uint8_t>(event.flags | kPikeFront);
+    }
+    if (breaks) {
+        event.flags = static_cast<std::uint8_t>(event.flags | kBreaks);
+    }
+    events_.push_back(event);
+    if (breaks) {
+        breakUnit(target);
+    }
+}
+
+void Battle::mingVolley(Unit &attacker, Unit &target) {
+    if (!alive(target)) {
+        return;
+    }
+    kill(target, kThreeEyedMen * typeOf(target).men);
+    if (fighting(target)) {
+        target.morale -= kThreeEyedMorale;
+    }
+    Event event;
+    event.type = Event::Type::ThreeEyedVolley;
+    event.tick = tick_;
+    event.a = attacker.id;
+    event.b = target.id;
+    event.pos = attacker.pos;
+    events_.push_back(event);
+}
+
+void Battle::breakUnit(Unit &unit) {
+    if (!fighting(unit)) {
+        return;
+    }
+    const UnitType &type = typeOf(unit);
+    const int parts = (!type.general && unit.men >= kBreakSplitMen) ? (unit.men >= kBreakTripleMen ? 3 : 2) : 1;
+    unit.state = UnitState::Broken;
+    unit.brokenSec = kBrokenSec;
+    unit.order = {};
+    unit.order.type = Order::Type::Hold;
+    unit.charging = false;
+    unit.momentum = 0;
+    unit.breaking = false;
+    if (!unit.everBroken) {
+        if (unit.side == Side::Ming) {
+            stats_.brokenMing += 1;
+        } else {
+            stats_.brokenJp += 1;
+        }
+        unit.everBroken = true;
+    }
+    unit.morale = std::min(unit.morale, kBrokenMorale);
+    Event event;
+    event.type = Event::Type::Broken;
+    event.tick = tick_;
+    event.a = unit.id;
+    event.pos = unit.pos;
+    event.value = static_cast<float>(parts);
+    events_.push_back(event);
 }
 
 void Battle::kill(Unit &unit, float amount) {
@@ -470,6 +670,16 @@ void Battle::fled(Unit &unit) {
     unit.state = UnitState::Gone;
     unit.gone = GoneReason::Fled;
     emit(Event::Type::Fled, unit.id, unit.pos);
+}
+
+void Battle::withdraw(Unit &unit) {
+    if (!alive(unit)) {
+        return;
+    }
+    stats_.exitedMen += unit.men;
+    unit.state = UnitState::Gone;
+    unit.gone = GoneReason::Withdrawn;
+    emit(Event::Type::Withdrawn, unit.id, unit.pos);
 }
 
 const Unit *Battle::nearestEnemy(const Unit &self, float limit) const {

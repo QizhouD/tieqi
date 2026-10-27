@@ -62,10 +62,15 @@ class Battle {
     void moveUnit(Unit &unit);
     void routMove(Unit &unit);
     void clampPos(Unit &unit) const;
+    void contactsStep();
+    void impact(Unit &attacker, Unit &target);
+    void mingVolley(Unit &attacker, Unit &target);
+    void breakUnit(Unit &unit);
     void kill(Unit &unit, float amount);
     void generalDown(Unit &unit);
     void disperse(Unit &unit);
     void fled(Unit &unit);
+    void withdraw(Unit &unit);
     const Unit *nearestEnemy(const Unit &self, float limit) const;
     const Unit *primaryContact(const Unit &self) const;
     void emit(Event::Type type, UnitId a, Vec2 pos);

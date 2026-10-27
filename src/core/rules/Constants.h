@@ -72,4 +72,66 @@ inline constexpr float kGeneralAllyMorale = 22.f;
 inline constexpr float kGeneralEnemyMorale = 8.f;
 inline constexpr float kMoraleMax = 100.f;
 
+inline constexpr float kContactRange = 120.f;
+inline constexpr float kContactInflate = 2.5f;
+inline constexpr float kSeparateRout = 0.8f;
+inline constexpr float kSeparateRoutOther = 0.2f;
+inline constexpr float kSeparateMover = 0.85f;
+inline constexpr float kSeparateHolder = 0.15f;
+inline constexpr float kSeparateEven = 0.5f;
+inline constexpr float kFastEnoughSpeed = 0.7f;
+inline constexpr float kFastEnoughDist = 35.f;
+inline constexpr float kDeployDoneY = 60.f;
+
+inline constexpr float kChargeFlank = 1.8f;
+inline constexpr float kChargeRear = 2.4f;
+inline constexpr float kChargeWavering = 1.35f;
+inline constexpr float kChargeBroken = 2.2f;
+inline constexpr float kChargeReloadSec = 2.4f;
+inline constexpr float kChargeReloadMul = 1.25f;
+inline constexpr float kChargeUnformedSec = 9.6f;
+inline constexpr float kChargeUnformedMul = 1.2f;
+inline constexpr float kChargePaddy = 0.5f;
+inline constexpr float kChargeUphill = 0.8f;
+inline constexpr float kChargePike = 0.35f;
+inline constexpr float kChargeMomentumStep = 0.1f;
+inline constexpr float kChargeOwnWaver = 0.8f;
+inline constexpr float kChargeResistSteady = 0.85f;
+inline constexpr float kChargeResistFloor = 0.15f;
+inline constexpr float kChargeSpeedFloor = 0.5f;
+inline constexpr float kModSpeed = 0.95f;
+inline constexpr float kModStrength = 0.95f;
+inline constexpr float kModDefense = 0.01f;
+
+inline constexpr float kImpactBreak = 1.9f;
+inline constexpr float kImpactPushMax = 26.f;
+inline constexpr float kImpactPushBase = 6.f;
+inline constexpr float kImpactPushScale = 7.f;
+inline constexpr float kImpactMorale = 4.f;
+inline constexpr float kImpactMoraleScale = 9.f;
+inline constexpr float kImpactPikeMorale = 2.f;
+inline constexpr float kImpactKill = 0.035f;
+inline constexpr float kImpactKillPike = 0.06f;
+inline constexpr float kImpactPikeMoraleHit = 14.f;
+inline constexpr float kImpactPikeRecover = 72.f;
+inline constexpr float kImpactKillSelf = 0.012f;
+inline constexpr float kImpactRatioFloor = 0.3f;
+inline constexpr float kRecoverCavalry = 48.f;
+inline constexpr float kRecoverInfantry = 32.f;
+inline constexpr float kBrokenSec = 9.6f;
+inline constexpr float kBrokenMorale = 25.f;
+inline constexpr float kBreakSplitMen = 150.f;
+inline constexpr float kBreakTripleMen = 330.f;
+inline constexpr float kThreeEyedMeters = 62.f;
+inline constexpr float kThreeEyedMen = 0.015f;
+inline constexpr float kThreeEyedMorale = 8.f;
+
+inline constexpr float kPreviewFavored = 1.2f;
+inline constexpr float kPreviewEven = 0.8f;
+inline constexpr float kVolleyReloadSec = 8.f;
+inline constexpr float kVolleyStillSec = 6.4f;
+inline constexpr float kVolleyNearTarget = 160.f;
+inline constexpr float kVolleyApproach = 220.f;
+inline constexpr float kVolleyAim = 1.f;
+
 } // namespace tq
