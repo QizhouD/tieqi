@@ -133,11 +133,20 @@ TEST_CASE("morale thresholds waver, hold, and break") {
     teppo.morale = 29.9f;
     teppo.state = UnitState::Steady;
     testing::BattleAccess::combat(battle);
-    CHECK(teppo.state == UnitState::Broken);
+    CHECK(battle.unit(7).state == UnitState::Broken);
     const std::vector<Event> three = battle.drainEvents();
-    REQUIRE_FALSE(three.empty());
-    CHECK(three.back().type == Event::Type::Broken);
-    CHECK(three.back().value == 3.f);
+    bool sawBroken = false;
+    bool sawShattered = false;
+    for (const Event &event : three) {
+        if (event.type == Event::Type::Broken && event.value == 3.f) {
+            sawBroken = true;
+        }
+        if (event.type == Event::Type::Shattered && event.value == 3.f) {
+            sawShattered = true;
+        }
+    }
+    CHECK(sawBroken);
+    CHECK(sawShattered);
 
     quiet(battle);
     Unit &again = testing::BattleAccess::unit(battle, 7);
@@ -326,7 +335,7 @@ TEST_CASE("breaking scares nearby troops and gives momentum") {
     const float jiadingMorale = jiading.morale;
     testing::BattleAccess::combat(battle);
     const float expectedDrop = 4.f + 10.f * (1.f - 100.f / 170.f);
-    CHECK(near(ally.morale, allyMorale - expectedDrop));
-    CHECK(near(jiading.morale, jiadingMorale + 4.f));
-    CHECK(samurai.momentum == 1);
+    CHECK(near(battle.unit(6).morale, allyMorale - expectedDrop));
+    CHECK(near(battle.unit(1).morale, jiadingMorale + 4.f));
+    CHECK(battle.unit(9).momentum == 1);
 }

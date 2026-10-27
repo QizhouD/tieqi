@@ -45,5 +45,6 @@ float meleePower(const Unit &unit, const UnitType &type, Terrain terrain);
 float pairMul(const Unit &left, const UnitType &leftType, const Unit &right, const UnitType &rightType);
 MeleeDetail meleeCalc(const Unit &attacker, const UnitType &attackerType, const Unit &target,
                       const UnitType &targetType, Terrain attackerTerrain, Terrain targetTerrain);
+void sizeFrag(Unit &unit, const UnitType &type);
 
 } // namespace tq

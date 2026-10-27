@@ -50,7 +50,8 @@ if(TQ_BUILD_TESTS)
         tests/data/load.cpp
         tests/core/sim.cpp
         tests/core/combat.cpp
-        tests/core/melee.cpp)
+        tests/core/melee.cpp
+        tests/core/formation.cpp)
     target_link_libraries(tq_tests PRIVATE tq_core tq_data doctest::doctest)
     file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}" TQ_SOURCE_DIR_FWD)
     target_compile_definitions(tq_tests PRIVATE "TQ_SOURCE_DIR=\"${TQ_SOURCE_DIR_FWD}\"")

@@ -8,6 +8,7 @@
 | D1 | 已完成 | #4 | 数据定义、JSON 加载与校验、繁中字符串表、duel_flat | 组出生点写进 Placement.pos，rally 另存。flow 省略时 enabled 为 false，由 C6 解释成停在阶段 1 且撤退口不开。flow、ai、result 只查类型和必填。地图边界和出生点外扩都含边界。字符串缺键回退到 zh-Hant 再退回键名，并写入 warnings。重整文案按战场秒写成 48 秒。num.liang 表示「兩」。duel_flat 只放李如松 |
 | C2 | 已完成 | #5 | 模拟骨架、命令队列、移动、溃逃和状态哈希 | 阶段流程、接触、战斗结算和胜负留空，phase 保持 0，第一次 step 不发 PhaseChanged。三眼铳不调用 mingVolley，冲锋开始仍把 volleyDone 置 false，但不因距离小于 62 置 true。Split 和 Join 先忽略。Rng 为 PCG32，initseq 固定为 1。哈希按字段字节：布尔写成 0/1，optional 为标志加浮点，字符串先写长度，接战先写个数。撤退纵坐标取场景 JSON。kTickSeconds 定义在 Constants.h，由 Types.h 引入 |
 | C3 | 已完成 | #6 | 接触、冲击、三眼铳、脱离和冲击预估 | 崩溃只改状态、士气上限和 Broken 事件，不散开，也不做连锁士气和气势。接战预估的倍数留到 C4。预估提示只有枚举，重整剩余秒数和齐射目标不另存。run 为 0 时冲击速度系数按 1。到达当帧的推挤可能把距离顶过 5 米。公式点相距 30 米，预估因不超过 45 米走接战，预估用例放在 70 米的同一正面 |
-| C4 | 已完成 |  | 接战计时、近战、齐射、士气状态与接战预估 | 崩溃仍不散开，不调用 shatter，mergeStep 留到 C5。primaryContact 改用完整 meleePower，同战力取较小 id。近战预估的攻防两项都记成 ModKind::Melee，攻方在前，守方值为 1/max(eP, 0.1)。nearGeneral 用将领自己的 aura，距离严格小于，多个取最小 id。实际近战 ratio 截断到 [0.3, 3]，预估不截断；share 用接战列表全长，跳过已退场目标。齐射同分保留较小 id。集结要求距离严格小于 180 米，且 routSec 严格大于 80。近战伤害按目标 id 升序结算，原型按首次累计的插入顺序 |
+| C4 | 已完成 | #7 | 接战计时、近战、齐射、士气状态与接战预估 | 崩溃仍不散开，不调用 shatter，mergeStep 留到 C5。primaryContact 改用完整 meleePower，同战力取较小 id。近战预估的攻防两项都记成 ModKind::Melee，攻方在前，守方值为 1/max(eP, 0.1)。nearGeneral 用将领自己的 aura，距离严格小于，多个取最小 id。实际近战 ratio 截断到 [0.3, 3]，预估不截断；share 用接战列表全长，跳过已退场目标。齐射同分保留较小 id。集结要求距离严格小于 180 米，且 routSec 严格大于 80。近战伤害按目标 id 升序结算，原型按首次累计的插入顺序 |
+| C5 | 已完成 |  | 崩溃散开、残部合并、分兵合兵和显示名后缀 | 总兵力记在私有计数里，残部和分队不增加，读取接口留给 C6。origin 为 kNoUnit 的单位不合并。同一步骤里新产生的单位不参加该步骤剩余部分，当次战斗结算的合并不包括刚散开的残部。displayName 返回后缀种类和 1 到 10 的循环序号。单股只设 knock，不发 Shattered。zh-Hant 补了 suffix.combined |
 
 ## 停在这里
