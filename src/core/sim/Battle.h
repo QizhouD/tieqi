@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -57,6 +58,8 @@ class Battle {
     float battleSeconds() const { return static_cast<float>(tick_) * kTickSeconds; }
     std::span<const Unit> units() const { return units_; }
     const Unit &unit(UnitId id) const;
+    std::optional<UnitId> sceneUnit(const std::string &id) const;
+    std::optional<std::string> sceneName(UnitId id) const;
     const UnitType &typeOf(const Unit &unit) const;
     int phase() const { return phase_; }
     bool exitOpen() const { return exitOpen_; }

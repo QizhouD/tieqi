@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "replay.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "build", "scenario", "seed", "ai", "commands"],
+  "properties": {
+    "schema": { "const": 1 },
+    "build": { "type": "string", "minLength": 1 },
+    "scenario": { "type": "string", "minLength": 1 },
+    "seed": { "type": "integer", "minimum": 0 },
+    "ai": { "type": "boolean" },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tick", "type", "units"],
+        "properties": {
+          "tick": { "type": "integer", "minimum": 1 },
+          "type": { "enum": ["move", "attack", "hold", "retreat", "split", "join"] },
+          "units": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "point": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } },
+          "target": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

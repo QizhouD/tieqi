@@ -1136,6 +1136,24 @@ ai\_role 取值：gunner（铁炮）、pike\_line（长枪）、shock（武士�
 - `num.` 族给出中文的"一"到"十"和"兩""三"，供编号和"散作兩股"使用；英文、韩文用阿拉伯数字。
 - zh-Hant 是源语言：字形按台湾标准（与思源宋体 TC 一致），从简体转写时只换字、不换词；文案从原型逐条搬运，原型界面已改为繁体，可以直接复制。"铁炮"一律写作"鐵砲"。en、ko 由 agent 起草，作者审校后合并。缺键时依次回退到 zh-Hant 和键名本身，开发版在控制台警告。
 
+### replay.json
+
+回放记在 `tq_data`，供无头工具和测试往返。命令用场景 id；没有场景 id 的单位（残部、分队）写成 `#` 加 UnitId。构建号是配置时的 git 短哈希，不同编译器之间不要求能互放。
+
+```json
+{
+  "schema": 1,
+  "build": "0123456789ab",
+  "scenario": "byeokjegwan",
+  "seed": 1,
+  "ai": true,
+  "commands": [
+    { "tick": 1, "type": "attack", "units": ["liaodong_right"], "target": "van_teppo_right" },
+    { "tick": 301, "type": "attack", "units": ["jiading_right"], "target": "van_samurai" }
+  ]
+}
+```
+
 专有名词以下表为准：
 
 | 键 | zh-Hant | en | ko |

@@ -165,6 +165,23 @@ const Unit &Battle::unit(UnitId id) const {
     return units_[id];
 }
 
+std::optional<UnitId> Battle::sceneUnit(const std::string &id) const {
+    const auto found = sceneIds_.find(id);
+    if (found == sceneIds_.end()) {
+        return std::nullopt;
+    }
+    return found->second;
+}
+
+std::optional<std::string> Battle::sceneName(UnitId id) const {
+    for (const auto &entry : sceneIds_) {
+        if (entry.second == id) {
+            return entry.first;
+        }
+    }
+    return std::nullopt;
+}
+
 const UnitType &Battle::typeOf(const Unit &unit) const { return defs_.types.at(unit.type); }
 
 Terrain Battle::terrainAt(Vec2 point) const { return tq::terrainAt(scenario_.map, point); }

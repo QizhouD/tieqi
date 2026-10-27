@@ -31,6 +31,9 @@ jobs:
       - name: Test
         run: ctest --preset ci
 
+      - name: Headless smoke
+        run: .\build\ci\tq_headless.exe --scenario byeokjegwan --seed 1 --runs 3 --policy scripted --max-ticks 18000
+
       - name: Core purity
         shell: bash
         run: |
@@ -74,6 +77,9 @@ jobs:
 
       - name: Test
         run: ctest --preset ci
+
+      - name: Headless smoke
+        run: ./build/ci/tq_headless --scenario byeokjegwan --seed 1 --runs 3 --policy scripted --max-ticks 18000
 
       - name: Core purity
         shell: bash
