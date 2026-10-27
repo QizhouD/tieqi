@@ -13,6 +13,8 @@ class BattleAccess {
     static void setExitOpen(Battle &battle, bool open) { battle.exitOpen_ = open; }
     static BattleStats &stats(Battle &battle) { return battle.stats_; }
     static void setPhase(Battle &battle, int phase) { battle.phase_ = phase; }
+    static void think(Battle &battle) { battle.aiThink(); }
+    static bool vanAggro(const Battle &battle) { return battle.vanAggro_; }
 };
 
 } // namespace tq::testing

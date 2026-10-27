@@ -138,7 +138,7 @@ void Battle::step() {
     advancePhase();
 
     if (options_.aiEnabled && tick_ % 10 == 0) {
-        // C7 补 AI。
+        aiThink();
     }
     for (Unit &unit : units_) {
         if (alive(unit)) {

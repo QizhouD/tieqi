@@ -17,7 +17,11 @@ std::filesystem::path sourceRoot() { return TQ_SOURCE_DIR; }
 
 GameData byeokjegwan() { return loadGameData(sourceRoot() / "data", "byeokjegwan.json"); }
 
-Battle makeBattle(const GameData &data, std::uint64_t seed) { return Battle(data.defs, data.scenario, seed); }
+Battle makeBattle(const GameData &data, std::uint64_t seed) {
+    BattleOptions options;
+    options.aiEnabled = false;
+    return Battle(data.defs, data.scenario, seed, options);
+}
 
 void submit(Battle &battle, Command::Type type, std::vector<UnitId> units, Vec2 point = {}, UnitId target = kNoUnit) {
     Command cmd;

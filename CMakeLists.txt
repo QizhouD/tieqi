@@ -18,6 +18,7 @@ add_library(tq_core STATIC
     src/core/core.cpp
     src/core/sim/Rng.cpp
     src/core/sim/Battle.cpp
+    src/core/ai/Ai.cpp
     src/core/rules/Combat.cpp
     src/core/rules/Preview.cpp)
 target_include_directories(tq_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -52,7 +53,8 @@ if(TQ_BUILD_TESTS)
         tests/core/combat.cpp
         tests/core/melee.cpp
         tests/core/formation.cpp
-        tests/core/flow.cpp)
+        tests/core/flow.cpp
+        tests/core/ai.cpp)
     target_link_libraries(tq_tests PRIVATE tq_core tq_data doctest::doctest)
     file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}" TQ_SOURCE_DIR_FWD)
     target_compile_definitions(tq_tests PRIVATE "TQ_SOURCE_DIR=\"${TQ_SOURCE_DIR_FWD}\"")
