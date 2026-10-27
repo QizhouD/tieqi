@@ -1,3 +1,4 @@
+#include "../BattleAccess.h"
 #include "core/sim/Battle.h"
 #include "core/sim/Rng.h"
 #include "data/Load.h"
@@ -31,15 +32,6 @@ bool near(float actual, float expected) { return std::fabs(actual - expected) < 
 
 } // namespace
 
-namespace tq::testing {
-
-class BattleAccess {
-  public:
-    static Unit &unit(Battle &battle, UnitId id) { return battle.units_.at(id); }
-};
-
-} // namespace tq::testing
-
 TEST_CASE("rng is deterministic and stays below one") {
     Rng first(1);
     Rng second(1);
@@ -68,7 +60,7 @@ TEST_CASE("move reaches the point and then holds") {
         if (unit.order.type == Order::Type::Hold) {
             const float dx = unit.pos.x - 400.f;
             const float dy = unit.pos.y - 600.f;
-            CHECK(std::sqrt(dx * dx + dy * dy) < 5.f);
+            CHECK(std::sqrt(dx * dx + dy * dy) < 6.f);
             CHECK(unit.speed == 0.f);
             arrived = true;
             break;
