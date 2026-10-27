@@ -2,6 +2,8 @@
 
 #include "core/math/Vec2.h"
 
+#include <cstdint>
+#include <string>
 #include <vector>
 
 namespace tq {
@@ -25,13 +27,24 @@ struct RoadDef {
     std::vector<Vec2> points;
 };
 
-// 地形用的地图。地名、驿舍由 D1 补进同一结构。
+enum class TextAlign : std::uint8_t { Left, Center };
+
+struct MapLabel {
+    std::string key;
+    Vec2 pos{};
+    float size = 0.f;
+    TextAlign align = TextAlign::Left;
+    bool faint = false;
+};
+
 struct MapDef {
     float width = 0.f;
     float height = 0.f;
     std::vector<Aabb> paddies;
     std::vector<Ellipse> hills;
     RoadDef road;
+    Vec2 postStation{};
+    std::vector<MapLabel> labels;
 };
 
 } // namespace tq
