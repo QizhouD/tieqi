@@ -1,0 +1,91 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows-msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/ci/_deps
+          key: ${{ runner.os }}-msvc-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: ${{ runner.os }}-msvc-
+
+      - name: Configure
+        run: cmake --preset ci
+
+      - name: Build
+        run: cmake --build --preset ci
+
+      - name: Test
+        run: ctest --preset ci
+
+      - name: Core purity
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          matches=$(grep -RInE '#include[[:space:]]*<SFML|imgui|#include[[:space:]]*<filesystem>' src/core) || status=$?
+          if [[ $status -eq 0 ]]; then
+            printf '%s\n' "$matches"
+            echo "src/core must not include SFML, imgui, or <filesystem>"
+            exit 1
+          elif [[ $status -ne 1 ]]; then
+            echo "purity check failed to scan src/core"
+            exit "$status"
+          fi
+
+  ubuntu-gcc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SFML system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++ cmake ninja-build xz-utils pkg-config \
+            libxrandr-dev libxcursor-dev libxi-dev libudev-dev libfreetype-dev \
+            libflac-dev libvorbis-dev libgl1-mesa-dev libegl1-mesa-dev libharfbuzz-dev
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/ci/_deps
+          key: ${{ runner.os }}-gcc-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: ${{ runner.os }}-gcc-
+
+      - name: Configure
+        run: cmake --preset ci
+
+      - name: Build
+        run: cmake --build --preset ci
+
+      - name: Test
+        run: ctest --preset ci
+
+      - name: Core purity
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          matches=$(grep -RInE '#include[[:space:]]*<SFML|imgui|#include[[:space:]]*<filesystem>' src/core) || status=$?
+          if [[ $status -eq 0 ]]; then
+            printf '%s\n' "$matches"
+            echo "src/core must not include SFML, imgui, or <filesystem>"
+            exit 1
+          elif [[ $status -ne 1 ]]; then
+            echo "purity check failed to scan src/core"
+            exit "$status"
+          fi

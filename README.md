@@ -130,6 +130,6 @@ flowchart LR
 
 ## 链接
 
-在线版本是私有链接，只有作者能打开：[开发文档](https://claude.ai/artifact/6uRaYbNkV5QtLEZohtZ12b)、[设计文档](https://claude.ai/artifact/377hQjkSfs6krJiTqJUM5s)、[可玩原型](https://claude.ai/artifact/GEGVr72yHEmDop4MWd4fDy)。仓库里的 `docs/` 是从在线版导出的，在线版更新后重新导出覆盖即可。
+在线版本是私有链接，只有作者能打开：[开发文档](https://claude.ai/artifact/6uRaYbNkV5QtLEZohtZ12b)、[设计文档](https://claude.ai/artifact/377hQjkSfs6krJiTqJUM5s)、[可玩原型](https://claude.ai/artifact/GEGVr72yHEmDop4MWd4fDy)。开工后以仓库里的 `docs/` 为准，在线版只作存档。
 
 框架来源：[QizhouD/2D-action-game](https://github.com/QizhouD/2D-action-game)。

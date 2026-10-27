@@ -1,0 +1,88 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 28,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja"
+        },
+        {
+            "name": "dev",
+            "displayName": "Dev",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/build/dev",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "TQ_DEV_TOOLS": "ON",
+                "TQ_BUILD_TESTS": "ON",
+                "TQ_WARNINGS_AS_ERRORS": "OFF"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Release",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/build/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "TQ_DEV_TOOLS": "OFF",
+                "TQ_BUILD_TESTS": "OFF",
+                "TQ_WARNINGS_AS_ERRORS": "OFF"
+            }
+        },
+        {
+            "name": "ci",
+            "displayName": "CI",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/build/ci",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "TQ_DEV_TOOLS": "OFF",
+                "TQ_BUILD_TESTS": "ON",
+                "TQ_WARNINGS_AS_ERRORS": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "dev",
+            "configurePreset": "dev"
+        },
+        {
+            "name": "release",
+            "configurePreset": "release"
+        },
+        {
+            "name": "ci",
+            "configurePreset": "ci"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "dev",
+            "configurePreset": "dev",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "release",
+            "configurePreset": "release",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "ci",
+            "configurePreset": "ci",
+            "output": {
+                "outputOnFailure": true
+            }
+        }
+    ]
+}
