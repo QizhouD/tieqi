@@ -5,6 +5,7 @@
 #include "data/Load.h"
 
 #include <cstdint>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
@@ -18,6 +19,7 @@ struct RunRequest {
     std::uint32_t maxTicks = 18000;
     bool replay = false;
     std::vector<ReplayCommand> commands;
+    std::optional<std::filesystem::path> eventsOut;
 };
 
 struct RunResult {

@@ -126,8 +126,9 @@ TEST_CASE("duel D1 through D7 stay inside the prototype bands") {
         CHECK(nearMen(battle.unit(rider).men, 383.f));
         CHECK(battle.unit(guns).everBroken);
         const float remnants = livingMen(battle, guns);
-        CHECK(remnants >= 222.f);
-        CHECK(remnants <= 227.f);
+        // 规格表是原型样本 222–227，验收另给兵数 ±3%。
+        CHECK(remnants >= 222.f * 0.97f);
+        CHECK(remnants <= 227.f * 1.03f);
     }
 
     for (std::uint64_t seed = 1; seed <= 10; ++seed) {

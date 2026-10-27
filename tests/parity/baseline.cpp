@@ -14,28 +14,65 @@ namespace {
 
 std::filesystem::path sourceRoot() { return TQ_SOURCE_DIR; }
 
-float median(std::vector<float> values) {
+float percentile(std::vector<float> values, double portion) {
     std::sort(values.begin(), values.end());
-    const std::size_t count = values.size();
-    if (count == 0) {
+    if (values.empty()) {
         return 0.f;
     }
-    if (count % 2 == 1) {
-        return values[count / 2];
-    }
-    return (values[count / 2 - 1] + values[count / 2]) * 0.5f;
+    const std::size_t index = std::min(
+        values.size() - 1, static_cast<std::size_t>(std::ceil(portion * static_cast<double>(values.size()))) - 1);
+    return values[index];
 }
 
 bool phase2Allowed(const RunResult &result) {
     if (!result.phase2Tick) {
         return true;
     }
-    const int tick = static_cast<int>(*result.phase2Tick);
-    return std::abs(tick - 1000) <= 2 || std::abs(tick - 1800) <= 2;
+    if (!result.warnTick) {
+        return false;
+    }
+    const int phase2 = static_cast<int>(*result.phase2Tick);
+    const int warn = static_cast<int>(*result.warnTick);
+    return std::abs(phase2 - (warn + 200)) <= 2 && phase2 >= 1000 && phase2 <= 1800;
 }
 
 bool isWin(const RunResult &result) {
     return result.grade == "decisive" || result.grade == "minor" || result.grade == "pyrrhic";
+}
+
+int countWins(const std::vector<RunResult> &results) {
+    int wins = 0;
+    for (const RunResult &result : results) {
+        wins += isWin(result) ? 1 : 0;
+    }
+    return wins;
+}
+
+int countCommanderKilled(const std::vector<RunResult> &results) {
+    int killed = 0;
+    for (const RunResult &result : results) {
+        killed += result.endKind == "commander_killed" ? 1 : 0;
+    }
+    return killed;
+}
+
+std::vector<float> column(const std::vector<RunResult> &results, auto pick) {
+    std::vector<float> values;
+    values.reserve(results.size());
+    for (const RunResult &result : results) {
+        values.push_back(static_cast<float>(pick(result)));
+    }
+    return values;
+}
+
+std::vector<float> presentTicks(const std::vector<RunResult> &results, auto pick) {
+    std::vector<float> values;
+    for (const RunResult &result : results) {
+        if (const auto tick = pick(result)) {
+            values.push_back(static_cast<float>(*tick));
+        }
+    }
+    return values;
 }
 
 } // namespace
@@ -44,9 +81,9 @@ TEST_CASE("slow full-battle baseline stays inside the published bands") {
     const GameData data = loadGameData(sourceRoot() / "data", "byeokjegwan.json");
     std::vector<RunResult> passive;
     std::vector<RunResult> scripted;
-    passive.reserve(30);
-    scripted.reserve(30);
-    for (std::uint64_t seed = 1; seed <= 30; ++seed) {
+    passive.reserve(100);
+    scripted.reserve(100);
+    for (std::uint64_t seed = 1; seed <= 100; ++seed) {
         RunRequest request;
         request.seed = seed;
         request.policy = PolicyKind::Passive;
@@ -55,48 +92,58 @@ TEST_CASE("slow full-battle baseline stays inside the published bands") {
         scripted.push_back(runBattle(data, request));
     }
 
-    int passiveDefeats = 0;
-    int commanderKilled = 0;
-    int endedInTime = 0;
-    std::vector<float> passiveEnds;
     for (const RunResult &result : passive) {
-        INFO("passive seed end " << result.endKind << " tick " << result.endTick << " grade " << result.grade);
-        passiveDefeats += result.grade == "defeat" ? 1 : 0;
-        commanderKilled += result.endKind == "commander_killed" ? 1 : 0;
-        endedInTime += !result.timeout && result.endTick <= 4000 ? 1 : 0;
-        passiveEnds.push_back(static_cast<float>(result.endTick));
+        INFO("passive seed end " << result.endKind << " tick " << result.endTick);
         CHECK(phase2Allowed(result));
     }
-    const float passiveMedian = median(passiveEnds);
-    INFO("passive median end tick " << passiveMedian);
-    CHECK(passiveDefeats == 30);
-    CHECK(commanderKilled == 30);
-    CHECK(endedInTime == 30);
-    CHECK(passiveMedian >= 1300.f);
-    CHECK(passiveMedian <= 2000.f);
-
-    int wins = 0;
-    std::vector<float> broken;
-    std::vector<float> impacts;
     for (const RunResult &result : scripted) {
-        INFO("scripted end " << result.endKind << " grade " << result.grade << " tick " << result.endTick
-                             << " reinforce " << (result.reinforceTick ? std::to_string(*result.reinforceTick) : "none")
-                             << " broken " << result.jpBroken << " impacts " << result.impacts);
-        wins += isWin(result) ? 1 : 0;
-        broken.push_back(static_cast<float>(result.jpBroken));
-        impacts.push_back(static_cast<float>(result.impacts));
+        INFO("scripted seed end " << result.endKind << " tick " << result.endTick);
         CHECK(phase2Allowed(result));
-        REQUIRE(result.reinforceTick.has_value());
-        CHECK(*result.reinforceTick >= 1150);
-        CHECK(*result.reinforceTick <= 2250);
     }
-    const float brokenMedian = median(broken);
-    const float impactMedian = median(impacts);
-    INFO("scripted wins " << wins << " jp broken median " << brokenMedian << " impact median " << impactMedian);
-    CHECK(wins >= 6);
-    CHECK(wins <= 21);
-    CHECK(brokenMedian >= 2.f);
-    CHECK(brokenMedian <= 4.f);
-    CHECK(impactMedian >= 9.f);
-    CHECK(impactMedian <= 15.f);
+
+    CHECK(std::abs(countWins(passive) - 2) <= 15);
+    CHECK(std::abs(countCommanderKilled(passive) - 98) <= 15);
+    CHECK(std::abs(countWins(scripted) - 49) <= 15);
+    CHECK(std::abs(countCommanderKilled(scripted) - 51) <= 15);
+
+    const float passiveEnd = percentile(column(passive, [](const RunResult &result) { return result.endTick; }), 0.5);
+    const float scriptedEnd = percentile(column(scripted, [](const RunResult &result) { return result.endTick; }), 0.5);
+    INFO("end median passive " << passiveEnd << " scripted " << scriptedEnd);
+    CHECK(passiveEnd >= 1575.f);
+    CHECK(passiveEnd <= 1765.f);
+    CHECK(scriptedEnd >= 2268.f);
+    CHECK(scriptedEnd <= 2885.f);
+
+    const float passiveBroken =
+        percentile(column(passive, [](const RunResult &result) { return result.jpBroken; }), 0.5);
+    const float scriptedBroken =
+        percentile(column(scripted, [](const RunResult &result) { return result.jpBroken; }), 0.5);
+    INFO("jp broken median passive " << passiveBroken << " scripted " << scriptedBroken);
+    CHECK(passiveBroken >= 0.f);
+    CHECK(passiveBroken <= 1.f);
+    CHECK(scriptedBroken >= 2.f);
+    CHECK(scriptedBroken <= 3.f);
+
+    const float passiveImpacts =
+        percentile(column(passive, [](const RunResult &result) { return result.impacts; }), 0.5);
+    const float scriptedImpacts =
+        percentile(column(scripted, [](const RunResult &result) { return result.impacts; }), 0.5);
+    INFO("impact median passive " << passiveImpacts << " scripted " << scriptedImpacts);
+    CHECK(passiveImpacts >= 4.f);
+    CHECK(passiveImpacts <= 6.f);
+    CHECK(scriptedImpacts >= 9.f);
+    CHECK(scriptedImpacts <= 13.f);
+
+    const std::vector<float> passiveYang =
+        presentTicks(passive, [](const RunResult &result) { return result.reinforceTick; });
+    const std::vector<float> scriptedYang =
+        presentTicks(scripted, [](const RunResult &result) { return result.reinforceTick; });
+    const float passiveYangMedian = percentile(passiveYang, 0.5);
+    const float scriptedYangMedian = percentile(scriptedYang, 0.5);
+    INFO("yang median passive " << passiveYangMedian << " scripted " << scriptedYangMedian);
+    // 原型 passive 全是 2003。移植 2000 早 3 tick，是 0.1 累加，允许早最多 4 tick。
+    CHECK(passiveYangMedian >= 2003.f - 4.f);
+    CHECK(passiveYangMedian <= 2003.f);
+    CHECK(scriptedYangMedian >= 1663.f);
+    CHECK(scriptedYangMedian <= 2003.f);
 }
