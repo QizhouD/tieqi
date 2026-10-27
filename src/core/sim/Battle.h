@@ -8,7 +8,9 @@
 #include "core/sim/Unit.h"
 
 #include <cstdint>
+#include <map>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace tq {
@@ -31,8 +33,16 @@ struct BattleStats {
     float exitedMen = 0.f;
 };
 
+enum class BattleEnd : std::uint8_t { None, CommanderKilled, Withdrawn, CommanderFled, Routed, Swept };
+
+enum class Grade : std::uint8_t { None, Decisive, Minor, Pyrrhic, Defeat };
+
 struct BattleResult {
     bool over = false;
+    BattleEnd end = BattleEnd::None;
+    Grade grade = Grade::None;
+    float saved = 0.f;
+    float rate = 0.f;
 };
 
 class Battle {
@@ -59,6 +69,12 @@ class Battle {
   private:
     friend class testing::BattleAccess;
     void apply(const Command &cmd);
+    void advancePhase();
+    void spawnGroup(const std::string &groupId);
+    void checkVictory();
+    const Unit *commander() const;
+    int vanguardBroken() const;
+    bool anyAlive(Side side) const;
     void moveUnit(Unit &unit);
     void routMove(Unit &unit);
     void clampPos(Unit &unit) const;
@@ -98,6 +114,13 @@ class Battle {
     float totalMing_ = 0.f;
     float totalJp_ = 0.f;
     std::vector<std::uint16_t> fragCount_;
+    std::map<std::string, UnitId> sceneIds_;
+    std::vector<UnitId> vanguardIds_;
+    bool warned_ = false;
+    std::uint32_t mainAt_ = 0;
+    std::uint32_t phase2At_ = 0;
+    std::uint32_t phase3At_ = 0;
+    std::vector<bool> reinforcementArrived_;
 };
 
 bool canSplit(const Battle &battle, UnitId id);
