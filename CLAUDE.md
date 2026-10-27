@@ -1,4 +1,4 @@
-# Tieqi（碧蹄馆 demo）
+# Tieqi（Afterglow: Imjin 1593）
 
 C++20 + SFML 3 的可暂停实时制战棋。完整规格见 docs/DEVELOPMENT.md，
 规则参考实现见 reference/prototype/byeokjegwan.html（浏览器直接打开）。

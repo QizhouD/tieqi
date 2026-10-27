@@ -4,6 +4,7 @@
   "language": "zh-Hant",
   "fonts": { "body": "NotoSerifTC-Regular.otf", "brush": "LXGWWenKaiTC-Bold.ttf" },
   "strings": {
+    "game.title": "餘暉：壬辰 1593",
     "scn.byeokjegwan": "碧蹄館之戰",
     "type.jiading": "遼東家丁精騎",
     "type.liaodong": "遼東騎兵",

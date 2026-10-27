@@ -4,6 +4,7 @@
   "language": "ko",
   "fonts": { "body": "NotoSerifKR-Regular.otf", "brush": "LXGWWenKaiTC-Bold.ttf" },
   "strings": {
+    "game.title": "Afterglow: Imjin 1593",
     "place.byeokjegwan": "벽제관",
     "place.yeoseokhyeon": "여석현",
     "place.to_paju": "파주 방면",
