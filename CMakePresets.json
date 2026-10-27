@@ -92,11 +92,6 @@
             "configurePreset": "ci",
             "output": {
                 "outputOnFailure": true
-            },
-            "filter": {
-                "exclude": {
-                    "label": "slow"
-                }
             }
         }
     ]
