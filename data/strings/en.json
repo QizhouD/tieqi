@@ -4,6 +4,7 @@
   "language": "en",
   "fonts": { "body": "NotoSerifTC-Regular.otf", "brush": "LXGWWenKaiTC-Bold.ttf" },
   "strings": {
+    "game.title": "Afterglow: Imjin 1593",
     "place.byeokjegwan": "Byeokjegwan",
     "place.yeoseokhyeon": "Yeoseok Pass",
     "place.to_paju": "To Paju",

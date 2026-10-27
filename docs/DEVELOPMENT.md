@@ -1,14 +1,14 @@
-# 碧蹄馆 Demo 开发文档
+# Afterglow: Imjin 1593 开发文档
 
 2026-10-27
 
 ## 概述
 
-本文档把碧蹄馆 demo 拆成可以直接开工的工程任务：任何一个 coding agent 都能领一张任务卡，在约定的目录里写代码，用约定的测试证明做对了。
+游戏名 Afterglow: Imjin 1593（繁中 餘暉：壬辰 1593），代号 Tieqi，demo 场景是碧蹄馆之战。本文档把碧蹄馆 demo 拆成可以直接开工的工程任务：任何一个 coding agent 都能领一张任务卡，在约定的目录里写代码，用约定的测试证明做对了。
 
 - **读者**：参与开发的 coding agent 和项目作者。
 - **目标**：用 C++20 和 SFML 3 做出碧蹄馆 demo 的 PC 版，玩法与 HTML 原型一致：可暂停实时制、棋子表现、明军辽东骑兵对日军先锋与本队。
-- **代号**：正式名称未定，代码和仓库统一用代号 Tieqi（铁骑），C++ 命名空间 `tq`，可执行文件 `tieqi`。
+- **代号**：英文名 Afterglow: Imjin 1593，繁中 餘暉：壬辰 1593。代码和仓库仍用代号 Tieqi，C++ 命名空间 `tq`，可执行文件 `tieqi`。
 - **起点**：从 [2D-action-game](https://github.com/QizhouD/2D-action-game) 复制可复用的基础设施（主循环、构建、CI、配置加载、脚本回放），玩法层全部重写。
 
 ### 文档之间的关系
@@ -67,7 +67,7 @@
 放在仓库根目录。多数 coding agent 会读取它；Claude Code 读取 `CLAUDE.md`，放一份同内容的副本即可。
 
 ```markdown
-# Tieqi（碧蹄馆 demo）
+# Tieqi（Afterglow: Imjin 1593）
 
 C++20 + SFML 3 的可暂停实时制战棋。完整规格见 docs/DEVELOPMENT.md，
 规则参考实现见 reference/prototype/byeokjegwan.html（浏览器直接打开）。
@@ -1274,6 +1274,7 @@ approach(u, f, keep)
 ### 窗口与布局
 
 - 默认窗口 1600 × 1000，可缩放，最小 1280 × 800。顶栏 56 像素（标题、阶段、时辰与时钟、控制按钮），右侧面板 380 像素，其余是战场。
+- 系统窗口标题用字符串 game.title。
 - 战场用一个 `sf::View`：缩放比 `sc = min((宽 - 20) / W, (高 - 20) / H)`，地图居中。原型没有缩放和平移，作为可选任务：滚轮以光标为中心 1 到 3 倍，中键拖动平移，Home 复位。
 - 单位的位置和朝向按 `prev + (cur - prev) * alpha` 插值绘制，alpha 为主循环累加器里不足一个 tick 的部分。
 
