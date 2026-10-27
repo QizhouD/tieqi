@@ -68,6 +68,11 @@
             "configurePreset": "dev",
             "output": {
                 "outputOnFailure": true
+            },
+            "filter": {
+                "exclude": {
+                    "label": "slow"
+                }
             }
         },
         {
@@ -75,6 +80,11 @@
             "configurePreset": "release",
             "output": {
                 "outputOnFailure": true
+            },
+            "filter": {
+                "exclude": {
+                    "label": "slow"
+                }
             }
         },
         {
@@ -82,6 +92,11 @@
             "configurePreset": "ci",
             "output": {
                 "outputOnFailure": true
+            },
+            "filter": {
+                "exclude": {
+                    "label": "slow"
+                }
             }
         }
     ]
