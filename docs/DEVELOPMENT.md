@@ -239,7 +239,7 @@ cmake --preset dev && cmake --build --preset dev && ctest --preset dev
 ```
 
 - 构建后把 `data/` 和 `assets/` 复制到可执行文件旁边。程序按顺序查找资源根目录：命令行 `--data-root`，当前目录下有 `data/` 时用当前目录，最后用可执行文件所在目录（沿用框架的 `chdirToAssets` 思路）。
-- `tieqi` 命令行参数：`--scenario <id>`、`--seed <n>`、`--time-scale <x>`、`--replay <file>`、`--script <file>`（脚本输入加截图，沿用框架做法）、`--data-root <dir>`。
+- `tieqi` 命令行参数：`--scenario <id>`、`--seed <n>`、`--time-scale <x>`、`--replay <file>`、`--script <file>`（脚本输入加截图，沿用框架做法）、`--data-root <dir>`。脚本行是 `<秒> down|up|press <键>`、`<秒> shot <文件>`、`<秒> quit`，另加 `<秒> resize <宽> <高>`。显式的 `--scenario`、`--seed` 盖过回放里的同名字段。
 
 ### CI
 
@@ -1381,14 +1381,17 @@ approach(u, f, keep)
 ### 本地化与字体
 
 - 所有可见文字来自字符串表，代码里不写中文字面量。数字按语言加千位分隔。本文档引用界面文字时为了阅读方便写成简体，游戏里实际显示一律以 zh-Hant 字符串表为准。
-- 字体：zh-Hant 正文用思源宋体 TC，标题、棋子字、飘字和横幅用霞鹜文楷 TC 粗体；ko 正文用思源宋体 KR，棋子字照样用霞鹜文楷 TC；en 正文用思源宋体 TC 自带的拉丁字形。韩文和英文的标题类字体见"待定问题"，定下之前用各自正文字体的粗体。
-- SFML 3.1 用 HarfBuzz 塑形，中韩文字直接交给 `sf::Text`；字体文件在 `data/strings/<语言>.json` 的 `fonts` 里指定。
+- 字体文件仍由 `data/strings/<语言>.json` 的 `fonts` 字段指定，字段保持 `body` 和 `brush` 两个名字，不按角色再拆文件。选字体的规则是：
+  - 棋子字三种语言都用 brush（霞鹜文楷 TC）。
+  - 正文用该语言的 body。zh-Hant 和 en 的 body 是思源宋体 TC，ko 的 body 是思源宋体 KR。
+  - 标题、横幅、飘字：zh-Hant 用 brush；ko 和 en 用各自的 body，并加上 SFML 的 Bold 样式。霞鹜文楷 TC 没有韩文字形，ko 的标题、横幅、飘字不能用 brush。
+- SFML 3.1 用 HarfBuzz 塑形，中韩文字直接交给 `sf::Text`。
 
 ### 无障碍与设置
 
 - `reduced_motion` 打开时不震屏，顿帧固定 40 毫秒，横幅放慢。
 - 状态除颜色外都有文字（状态签、标签），不只靠颜色传达。
-- 设置保存沿用框架的 SaveData：语言、音量、倍速、reduced\_motion。
+- 设置保存沿用框架的 SaveData：语言、音量、倍速、reduced\_motion，写在可执行文件旁边的 `settings.txt`。缺文件时用 `config.json`。
 
 ## 测试与验收
 
@@ -1760,7 +1763,7 @@ agent 碰到下列问题时按"默认做法"继续干，不要停工；作者改
 | AI 难度 | 只有一档 | demo 之后 |
 | 兵力与地形的史实核对 | 数值标为暂定，开局遮罩保留原型里的说明 | 试玩包前 |
 | 朝鲜军陆战视角 | demo 不做，海战以后另议 | demo 之后 |
-| 韩文、英文标题字体 | 先用各自正文字体的粗体。韩文候选 Nanum Brush Script（OFL） | L1 |
+| 韩文、英文标题字体 | 已定：ko、en 的标题、横幅、飘字用各自 body 加 SFML Bold；棋子字仍用霞鹜文楷 TC。Nanum Brush Script 仍只是以后的候选，本阶段不用 | 已定 |
 | 界面秒数用战场秒还是墙钟秒 | 战场秒，与战场时钟一致 | M2 试玩后 |
 | 溃兵能否逃出地图，以及溃兵在撤退口里集结后是否算撤出 | 维持原型：接触检测对所有单位 clampPos，溃兵出不了地图，fled 目前不会触发 | M2 试玩后 |
 | 美术 | 代码绘制；AIGC 素材到位后按原尺寸替换，并登记到 AI\_ASSETS.md | 随时 |
