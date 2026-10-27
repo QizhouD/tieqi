@@ -146,4 +146,10 @@ TEST_CASE("slow full-battle baseline stays inside the published bands") {
     CHECK(passiveYangMedian <= 2003.f);
     CHECK(scriptedYangMedian >= 1663.f);
     CHECK(scriptedYangMedian <= 2003.f);
+
+    const float scriptedSaved =
+        percentile(column(scripted, [](const RunResult &result) { return result.savedRate; }), 0.5);
+    INFO("scripted saved-rate median " << scriptedSaved);
+    CHECK(scriptedSaved >= 0.04234489933961343);
+    CHECK(scriptedSaved <= 0.4384374131301025);
 }
