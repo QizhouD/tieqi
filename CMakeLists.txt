@@ -15,6 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(cmake/Warnings.cmake)
 
 add_library(tq_core STATIC src/core/core.cpp)
+target_include_directories(tq_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 tq_apply_warnings(tq_core)
 
 add_library(tq_data STATIC src/data/data.cpp)
@@ -34,7 +35,10 @@ tq_apply_warnings(tq_headless)
 
 if(TQ_BUILD_TESTS)
     enable_testing()
-    add_executable(tq_tests tests/placeholder.cpp)
+    add_executable(tq_tests
+        tests/placeholder.cpp
+        tests/core/geometry.cpp
+        tests/core/terrain.cpp)
     target_link_libraries(tq_tests PRIVATE tq_core tq_data doctest::doctest)
     tq_apply_warnings(tq_tests)
     add_test(NAME tq_tests COMMAND tq_tests)
