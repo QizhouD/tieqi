@@ -209,4 +209,28 @@ inline constexpr float kMergeDistance = 46.f;
 inline constexpr float kSplitMinMen = 160.f;
 inline constexpr float kSplitGap = 2.f;
 
+inline constexpr float kAiDeployMeters = 170.f;
+inline constexpr float kAiFragSeek = 260.f;
+inline constexpr float kAiFragNear = 120.f;
+inline constexpr float kAiGunnerAdvance = 15.f;
+inline constexpr float kAiGunnerHalt = 20.f;
+inline constexpr float kAiGunnerKeep = 40.f;
+inline constexpr float kAiAnchorEngage = 100.f;
+inline constexpr float kAiAnchorDepth = 130.f;
+inline constexpr float kAiAnchorSlop = 40.f;
+inline constexpr float kAiRearPad = 20.f;
+inline constexpr float kAiSupportMeters = 240.f;
+inline constexpr float kAiFollowMeters = 55.f;
+inline constexpr float kAiVanCharge = 260.f;
+inline constexpr float kAiScoreDist = 60.f;
+inline constexpr float kAiScoreWaver = 1.6f;
+inline constexpr float kAiScoreUnfitShock = 1.6f;
+inline constexpr float kAiScoreUnfit = 0.5f;
+inline constexpr float kAiScoreGeneralShock = 1.3f;
+inline constexpr float kAiScoreGeneral = 1.05f;
+inline constexpr float kAiScoreRecover = 1.3f;
+inline constexpr float kAiScorePikeGun = 1.7f;
+inline constexpr float kAiPikeGunMeters = 150.f;
+inline constexpr float kAiSwitchKeep = 0.7f;
+
 } // namespace tq

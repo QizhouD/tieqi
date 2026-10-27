@@ -69,6 +69,7 @@ class Battle {
   private:
     friend class testing::BattleAccess;
     void apply(const Command &cmd);
+    void aiThink();
     void advancePhase();
     void spawnGroup(const std::string &groupId);
     void checkVictory();
@@ -116,6 +117,7 @@ class Battle {
     std::vector<std::uint16_t> fragCount_;
     std::map<std::string, UnitId> sceneIds_;
     std::vector<UnitId> vanguardIds_;
+    bool vanAggro_ = false;
     bool warned_ = false;
     std::uint32_t mainAt_ = 0;
     std::uint32_t phase2At_ = 0;

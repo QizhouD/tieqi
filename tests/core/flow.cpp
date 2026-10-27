@@ -64,7 +64,7 @@ void markThreeVanguard(Battle &battle) {
 
 TEST_CASE("the clock warns, changes phase, and reinforces on the converted ticks") {
     const GameData data = byeokjegwan();
-    Battle battle(data.defs, data.scenario, 1);
+    Battle battle(data.defs, data.scenario, 1, BattleOptions{false});
     grid(battle);
     markThreeVanguard(battle);
     std::optional<std::uint32_t> warning;
@@ -115,7 +115,7 @@ TEST_CASE("the clock warns, changes phase, and reinforces on the converted ticks
 
 TEST_CASE("a threatened commander brings the reinforcement early") {
     const GameData data = byeokjegwan();
-    Battle battle(data.defs, data.scenario, 1);
+    Battle battle(data.defs, data.scenario, 1, BattleOptions{false});
     grid(battle);
     markThreeVanguard(battle);
     testing::BattleAccess::unit(battle, 0).men = 1.f;
@@ -135,7 +135,7 @@ TEST_CASE("a threatened commander brings the reinforcement early") {
 
 TEST_CASE("without a broken vanguard the schedule stays on the long clock") {
     const GameData data = byeokjegwan();
-    Battle battle(data.defs, data.scenario, 1);
+    Battle battle(data.defs, data.scenario, 1, BattleOptions{false});
     grid(battle);
     std::optional<std::uint32_t> warning;
     std::optional<std::uint32_t> phase2;
@@ -174,7 +174,7 @@ TEST_CASE("without a broken vanguard the schedule stays on the long clock") {
 TEST_CASE("a scenario without flow stays in phase 1") {
     GameData data = byeokjegwan();
     data.scenario.flow.enabled = false;
-    Battle battle(data.defs, data.scenario, 1);
+    Battle battle(data.defs, data.scenario, 1, BattleOptions{false});
     const std::size_t before = battle.units().size();
     battle.step();
     CHECK(battle.phase() == 1);
@@ -196,7 +196,7 @@ TEST_CASE("a scenario without flow stays in phase 1") {
 TEST_CASE("five endings and the grade boundaries") {
     const GameData data = byeokjegwan();
     const auto finish = [&](auto &&prepare) {
-        Battle battle(data.defs, data.scenario, 1);
+        Battle battle(data.defs, data.scenario, 1, BattleOptions{false});
         prepare(battle);
         battle.step();
         return battle.result();
@@ -254,7 +254,7 @@ TEST_CASE("five endings and the grade boundaries") {
 
     float total = 0.f;
     {
-        Battle battle(data.defs, data.scenario, 1);
+        Battle battle(data.defs, data.scenario, 1, BattleOptions{false});
         for (const Unit &unit : battle.units()) {
             if (unit.side == Side::Ming) {
                 total += battle.typeOf(unit).men;
@@ -262,7 +262,7 @@ TEST_CASE("five endings and the grade boundaries") {
         }
     }
     const auto graded = [&](float saved, int broken) {
-        Battle battle(data.defs, data.scenario, 1);
+        Battle battle(data.defs, data.scenario, 1, BattleOptions{false});
         for (const Unit &unit : battle.units()) {
             if (unit.id == 0) {
                 continue;
