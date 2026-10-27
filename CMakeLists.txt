@@ -71,11 +71,15 @@ if(TQ_BUILD_TESTS)
         tests/core/flow.cpp
         tests/core/ai.cpp
         tests/replay/replay.cpp
+        tests/parity/duel.cpp
+        tests/parity/baseline.cpp
         tools/headless/Policy.cpp
         tools/headless/Run.cpp)
     target_link_libraries(tq_tests PRIVATE tq_core tq_data doctest::doctest)
     file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}" TQ_SOURCE_DIR_FWD)
     target_compile_definitions(tq_tests PRIVATE "TQ_SOURCE_DIR=\"${TQ_SOURCE_DIR_FWD}\"")
     tq_apply_warnings(tq_tests)
-    add_test(NAME tq_tests COMMAND tq_tests)
+    add_test(NAME tq_tests COMMAND tq_tests --test-case-exclude=*slow*)
+    add_test(NAME tq_tests_slow COMMAND tq_tests --test-case=*slow*)
+    set_tests_properties(tq_tests_slow PROPERTIES LABELS slow)
 endif()

@@ -22,6 +22,7 @@ struct Args {
     std::uint32_t maxTicks = 18000;
     std::optional<std::filesystem::path> out;
     std::optional<std::filesystem::path> replayDir;
+    std::optional<std::filesystem::path> eventsOut;
     std::optional<std::filesystem::path> dataRoot;
     bool sawScenario = false;
     bool sawPolicy = false;
@@ -30,7 +31,7 @@ struct Args {
 void usage() {
     std::cerr << "tq_headless --scenario byeokjegwan --seed 1 --runs 30 --policy scripted\n"
               << "            [--no-ai] [--max-ticks 18000] [--out runs.csv] [--replay-dir replays/]\n"
-              << "            [--data-root data]\n";
+              << "            [--events-out trace.jsonl] [--data-root data]\n";
 }
 
 bool parse(int argc, char **argv, Args &args) {
@@ -69,6 +70,8 @@ bool parse(int argc, char **argv, Args &args) {
             args.out = need("--out");
         } else if (flag == "--replay-dir") {
             args.replayDir = need("--replay-dir");
+        } else if (flag == "--events-out") {
+            args.eventsOut = need("--events-out");
         } else if (flag == "--data-root") {
             args.dataRoot = need("--data-root");
         } else if (flag == "--help") {
@@ -142,10 +145,18 @@ int main(int argc, char **argv) {
             request.seed = args.seed + static_cast<std::uint64_t>(i);
             request.ai = args.ai;
             request.maxTicks = args.maxTicks;
+            if (args.eventsOut) {
+                std::filesystem::path path = *args.eventsOut;
+                if (args.runs > 1) {
+                    path = path.parent_path() /
+                           (path.stem().string() + "-" + std::to_string(request.seed) + path.extension().string());
+                }
+                request.eventsOut = path;
+            }
             const auto started = std::chrono::steady_clock::now();
             tq::RunResult result = tq::runBattle(data, request);
             const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-            if (result.timeout || !result.finite || result.events <= 0 || seconds > 10.0) {
+            if (result.timeout || !result.finite || result.events <= 0 || (!args.eventsOut && seconds > 10.0)) {
                 failed = true;
             }
             if (args.policy == tq::PolicyKind::Scripted && result.impacts <= 0) {

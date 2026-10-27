@@ -102,7 +102,8 @@ Battle::Battle(const GameDefs &defs, const ScenarioDef &scenario, std::uint64_t 
         unit.order.type = Order::Type::Hold;
         unit.order.face = place.facing;
         unit.stillSec = kInitialStillSec;
-        unit.reloadSec = type.range > 0.f ? kReloadRollSec * rng_.uniform() : 0.f;
+        const float reloadRoll = rng_.uniform();
+        unit.reloadSec = type.range > 0.f ? kReloadRollSec * reloadRoll : 0.f;
         unit.vanguard = place.vanguard;
         if (type.side == Side::Ming) {
             totalMing_ += type.men;
@@ -952,6 +953,7 @@ void Battle::combatTick() {
         bool used = false;
     };
     std::vector<Harm> harm(units_.size());
+    std::vector<UnitId> settlement;
     for (UnitId id : live) {
         Unit &attacker = units_[id];
         if (!alive(attacker) || attacker.contacts.empty() || !fighting(attacker) || attacker.breaking) {
@@ -987,6 +989,9 @@ void Battle::combatTick() {
                                            kMeleeRatioMin, kMeleeRatioMax);
             const float roll = kMeleeRandomBase + kMeleeRandomSpan * rng_.uniform();
             const float cavalryRout = routed && attackerType.cls == UnitClass::Cavalry ? kMeleeCavalryRout : 1.f;
+            if (!harm[targetId].used) {
+                settlement.push_back(targetId);
+            }
             harm[targetId].used = true;
             harm[targetId].casualties += targetType.men * kMeleeCasualties * attackPower * sideMul * roll * share *
                                          targetType.armor * cavalryRout;
@@ -996,8 +1001,8 @@ void Battle::combatTick() {
             }
         }
     }
-    for (UnitId id = 0; id < harm.size(); ++id) {
-        if (!harm[id].used || !alive(units_[id])) {
+    for (UnitId id : settlement) {
+        if (!alive(units_[id])) {
             continue;
         }
         Unit &target = units_[id];
@@ -1303,8 +1308,11 @@ Unit Battle::makeUnit(std::uint16_t typeIndex, Vec2 pos, float facing, bool coun
     unit.order.type = Order::Type::Hold;
     unit.order.face = facing;
     unit.stillSec = kInitialStillSec;
-    if (rollReload && type.range > 0.f) {
-        unit.reloadSec = kReloadRollSec * rng_.uniform();
+    if (rollReload) {
+        const float reloadRoll = rng_.uniform();
+        if (type.range > 0.f) {
+            unit.reloadSec = kReloadRollSec * reloadRoll;
+        }
     }
     if (countTotal) {
         if (type.side == Side::Ming) {

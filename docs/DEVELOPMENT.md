@@ -481,7 +481,7 @@ struct Replay { std::string build, scenario; std::uint64_t seed; std::vector<Com
 - `nearGeneral(u)`：同阵营、可战、与 u 的距离小于自身 `aura` 的将领单位（不含 u 自己），有多个时取 UnitId 最小者。
 - 范围判定一律用严格小于；"最近""最高"出现并列时取 UnitId 最小者。
 - 遍历单位一律按 UnitId 升序。一个步骤开始时记下单位总数，步骤中新产生的单位（残部、分队）从下一个步骤起才参与。
-- 单位生成时：`men = maxMen = type.men`，`morale = type.morale`，状态 Steady，命令 Hold（朝向为初始朝向），正面宽度和纵深取兵种值，`stillSec = 16`；有射程的兵种 `reloadSec = 16 × U()`，其余为 0。
+- 单位生成时：`men = maxMen = type.men`，`morale = type.morale`，状态 Steady，命令 Hold（朝向为初始朝向），正面宽度和纵深取兵种值，`stillSec = 16`。每个新单位都消耗一次 `U()`（与原型 `add()` 相同）；有射程的把 `reloadSec` 设为 `16 ×` 该值，其余丢掉这次结果，`reloadSec` 为 0。
 - `isMoving(u)`：可战，且命令为 Move 或 Attack。
 
 ### 原型数值换算
@@ -583,6 +583,8 @@ routMove(u)
   x 限制在 [10, W - 10]，y 不限制；y < -12 或 y > H + 12 -> fled(u)
 ```
 
+接触检测末尾对所有存活单位调用 `clampPos`，溃逃单位的 y 也会被夹回 \[10, H − 10\]。因此上面的 `fled` 判定目前到不了：溃兵停在地图边缘，可能集结后再走进撤退口。这与原型 `contactsStep` 一致，本阶段维持现状。
+
 ### 接触检测（每 tick）
 
 ```text
@@ -682,7 +684,7 @@ pairMul(x, y) = (x 有长枪、y 是骑兵、sideOf(x, y) 为 Front ? 1.3 : 1)
     cas   = e.type.men * 0.012 * aP * sm * rnd * share * e.type.armor * (routed 且 a 是骑兵 ? 1.4 : 1)
     ml    = routed ? 0 : (0.8 + e.engagedSec / 160) * sqrt(ratio) * (Front 1，Flank 1.5，Rear 2) * share * rnd
     e 的累计伤亡 += cas，累计士气损失 += ml
-按 e 的 id 升序结算：before = e.men；kill(e, 累计伤亡)
+按首次累计到该目标的顺序结算（攻击方按 id 升序，其接战列表按 id 升序；同一目标只在第一次被计入时入队）。这与原型 `Map` 的插入顺序一致，并且确定。before = e.men；kill(e, 累计伤亡)
   e 仍存活且可战：frac = (before - e.men) / e.maxMen
                  e.morale -= (累计士气损失 + 75 * frac) * (nearGeneral(e) ? 0.85 : 1)
 ```
@@ -1457,7 +1459,7 @@ approach(u, f, keep)
 | D6 | 辽骑 (440, 600) recoverSec = 400（不能冲锋）接战长枪；家丁 (150, 700) 朝东坚守，tick 61 转为攻击，跑 300 tick | tick 110 侧击 ×2.32–3.70，长枪当场崩溃；辽骑在正面缠斗中也全部崩溃 |
 | D7 | 同 D1 但开 AI；铁炮崩溃后家丁 Move 到 (440, 150)，跑 900 tick | tick 47 冲击 ×3.14（铁炮在 AI 驱使下前移，未列阵）；残部自行靠拢，tick 245–270 开始合并；结束时合成一队 343 人、可战 |
 
-验收：第一次冲击的 tick ±2、倍数 ±0.05；是否破阵、攻方是否崩溃与原型一致；崩溃 tick ±10；兵数 ±3%；D7 的合并 tick ±20。跑 10 个种子，全部满足才算通过。
+验收：第一次冲击的 tick ±2、倍数 ±0.05；是否破阵、攻方是否崩溃与原型一致；崩溃 tick ±10；兵数 ±3%；D7 的合并 tick ±20。D1 铁炮残部相对上表的 222–227 同样按 ±3%。跑 10 个种子，全部满足才算通过。对齐 `add()` 的随机数之后，种子 3、6、8、9 的残部是 218.8–221.9。
 
 ### 整场基线
 
@@ -1466,20 +1468,35 @@ approach(u, f, keep)
 - `passive`：不下任何命令。
 - `scripted`：tick 1 令辽骑右营攻立花铁炮右队、家丁左营攻立花铁炮左队；tick 300 之后令家丁右营攻立花武士队（双方都在且家丁右营可战时）；进入阶段 3 满 300 tick 时，给每个可战明军单独下一条 Move 到 (440, 20)，只下一次。单位按场景 id 引用。
 
-原型各跑 30 场的结果：
+原型用官方浮点时钟各跑 100 场（种子 1–100）的结果。分位取排序后的下标 `ceil(p×n)−1`。
 
 | 指标 | passive | scripted |
 | --- | --- | --- |
-| 结果 | 30 场全败，李如松阵亡 | 败 17、小胜 7、惨胜 6、大胜 0 |
-| 结束 tick（5% / 中位 / 95%） | 1425 / 1600 / 3700 | 2093 / 2320 / 3065 |
-| 预警 tick | 1601（半数场次在此前已结束） | 801 或 1601 |
-| 阶段 2 / 阶段 3 | 1802 / 2703 | 1002 或 1802 / 1903 或 2703 |
-| 杨元入场 tick | 2003 | 1203–2197，中位 1910 |
-| 撤出兵力比例中位 | 0 | 0.27（95% 为 0.49） |
-| 日军崩溃队数中位 | 1 | 3 |
-| 冲击次数中位 | 5 | 12 |
+| 结果 | 败 98、惨胜 1、小胜 1、大胜 0；主帅阵亡 98 | 败 51、小胜 34、惨胜 15、大胜 0；主帅阵亡 51 |
+| 结束 tick（5% / 25% / 中位 / 75% / 95%） | 1475 / 1575 / 1625 / 1765 / 3125 | 1930 / 2268 / 2398 / 2885 / 3205 |
+| 预警 tick | 58 场，全是 1601 | 100 场：801 或 1601，另有 1 场 1536；中位 801 |
+| 阶段 2 / 阶段 3 | 20 场全是 1802 / 11 场全是 2703 | 1002×50、1737×1、1802×49 / 1903×47、2703×29 |
+| 杨元入场 tick | 13 场全是 2003 | 98 场：1267 / 1663 / 2003 / 2003 / 2540 |
+| 撤出兵力比例（中位 / 95%） | 0 / 0.057 | 0.284 / 0.550 |
+| 日军崩溃队数（25% / 中位 / 75%） | 0 / 1 / 1 | 2 / 3 / 3 |
+| 冲击次数（25% / 中位 / 75%） | 4 / 5 / 6 | 9 / 10 / 13 |
 
-验收（30 个种子）：passive 全败且都是主帅阵亡、都在 4000 tick 内结束、结束 tick 中位数在 1300–2000；scripted 胜率在 20%–70%、日军崩溃中位数 2–4、冲击次数中位数 9–15、杨元入场在 tick 1150–2250；两种策略的阶段 2 都只出现在 tick 1000 或 1800（±2）。这些是回归基线，不是平衡目标；改平衡时同步更新本表。
+同一种子上移植的 100 场：
+
+| 指标 | passive 移植 | scripted 移植 |
+| --- | --- | --- |
+| 胜 / 主帅阵亡 | 2 / 98 | 48 / 52 |
+| 结束 tick 中位 | 1615 | 2271 |
+| 杨元入场中位（有入场的场次） | 12 场全是 2000 | 98 场，中位 1864 |
+| 日军崩溃队数中位 | 1 | 3 |
+| 冲击次数中位 | 5 | 10 |
+
+阶段 2 的规则是先锋崩满 3 队且 t ≥ 800 就立即预警，所以它可以落在 1000–1800 之间的任何 tick。验收（两种策略分开算）：
+
+- 胜率、主帅阵亡占比与原型相差不超过 15 个百分点。
+- 结束 tick、日军崩溃队数、冲击次数：移植中位数落在原型的 25%–75% 分位之间。
+- 杨元入场 tick 同样比分位。passive 的原型样本挤在 2003，移植是 2000，差 3 tick，来自 0.1 累加（预警、阶段 2、危急各晚 1 tick）。这一项允许移植中位数比原型中位数早最多 4 tick。
+- 阶段 2 = 该场预警 tick + 200（±2），并且在 1000–1800 之内。
 
 ### 回放与确定性
 
@@ -1492,6 +1509,7 @@ approach(u, f, keep)
 ```text
 tq_headless --scenario byeokjegwan --seed 1 --runs 30 --policy scripted
             [--no-ai] [--max-ticks 18000] [--out runs.csv] [--replay-dir replays/]
+            [--events-out trace.jsonl]
 ```
 
 每场一行 CSV：seed、policy、end\_tick、end\_kind、grade、saved\_rate、warn\_tick、phase2\_tick、phase3\_tick、reinforce\_tick、ming\_lost、jp\_lost、ming\_broken、jp\_broken、impacts、best\_impact、events。最后打印各列的 5%、中位、95% 和结果计数。超过 `--max-ticks` 未结束记为 timeout。CI 冒烟用 scripted 策略跑种子 1、2、3：不崩溃、不 timeout、至少一次 Impact、所有单位字段始终是有限数、每场少于 10 秒。
@@ -1511,6 +1529,22 @@ window.__S = () => S; window.__step = step;
 window.__f = { PADDIES, HILLS, ROAD, TYPES, chargeCalc, meleeCalc, sideOf, terrainAt, capOf,
                meleePower, pairMul, previewCalc, add, newGame, sizeFrag, startBattle };
 ```
+
+本机脚本在 `tools/parity/`，不进 CMake，也不进 CI。它运行时复制原型再打上面两处补丁，模拟用的 `Math.random` 换成与 `tq::Rng` 相同的 PCG32（种子、initseq 1、24 位），特效随机数另走一条。`--events-out` 与原型脚本写出同一种 JSON Lines：事件带类型、tick、场景 id、序号和数值，每个 tick 再附一条单位状态。
+
+```text
+node tools/parity/drive.mjs --seed 1 --policy passive --out trace.jsonl
+tq_headless --scenario byeokjegwan --seed 1 --runs 1 --policy passive --events-out trace.jsonl
+node tools/parity/compare.mjs proto.jsonl port.jsonl
+```
+
+种子 1–30、两种策略逐 tick 对照过。第一处分歧都是浮点，没有改移植：
+
+- 分离轴用 float32，原型用 JS 的 float64。重叠残部会选到不同的轴。passive 种子 1 在 tick 761，辽骑中营三股的击退速度仍一致，位置差约 15 米。scripted 的同样差别在第一次散开后的 tick 60。
+- 崩溃计时。float32 的 9.6 − 12×0.8 < 0，第 12 次扣减进入溃逃；JS 的 1.2 − 12×0.1 仍是正的极小值，要第 13 次。scripted 在 tick 71、passive 在 tick 772 看得到状态差。
+- 先锋按兵。原型 `S.t > 45` 在 tick 450 已经为真（450×0.1 = 45.00000000000037）。移植用整数 tick > 450，AI 又只在整十 tick 思考，最早是 tick 460。
+- 阶段时钟。原型预警 1601、阶段 2 为 1802、危急援军 2003；移植是 1600、1800、2000。
+- 大约从 tick 507 起，个别单位位置差约 1e-3 米，朝向差约 1e-6。
 
 ### 手动验收（每个里程碑）
 
@@ -1600,8 +1634,8 @@ window.__f = { PADDIES, HILLS, ROAD, TYPES, chargeCalc, meleeCalc, sideOf, terra
 
 ### P1 原型对照
 
-- 做：`tests/parity/` 里的 D1–D7 对决测试（10 个种子）；整场基线检查做成带 `slow` 标签的 ctest（30 个种子）。
-- 验收：全部在允许范围内。不在范围内时找出移植差异并在 PR 里分析，不要为了过测试改数值。
+- 做：`tests/parity/` 里的 D1–D7 对决测试（10 个种子）；整场基线检查做成带 `slow` 标签的 ctest（100 个种子）。
+- 验收：对决全部在允许范围内；整场按「整场基线」的 100 场规则。不在范围内时找出移植差异并在 PR 里分析，不要为了过测试改数值。
 
 ### A0 SFML 3 外壳
 
@@ -1726,6 +1760,7 @@ agent 碰到下列问题时按"默认做法"继续干，不要停工；作者改
 | 朝鲜军陆战视角 | demo 不做，海战以后另议 | demo 之后 |
 | 韩文、英文标题字体 | 先用各自正文字体的粗体。韩文候选 Nanum Brush Script（OFL） | L1 |
 | 界面秒数用战场秒还是墙钟秒 | 战场秒，与战场时钟一致 | M2 试玩后 |
+| 溃兵能否逃出地图，以及溃兵在撤退口里集结后是否算撤出 | 维持原型：接触检测对所有单位 clampPos，溃兵出不了地图，fled 目前不会触发 | M2 试玩后 |
 | 美术 | 代码绘制；AIGC 素材到位后按原尺寸替换，并登记到 AI\_ASSETS.md | 随时 |
 | 存档与多场景 | demo 只有一个场景，不做存档，只存设置 | demo 之后 |
 | macOS 构建 | demo 不支持；CI 只有 Windows 和 Ubuntu | demo 之后 |

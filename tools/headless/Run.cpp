@@ -1,8 +1,13 @@
 #include "Run.h"
 
+#include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace tq {
 namespace {
@@ -97,6 +102,182 @@ void note(RunResult &result, const Event &event) {
     }
 }
 
+const char *eventName(Event::Type type) {
+    switch (type) {
+    case Event::Type::Impact:
+        return "Impact";
+    case Event::Type::ThreeEyedVolley:
+        return "ThreeEyedVolley";
+    case Event::Type::TeppoVolley:
+        return "TeppoVolley";
+    case Event::Type::Breakaway:
+        return "Breakaway";
+    case Event::Type::Broken:
+        return "Broken";
+    case Event::Type::Shattered:
+        return "Shattered";
+    case Event::Type::Rallied:
+        return "Rallied";
+    case Event::Type::Merged:
+        return "Merged";
+    case Event::Type::Split:
+        return "Split";
+    case Event::Type::Dispersed:
+        return "Dispersed";
+    case Event::Type::Fled:
+        return "Fled";
+    case Event::Type::Withdrawn:
+        return "Withdrawn";
+    case Event::Type::GeneralDown:
+        return "GeneralDown";
+    case Event::Type::MomentumGained:
+        return "MomentumGained";
+    case Event::Type::ScoutWarning:
+        return "ScoutWarning";
+    case Event::Type::PhaseChanged:
+        return "PhaseChanged";
+    case Event::Type::Reinforcement:
+        return "Reinforcement";
+    case Event::Type::GrandAssault:
+        return "GrandAssault";
+    case Event::Type::BattleEnded:
+        return "BattleEnded";
+    }
+    return "Impact";
+}
+
+const char *stateName(UnitState state) {
+    switch (state) {
+    case UnitState::Steady:
+        return "Steady";
+    case UnitState::Wavering:
+        return "Wavering";
+    case UnitState::Broken:
+        return "Broken";
+    case UnitState::Routing:
+        return "Routing";
+    case UnitState::Gone:
+        return "Gone";
+    }
+    return "Gone";
+}
+
+const char *orderName(Order::Type type) {
+    switch (type) {
+    case Order::Type::Hold:
+        return "Hold";
+    case Order::Type::Move:
+        return "Move";
+    case Order::Type::Attack:
+        return "Attack";
+    }
+    return "Hold";
+}
+
+struct Named {
+    std::string id;
+    int seq = 0;
+};
+
+Named nameOf(const Battle &battle, UnitId id) {
+    Named named;
+    if (id == kNoUnit || id >= battle.units().size()) {
+        return named;
+    }
+    const Unit &unit = battle.units()[id];
+    const UnitId origin = unit.origin == kNoUnit ? id : unit.origin;
+    const bool piece = unit.origin != kNoUnit || unit.fragNo > 0;
+    named.seq = piece ? static_cast<int>(unit.fragNo) : 0;
+    if (const std::optional<std::string> scene = battle.sceneName(piece ? origin : id)) {
+        named.id = *scene;
+    } else {
+        named.id = "#" + std::to_string(piece ? origin : id);
+    }
+    return named;
+}
+
+void jsonString(std::ostream &out, const std::string &text) {
+    out << '"';
+    for (unsigned char c : text) {
+        if (c == '"' || c == '\\') {
+            out << '\\';
+        }
+        out << static_cast<char>(c);
+    }
+    out << '"';
+}
+
+void jsonFloat(std::ostream &out, float value) {
+    char buffer[64];
+    std::snprintf(buffer, sizeof(buffer), "%.8g", static_cast<double>(value));
+    out << buffer;
+}
+
+void writeEventLine(std::ostream &out, const Battle &battle, const Event &event) {
+    const Named a = nameOf(battle, event.a);
+    const Named b = nameOf(battle, event.b);
+    out << "{\"kind\":\"event\",\"tick\":" << event.tick << ",\"type\":\"" << eventName(event.type) << "\",\"a\":";
+    jsonString(out, a.id);
+    out << ",\"aSeq\":" << a.seq << ",\"b\":";
+    jsonString(out, b.id);
+    out << ",\"bSeq\":" << b.seq << ",\"value\":";
+    jsonFloat(out, event.value);
+    out << "}\n";
+}
+
+void writeStateLine(std::ostream &out, const Battle &battle) {
+    struct Row {
+        Named name;
+        const Unit *unit = nullptr;
+    };
+    std::vector<Row> rows;
+    rows.reserve(battle.units().size());
+    for (const Unit &unit : battle.units()) {
+        rows.push_back(Row{nameOf(battle, unit.id), &unit});
+    }
+    std::sort(rows.begin(), rows.end(), [](const Row &left, const Row &right) {
+        if (left.name.id != right.name.id) {
+            return left.name.id < right.name.id;
+        }
+        return left.name.seq < right.name.seq;
+    });
+    out << "{\"kind\":\"state\",\"tick\":" << battle.tick() << ",\"units\":[";
+    bool first = true;
+    for (const Row &row : rows) {
+        const Unit &unit = *row.unit;
+        if (!first) {
+            out << ',';
+        }
+        first = false;
+        const Named target = unit.order.type == Order::Type::Attack ? nameOf(battle, unit.order.target) : Named{};
+        out << "{\"id\":";
+        jsonString(out, row.name.id);
+        out << ",\"seq\":" << row.name.seq << ",\"x\":";
+        jsonFloat(out, unit.pos.x);
+        out << ",\"y\":";
+        jsonFloat(out, unit.pos.y);
+        out << ",\"facing\":";
+        jsonFloat(out, unit.facing);
+        out << ",\"men\":";
+        jsonFloat(out, unit.men);
+        out << ",\"morale\":";
+        jsonFloat(out, unit.morale);
+        out << ",\"state\":\"" << stateName(unit.state) << "\",\"order\":\"" << orderName(unit.order.type)
+            << "\",\"target\":";
+        jsonString(out, target.id);
+        out << ",\"targetSeq\":" << target.seq << ",\"still\":";
+        jsonFloat(out, unit.stillSec);
+        out << ",\"reload\":";
+        jsonFloat(out, unit.reloadSec);
+        out << ",\"kx\":";
+        jsonFloat(out, unit.knock.x);
+        out << ",\"ky\":";
+        jsonFloat(out, unit.knock.y);
+        out << '}';
+    }
+    out << "]}\n";
+}
+
 } // namespace
 
 RunResult runBattle(const GameData &data, const RunRequest &request) {
@@ -105,6 +286,17 @@ RunResult runBattle(const GameData &data, const RunRequest &request) {
     Battle battle(data.defs, data.scenario, request.seed, options);
     PolicyState state;
     RunResult result;
+    std::ofstream events;
+    if (request.eventsOut) {
+        if (request.eventsOut->has_parent_path()) {
+            std::filesystem::create_directories(request.eventsOut->parent_path());
+        }
+        events.open(*request.eventsOut, std::ios::binary);
+        if (!events) {
+            throw std::runtime_error("无法写入 " + request.eventsOut->string());
+        }
+        writeStateLine(events, battle);
+    }
     result.replay.schema = 1;
     result.replay.build = buildId();
     result.replay.scenario = data.scenario.id;
@@ -132,6 +324,12 @@ RunResult runBattle(const GameData &data, const RunRequest &request) {
         for (const Event &event : battle.drainEvents()) {
             note(result, event);
             result.log.push_back(event);
+            if (events) {
+                writeEventLine(events, battle, event);
+            }
+        }
+        if (events) {
+            writeStateLine(events, battle);
         }
     }
     result.endTick = battle.tick();
