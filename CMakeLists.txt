@@ -43,8 +43,21 @@ target_compile_definitions(tq_data PRIVATE "TQ_BUILD_ID=\"${TQ_BUILD_ID}\"")
 target_link_libraries(tq_data PUBLIC tq_core nlohmann_json::nlohmann_json)
 tq_apply_warnings(tq_data)
 
-add_executable(tieqi src/app/main.cpp)
+add_executable(tieqi
+    src/app/main.cpp
+    src/app/App.cpp
+    src/app/Window.cpp
+    src/app/ResourceManager.cpp
+    src/app/AudioManager.cpp
+    src/app/ParticleSystem.cpp
+    src/app/Launch.cpp
+    src/app/SaveData.cpp
+    src/app/Script.cpp
+    src/app/Synth.cpp)
 target_link_libraries(tieqi PRIVATE tq_core tq_data SFML::Graphics SFML::Audio)
+add_custom_command(TARGET tieqi POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:tieqi>/data
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:tieqi>/assets)
 if(TQ_DEV_TOOLS)
     target_link_libraries(tieqi PRIVATE ImGui-SFML::ImGui-SFML)
 endif()
@@ -73,6 +86,11 @@ if(TQ_BUILD_TESTS)
         tests/replay/replay.cpp
         tests/parity/duel.cpp
         tests/parity/baseline.cpp
+        tests/app/shell.cpp
+        src/app/Launch.cpp
+        src/app/SaveData.cpp
+        src/app/Script.cpp
+        src/app/Synth.cpp
         tools/headless/Policy.cpp
         tools/headless/Run.cpp)
     target_link_libraries(tq_tests PRIVATE tq_core tq_data doctest::doctest)
