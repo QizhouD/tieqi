@@ -9,6 +9,7 @@ namespace tq {
 inline constexpr std::uint8_t kPikeFront = 1;
 inline constexpr std::uint8_t kBreaks = 2;
 inline constexpr std::uint8_t kImportant = 4;
+inline constexpr std::uint8_t kAssaultFailed = 8;
 
 struct Event {
     enum class Type : std::uint8_t {

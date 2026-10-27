@@ -75,6 +75,10 @@ float capOf(const Unit &unit, const UnitType &type) {
     return type.morale * (kCapFloor + kCapMen * std::min(1.f, unit.men / type.men));
 }
 
+std::uint32_t ticksFromSeconds(float seconds) {
+    return static_cast<std::uint32_t>(std::lround(static_cast<double>(seconds) / static_cast<double>(kTickSeconds)));
+}
+
 } // namespace
 
 Battle::Battle(const GameDefs &defs, const ScenarioDef &scenario, std::uint64_t seed, BattleOptions opts)
@@ -105,8 +109,13 @@ Battle::Battle(const GameDefs &defs, const ScenarioDef &scenario, std::uint64_t 
         } else {
             totalJp_ += type.men;
         }
+        sceneIds_[place.id] = unit.id;
+        if (place.vanguard) {
+            vanguardIds_.push_back(unit.id);
+        }
         units_.push_back(std::move(unit));
     }
+    reinforcementArrived_.assign(scenario_.flow.reinforcements.size(), false);
 }
 
 void Battle::submit(Command cmd) {
@@ -115,6 +124,9 @@ void Battle::submit(Command cmd) {
 }
 
 void Battle::step() {
+    if (result_.over) {
+        return;
+    }
     const std::uint32_t executing = tick_ + 1;
     for (const Command &cmd : commands_) {
         if (cmd.tick == executing) {
@@ -123,6 +135,7 @@ void Battle::step() {
     }
     std::erase_if(commands_, [&](const Command &cmd) { return cmd.tick == executing; });
     tick_ = executing;
+    advancePhase();
 
     if (options_.aiEnabled && tick_ % 10 == 0) {
         // C7 补 AI。
@@ -136,6 +149,7 @@ void Battle::step() {
     if (tick_ % 5 == 0) {
         combatTick();
     }
+    checkVictory();
 }
 
 std::vector<Event> Battle::drainEvents() {
@@ -1025,6 +1039,234 @@ void Battle::combatTick() {
         }
     }
     mergeStep(born);
+}
+
+const Unit *Battle::commander() const {
+    const auto found = sceneIds_.find(scenario_.commander);
+    if (found == sceneIds_.end() || found->second >= units_.size()) {
+        return nullptr;
+    }
+    return &units_[found->second];
+}
+
+int Battle::vanguardBroken() const {
+    int count = 0;
+    for (UnitId id : vanguardIds_) {
+        if (id >= units_.size()) {
+            continue;
+        }
+        const Unit &unit = units_[id];
+        if (unit.everBroken || !alive(unit)) {
+            count += 1;
+        }
+    }
+    return count;
+}
+
+bool Battle::anyAlive(Side side) const {
+    for (const Unit &unit : units_) {
+        if (unit.side == side && alive(unit)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Battle::spawnGroup(const std::string &groupId) {
+    const SpawnGroup *group = nullptr;
+    for (const SpawnGroup &item : scenario_.groups) {
+        if (item.id == groupId) {
+            group = &item;
+        }
+    }
+    if (group == nullptr) {
+        return;
+    }
+    for (const Placement &place : group->units) {
+        Unit unit = makeUnit(place.type, place.pos, place.facing, true, true);
+        unit.id = static_cast<UnitId>(units_.size());
+        unit.labelKey = place.labelKey;
+        unit.deploying = true;
+        unit.vanguard = place.vanguard;
+        unit.speed = defs_.types.at(place.type).walk;
+        unit.order = {};
+        unit.order.type = Order::Type::Move;
+        unit.order.point = place.rally;
+        unit.order.face = place.rallyFacing;
+        sceneIds_[place.id] = unit.id;
+        units_.push_back(std::move(unit));
+    }
+}
+
+void Battle::advancePhase() {
+    if (phase_ == 0) {
+        phase_ = 1;
+        Event entered;
+        entered.type = Event::Type::PhaseChanged;
+        entered.tick = tick_;
+        entered.value = 1.f;
+        events_.push_back(entered);
+    }
+    if (!scenario_.flow.enabled || result_.over) {
+        return;
+    }
+    const FlowDef &flow = scenario_.flow;
+    if (phase_ == 1) {
+        const std::uint32_t warnAt = ticksFromSeconds(flow.scoutWarning.atSec);
+        const std::uint32_t earlyAt = ticksFromSeconds(flow.scoutWarning.earlyAtSec);
+        const bool early = vanguardBroken() >= flow.scoutWarning.earlyVanguardBroken && tick_ >= earlyAt;
+        if (!warned_ && (tick_ >= warnAt || early)) {
+            warned_ = true;
+            mainAt_ = tick_ + ticksFromSeconds(flow.scoutWarning.leadSec);
+            Event warning;
+            warning.type = Event::Type::ScoutWarning;
+            warning.tick = tick_;
+            if (const Unit *ming = commander()) {
+                warning.pos = ming->pos;
+            }
+            events_.push_back(warning);
+        }
+        if (warned_ && tick_ >= mainAt_) {
+            phase_ = 2;
+            phase2At_ = tick_;
+            if (flow.phase2.openExit) {
+                exitOpen_ = true;
+            }
+            spawnGroup(flow.phase2.spawnGroup);
+            Event changed;
+            changed.type = Event::Type::PhaseChanged;
+            changed.tick = tick_;
+            changed.value = 2.f;
+            events_.push_back(changed);
+        }
+    }
+    if (phase_ == 2 && tick_ - phase2At_ >= ticksFromSeconds(flow.phase3.afterPhase2Sec)) {
+        phase_ = 3;
+        phase3At_ = tick_;
+        spawnGroup(flow.phase3.spawnGroup);
+        const auto general = sceneIds_.find(flow.phase3.grandAssault.general);
+        const bool launched =
+            general != sceneIds_.end() && general->second < units_.size() && fighting(units_[general->second]);
+        if (launched) {
+            const float added = flow.phase3.grandAssault.moraleAdd;
+            const float over = flow.phase3.grandAssault.capOverType;
+            for (Unit &unit : units_) {
+                if (unit.side == Side::Jp && fighting(unit)) {
+                    const float cap = typeOf(unit).morale + over;
+                    unit.morale = std::min(cap, unit.morale + added);
+                }
+            }
+        }
+        Event assault;
+        assault.type = Event::Type::GrandAssault;
+        assault.tick = tick_;
+        if (!launched) {
+            assault.flags = kAssaultFailed;
+        }
+        events_.push_back(assault);
+        Event changed;
+        changed.type = Event::Type::PhaseChanged;
+        changed.tick = tick_;
+        changed.value = 3.f;
+        events_.push_back(changed);
+    }
+    for (std::size_t index = 0; index < flow.reinforcements.size(); ++index) {
+        if (reinforcementArrived_[index] || phase_ < 2) {
+            continue;
+        }
+        const ReinforcementDef &reinforcement = flow.reinforcements[index];
+        bool danger = false;
+        if (const Unit *ming = commander(); ming != nullptr && alive(*ming)) {
+            const bool engaged = !ming->contacts.empty();
+            const bool unsteady = ming->state != UnitState::Steady;
+            const bool thin = ming->men < reinforcement.danger.menBelow * ming->maxMen;
+            const bool close = nearestEnemy(*ming, reinforcement.danger.enemyWithin) != nullptr;
+            danger = engaged || unsteady || thin || close;
+        }
+        const bool delayed = phase_ >= 3 && tick_ - phase3At_ >= ticksFromSeconds(reinforcement.afterPhase3Sec);
+        const bool rushed = danger && tick_ - phase2At_ >= ticksFromSeconds(reinforcement.danger.afterPhase2Sec);
+        if (!delayed && !rushed) {
+            continue;
+        }
+        spawnGroup(reinforcement.spawnGroup);
+        reinforcementArrived_[index] = true;
+        Event arrived;
+        arrived.type = Event::Type::Reinforcement;
+        arrived.tick = tick_;
+        events_.push_back(arrived);
+    }
+}
+
+void Battle::checkVictory() {
+    if (result_.over) {
+        return;
+    }
+    const Unit *ming = commander();
+    BattleEnd end = BattleEnd::None;
+    if (ming != nullptr && !alive(*ming)) {
+        if (ming->gone == GoneReason::GeneralKilled) {
+            end = BattleEnd::CommanderKilled;
+        } else if (ming->gone == GoneReason::Withdrawn) {
+            end = BattleEnd::Withdrawn;
+        } else if (ming->gone == GoneReason::Fled) {
+            end = BattleEnd::CommanderFled;
+        }
+    }
+    if (end == BattleEnd::None && !anyAlive(Side::Ming)) {
+        end = BattleEnd::Routed;
+    }
+    if (end == BattleEnd::None && phase_ >= 3 && !anyAlive(Side::Jp)) {
+        end = BattleEnd::Swept;
+    }
+    if (end == BattleEnd::None) {
+        return;
+    }
+    float saved = stats_.exitedMen;
+    if (end == BattleEnd::Withdrawn) {
+        const Aabb &rect = scenario_.exit.rect;
+        const Vec2 center{rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f};
+        for (const Unit &unit : units_) {
+            if (unit.side != Side::Ming || !fighting(unit) || !unit.contacts.empty()) {
+                continue;
+            }
+            if (length(unit.pos - center) < scenario_.exit.followRadius) {
+                saved += unit.men;
+            }
+        }
+    } else if (end == BattleEnd::Swept) {
+        for (const Unit &unit : units_) {
+            if (unit.side == Side::Ming && fighting(unit)) {
+                saved += unit.men;
+            }
+        }
+    }
+    const float rate = totalMing_ > 0.f ? saved / totalMing_ : 0.f;
+    const bool victory = end == BattleEnd::Withdrawn || end == BattleEnd::Swept;
+    Grade grade = Grade::Defeat;
+    if (victory) {
+        const bool decisive = end == BattleEnd::Swept || (rate >= scenario_.result.decisiveRate &&
+                                                          stats_.brokenJp >= scenario_.result.decisiveEnemyBroken);
+        if (decisive) {
+            grade = Grade::Decisive;
+        } else if (rate >= scenario_.result.minorRate) {
+            grade = Grade::Minor;
+        } else {
+            grade = Grade::Pyrrhic;
+        }
+    }
+    result_.over = true;
+    result_.end = end;
+    result_.grade = grade;
+    result_.saved = saved;
+    result_.rate = rate;
+    Event ended;
+    ended.type = Event::Type::BattleEnded;
+    ended.tick = tick_;
+    ended.value = static_cast<float>(static_cast<int>(grade));
+    if (ming != nullptr) {
+        ended.pos = ming->pos;
+    }
+    events_.push_back(ended);
 }
 
 Unit Battle::makeUnit(std::uint16_t typeIndex, Vec2 pos, float facing, bool countTotal, bool rollReload) {
