@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <numbers>
 #include <stdexcept>
 #include <utility>
 
@@ -23,10 +24,6 @@ float directionOf(Vec2 from, Vec2 to) { return std::atan2(to.y - from.y, to.x - 
 bool alive(const Unit &unit) { return unit.state != UnitState::Gone; }
 
 bool fighting(const Unit &unit) { return unit.state == UnitState::Steady || unit.state == UnitState::Wavering; }
-
-float strength(const Unit &unit, const UnitType &type) { return std::sqrt(unit.men / type.men); }
-
-float meleePower(const Unit &unit, const UnitType &type) { return type.melee * strength(unit, type); }
 
 void mix(std::uint64_t &hash, const void *data, std::size_t size) {
     const auto *bytes = static_cast<const unsigned char *>(data);
@@ -71,6 +68,10 @@ Obb unitBox(const Unit &unit, float inflate) { return obb(unit.pos, unit.facing,
 
 bool isMoving(const Unit &unit) {
     return fighting(unit) && (unit.order.type == Order::Type::Move || unit.order.type == Order::Type::Attack);
+}
+
+float capOf(const Unit &unit, const UnitType &type) {
+    return type.morale * (kCapFloor + kCapMen * std::min(1.f, unit.men / type.men));
 }
 
 } // namespace
@@ -127,7 +128,7 @@ void Battle::step() {
     }
     contactsStep();
     if (tick_ % 5 == 0) {
-        // C4 补战斗结算。
+        combatTick();
     }
 }
 
@@ -618,6 +619,43 @@ void Battle::breakUnit(Unit &unit) {
     event.pos = unit.pos;
     event.value = static_cast<float>(parts);
     events_.push_back(event);
+    for (Unit &other : units_) {
+        if (other.id == unit.id || !alive(other) || !fighting(other)) {
+            continue;
+        }
+        const float distance = length(other.pos - unit.pos);
+        if (other.side == unit.side && distance < kBreakAllyRange) {
+            const float cover = nearGeneral(other) ? kBreakAllyGeneral : 1.f;
+            other.morale -= (kBreakAllyBase + kBreakAllyScale * (1.f - distance / kBreakAllyRange)) * cover;
+        } else if (other.side != unit.side && distance < kBreakEnemyRange) {
+            const float cap = capOf(other, typeOf(other)) + kBreakEnemyCap;
+            other.morale = std::min(cap, other.morale + kBreakEnemyGain);
+        }
+    }
+    for (UnitId id : unit.contacts) {
+        if (id >= units_.size() || !fighting(units_[id]) || !typeOf(units_[id]).momentum) {
+            continue;
+        }
+        Unit &other = units_[id];
+        const UnitType &otherType = typeOf(other);
+        int gained = otherType.momentumBoost ? 2 : 1;
+        if (gained == 1) {
+            if (const Unit *general = nearGeneral(other)) {
+                if (typeOf(*general).momentumBoost) {
+                    gained = 2;
+                }
+            }
+        }
+        other.momentum = std::min(static_cast<int>(kMomentumCap), other.momentum + gained);
+        other.momentumSec = 0.f;
+        Event gainedEvent;
+        gainedEvent.type = Event::Type::MomentumGained;
+        gainedEvent.tick = tick_;
+        gainedEvent.a = other.id;
+        gainedEvent.pos = other.pos;
+        gainedEvent.value = static_cast<float>(gained);
+        events_.push_back(gainedEvent);
+    }
 }
 
 void Battle::kill(Unit &unit, float amount) {
@@ -708,7 +746,7 @@ const Unit *Battle::primaryContact(const Unit &self) const {
             continue;
         }
         const Unit &other = units_[id];
-        const float power = fighting(other) ? meleePower(other, typeOf(other)) : kUnfitMelee;
+        const float power = fighting(other) ? tq::meleePower(other, typeOf(other), terrainAt(other.pos)) : kUnfitMelee;
         if (best == nullptr || power > bestPower || (power == bestPower && other.id < best->id)) {
             best = &other;
             bestPower = power;
@@ -724,6 +762,200 @@ void Battle::emit(Event::Type type, UnitId id, Vec2 pos) {
     event.a = id;
     event.pos = pos;
     events_.push_back(event);
+}
+
+const Unit *Battle::nearGeneral(const Unit &unit) const {
+    for (const Unit &other : units_) {
+        if (other.id == unit.id || other.side != unit.side || !fighting(other) || !typeOf(other).general) {
+            continue;
+        }
+        if (length(other.pos - unit.pos) < typeOf(other).aura) {
+            return &other;
+        }
+    }
+    return nullptr;
+}
+
+void Battle::tryFire(Unit &shooter) {
+    const UnitType &shooterType = typeOf(shooter);
+    UnitId best = kNoUnit;
+    float bestScore = -1.f;
+    for (const Unit &other : units_) {
+        if (other.side == shooter.side || !alive(other)) {
+            continue;
+        }
+        const float distance = length(other.pos - shooter.pos);
+        if (distance > shooterType.range) {
+            continue;
+        }
+        if (!other.charging && distance > shooterType.range * kShotClose) {
+            continue;
+        }
+        const float aim = std::atan2(other.pos.y - shooter.pos.y, other.pos.x - shooter.pos.x);
+        if (std::fabs(angDiff(aim, shooter.facing)) > kShotArc) {
+            continue;
+        }
+        const float score = (other.charging ? kShotChargeScore : 1.f) / (distance + kShotRangePad);
+        if (score > bestScore) {
+            bestScore = score;
+            best = other.id;
+        }
+    }
+    if (best == kNoUnit) {
+        return;
+    }
+    Unit &target = units_[best];
+    const UnitType &targetType = typeOf(target);
+    const float distance = length(target.pos - shooter.pos);
+    const float falloff = 1.f - kShotFalloff * distance / shooterType.range;
+    const bool charging = target.charging;
+    const float strength =
+        std::sqrt(shooter.men / shooterType.men) * (shooter.state == UnitState::Wavering ? kShotWaver : 1.f);
+    const float charge = charging ? kShotCharge : 1.f;
+    kill(target, targetType.men * kShotMen * falloff * strength * targetType.armor * charge);
+    if (fighting(target)) {
+        const float cover = nearGeneral(target) ? kMeleeNearGeneral : 1.f;
+        target.morale -= (kShotMorale + kShotMoraleScale * falloff) * strength * charge * cover;
+    }
+    if (charging && alive(target)) {
+        target.speed *= kShotSlow;
+    }
+    shooter.reloadSec = shooterType.reload + kShotReloadJitter * rng_.uniform();
+    Event event;
+    event.type = Event::Type::TeppoVolley;
+    event.tick = tick_;
+    event.a = shooter.id;
+    event.b = target.id;
+    event.pos = shooter.pos;
+    events_.push_back(event);
+}
+
+void Battle::combatTick() {
+    std::vector<UnitId> live;
+    for (const Unit &unit : units_) {
+        if (alive(unit)) {
+            live.push_back(unit.id);
+        }
+    }
+    for (UnitId id : live) {
+        Unit &unit = units_[id];
+        if (!alive(unit)) {
+            continue;
+        }
+        if (!unit.contacts.empty()) {
+            unit.engagedSec += kEngagedGain;
+        } else {
+            unit.engagedSec = std::max(0.f, unit.engagedSec - kEngagedLoss);
+        }
+    }
+
+    struct Harm {
+        float casualties = 0.f;
+        float morale = 0.f;
+        bool used = false;
+    };
+    std::vector<Harm> harm(units_.size());
+    for (UnitId id : live) {
+        Unit &attacker = units_[id];
+        if (!alive(attacker) || attacker.contacts.empty() || !fighting(attacker) || attacker.breaking) {
+            continue;
+        }
+        const float share = 1.f / static_cast<float>(attacker.contacts.size());
+        const UnitType &attackerType = typeOf(attacker);
+        const float basePower = meleePower(attacker, attackerType, terrainAt(attacker.pos));
+        for (UnitId targetId : attacker.contacts) {
+            if (targetId >= units_.size() || !alive(units_[targetId])) {
+                continue;
+            }
+            Unit &target = units_[targetId];
+            const UnitType &targetType = typeOf(target);
+            const bool routed = !fighting(target);
+            const float attackPower = basePower * pairMul(attacker, attackerType, target, targetType);
+            const ContactSide side = sideOf(target.pos, target.facing, target.depth, target.frontage, attacker.pos);
+            float sideMul = 1.f;
+            float moraleSide = 1.f;
+            if (routed) {
+                sideMul = kMeleePursuit;
+            } else if (side == ContactSide::Flank) {
+                sideMul = kMeleeFlank;
+                moraleSide = kMeleeMoraleFlank;
+            } else if (side == ContactSide::Rear) {
+                sideMul = kMeleeRear;
+                moraleSide = kMeleeMoraleRear;
+            }
+            const float defendPower = routed ? kMeleeRoutPower
+                                             : meleePower(target, targetType, terrainAt(target.pos)) *
+                                                   pairMul(target, targetType, attacker, attackerType);
+            const float ratio = std::clamp(attackPower * sideMul / std::max(defendPower, kMeleePowerFloor),
+                                           kMeleeRatioMin, kMeleeRatioMax);
+            const float roll = kMeleeRandomBase + kMeleeRandomSpan * rng_.uniform();
+            const float cavalryRout = routed && attackerType.cls == UnitClass::Cavalry ? kMeleeCavalryRout : 1.f;
+            harm[targetId].used = true;
+            harm[targetId].casualties += targetType.men * kMeleeCasualties * attackPower * sideMul * roll * share *
+                                         targetType.armor * cavalryRout;
+            if (!routed) {
+                harm[targetId].morale += (kMeleeMoraleBase + target.engagedSec / kMeleeMoraleEngaged) *
+                                         std::sqrt(ratio) * moraleSide * share * roll;
+            }
+        }
+    }
+    for (UnitId id = 0; id < harm.size(); ++id) {
+        if (!harm[id].used || !alive(units_[id])) {
+            continue;
+        }
+        Unit &target = units_[id];
+        const float before = target.men;
+        kill(target, harm[id].casualties);
+        if (!alive(target) || !fighting(target) || target.maxMen <= 0.f) {
+            continue;
+        }
+        const float lost = (before - target.men) / target.maxMen;
+        const float cover = nearGeneral(target) ? kMeleeNearGeneral : 1.f;
+        target.morale -= (harm[id].morale + kMeleeLossMorale * lost) * cover;
+    }
+
+    for (UnitId id : live) {
+        Unit &shooter = units_[id];
+        if (alive(shooter) && typeOf(shooter).range > 0.f && fighting(shooter) && shooter.contacts.empty() &&
+            shooter.reloadSec <= 0.f && shooter.stillSec >= kChargeUnformedSec) {
+            tryFire(shooter);
+        }
+    }
+
+    for (Unit &unit : units_) {
+        if (!alive(unit)) {
+            continue;
+        }
+        if (fighting(unit)) {
+            const float cap = capOf(unit, typeOf(unit));
+            if (unit.contacts.empty() && unit.morale < cap) {
+                const float extra = nearGeneral(unit) ? kMoraleGeneral : 0.f;
+                unit.morale = std::min(cap, unit.morale + kMoraleRecover + extra);
+            }
+            unit.morale = std::clamp(unit.morale, 0.f, kMoraleMax);
+            if (unit.morale < kMoraleBreak) {
+                breakUnit(unit);
+            } else {
+                unit.state = unit.morale < kMoraleWaver ? UnitState::Wavering : UnitState::Steady;
+            }
+        } else if (unit.state == UnitState::Routing) {
+            kill(unit, kRoutAttrition * unit.maxMen);
+            if (!alive(unit)) {
+                continue;
+            }
+            if (nearestEnemy(unit, kRallyRange) == nullptr && unit.routSec > kRallySec) {
+                unit.morale = std::min(unit.morale + kRallyGain, capOf(unit, typeOf(unit)));
+                if (unit.morale >= kRallyMorale && unit.men > kRallyMen * unit.maxMen) {
+                    unit.state = UnitState::Wavering;
+                    unit.order = {};
+                    unit.order.type = Order::Type::Hold;
+                    unit.order.face =
+                        unit.side == Side::Ming ? std::numbers::pi_v<float> / 2.f : -std::numbers::pi_v<float> / 2.f;
+                    emit(Event::Type::Rallied, unit.id, unit.pos);
+                }
+            }
+        }
+    }
 }
 
 } // namespace tq

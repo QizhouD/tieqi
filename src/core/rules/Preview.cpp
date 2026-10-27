@@ -124,8 +124,35 @@ Preview previewAttack(const Battle &battle, UnitId attackerId, UnitId targetId) 
 
     preview.side = sideOf(target.pos, target.facing, target.depth, target.frontage, attacker.pos);
     if (!canCharge) {
-        // 接战预估的倍数和修正项在 C4 补。
+        const MeleeDetail detail = meleeCalc(attacker, attackerType, target, targetType, battle.terrainAt(attacker.pos),
+                                             battle.terrainAt(target.pos));
         preview.kind = Preview::Kind::Melee;
+        preview.ratio = detail.ratio;
+        preview.side = detail.side;
+        if (detail.ratio >= kPreviewMeleeFavored) {
+            preview.verdict = Verdict::Favored;
+        } else if (detail.ratio >= kPreviewEven) {
+            preview.verdict = Verdict::Even;
+        } else {
+            preview.verdict = Verdict::Unfavored;
+        }
+        if (detail.power != 1.f) {
+            addMod(preview, ModKind::Melee, detail.power);
+        }
+        if (detail.pair < 1.f) {
+            addMod(preview, ModKind::PikeWall, detail.pair);
+        }
+        if (detail.grind) {
+            addMod(preview, ModKind::CavalryGrind, kMeleeGrind);
+        }
+        if (detail.sideMul > 1.f) {
+            const ModKind kind = detail.pursuit ? ModKind::Pursuit
+                                                : (detail.side == ContactSide::Flank ? ModKind::Flank : ModKind::Rear);
+            addMod(preview, kind, detail.sideMul);
+        }
+        if (detail.defender != 1.f) {
+            addMod(preview, ModKind::Melee, detail.defender);
+        }
         return preview;
     }
     const ChargeDetail detail = chargeCalc(attacker, attackerType, target, targetType, battle.terrainAt(attacker.pos),

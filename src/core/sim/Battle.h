@@ -63,6 +63,9 @@ class Battle {
     void routMove(Unit &unit);
     void clampPos(Unit &unit) const;
     void contactsStep();
+    void combatTick();
+    void tryFire(Unit &shooter);
+    const Unit *nearGeneral(const Unit &unit) const;
     void impact(Unit &attacker, Unit &target);
     void mingVolley(Unit &attacker, Unit &target);
     void breakUnit(Unit &unit);

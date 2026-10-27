@@ -59,4 +59,58 @@ ChargeDetail chargeCalc(const Unit &attacker, const UnitType &attackerType, cons
     return detail;
 }
 
+float meleePower(const Unit &unit, const UnitType &type, Terrain terrain) {
+    float power = type.melee * std::sqrt(unit.men / type.men);
+    if (unit.state == UnitState::Wavering) {
+        power *= kMeleeWaver;
+    }
+    power *= 1.f + kMeleeMomentum * static_cast<float>(unit.momentum);
+    if (type.cls == UnitClass::Cavalry && unit.recoverSec > 0.f) {
+        power *= kMeleeRecover;
+    }
+    if (type.cls == UnitClass::Cavalry && terrain == Terrain::Paddy) {
+        power *= kMeleePaddy;
+    }
+    if (type.cls == UnitClass::Cavalry && unit.engagedSec > kMeleeGrindSec) {
+        power *= kMeleeGrind;
+    }
+    return power;
+}
+
+float pairMul(const Unit &left, const UnitType &leftType, const Unit &right, const UnitType &rightType) {
+    float factor = 1.f;
+    if (leftType.pike && rightType.cls == UnitClass::Cavalry &&
+        sideOf(left.pos, left.facing, left.depth, left.frontage, right.pos) == ContactSide::Front) {
+        factor *= kPikeVsCavalry;
+    }
+    if (leftType.cls == UnitClass::Cavalry && rightType.pike && fighting(right) &&
+        sideOf(right.pos, right.facing, right.depth, right.frontage, left.pos) == ContactSide::Front) {
+        factor *= kCavalryVsPike;
+    }
+    return factor;
+}
+
+MeleeDetail meleeCalc(const Unit &attacker, const UnitType &attackerType, const Unit &target,
+                      const UnitType &targetType, Terrain attackerTerrain, Terrain targetTerrain) {
+    MeleeDetail detail;
+    detail.side = sideOf(target.pos, target.facing, target.depth, target.frontage, attacker.pos);
+    detail.pursuit = !fighting(target);
+    detail.power = meleePower(attacker, attackerType, attackerTerrain);
+    detail.pair = pairMul(attacker, attackerType, target, targetType);
+    detail.grind = attackerType.cls == UnitClass::Cavalry && attacker.engagedSec > kMeleeGrindSec;
+    if (detail.pursuit) {
+        detail.sideMul = kMeleePursuit;
+    } else if (detail.side == ContactSide::Flank) {
+        detail.sideMul = kMeleeFlank;
+    } else if (detail.side == ContactSide::Rear) {
+        detail.sideMul = kMeleeRear;
+    }
+    const float defenderPower = detail.pursuit ? kMeleeRoutPower
+                                               : meleePower(target, targetType, targetTerrain) *
+                                                     pairMul(target, targetType, attacker, attackerType);
+    detail.defender = 1.f / std::max(defenderPower, kMeleePowerFloor);
+    detail.ratio = detail.power * detail.pair * detail.sideMul * detail.defender;
+    return detail;
+}
+
 } // namespace tq
