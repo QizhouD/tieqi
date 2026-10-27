@@ -1,0 +1,33 @@
+// 目前只有专有名词，其余由 L1 起草、作者审校；缺键时回退到 zh-Hant。
+{
+  "schema": 1,
+  "language": "ko",
+  "fonts": { "body": "NotoSerifKR-Regular.otf", "brush": "LXGWWenKaiTC-Bold.ttf" },
+  "strings": {
+    "place.byeokjegwan": "벽제관",
+    "place.yeoseokhyeon": "여석현",
+    "place.to_paju": "파주 방면",
+    "place.to_hanseong": "한성 방면",
+    "unit.li_rusong": "이여송",
+    "unit.yang_left": "양원 좌영",
+    "unit.yang_right": "양원 우영",
+    "unit.tachibana": "다치바나 무네시게",
+    "unit.kobayakawa": "고바야카와 다카카게",
+    "type.jiading": "요동 가정 정기",
+    "type.liaodong": "요동 기병",
+    "type.lirusong": "제독 친병",
+    "type.teppo": "조총 아시가루",
+    "type.yari": "장창 아시가루",
+    "type.samurai": "사무라이",
+    "type.tachibana": "선봉 대장",
+    "type.kobayakawa": "본대 주장",
+    "glyph.cavalry": "騎",
+    "glyph.li": "李",
+    "glyph.gun": "銃",
+    "glyph.pike": "槍",
+    "glyph.samurai": "武",
+    "glyph.tachibana": "立",
+    "glyph.kobayakawa": "隆",
+    "glyph.routed": "潰"
+  }
+}

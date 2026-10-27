@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "time_scale": 8,              // 1 个墙钟秒对应的战场秒数；8 与原型节奏一致
+  "player_speeds": [0.5, 1, 2], // 快捷键 1、2、3
+  "default_speed": 1,
+  "max_ticks_per_frame": 8,
+  "language": "zh-Hant",        // zh-Hant（繁体中文）、en、ko
+  "reduced_motion": false,      // 关掉震屏，顿帧缩短为 40 毫秒
+  "sound": true
+}

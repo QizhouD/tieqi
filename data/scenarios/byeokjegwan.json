@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "id": "byeokjegwan",
+  "name_key": "scn.byeokjegwan",
+  "start_clock": "07:00",          // 战场时钟起点，用于显示时辰
+  "map": {
+    "width": 880, "height": 1100,
+    "paddies": [[230,250,150,150],[500,280,160,140],[250,720,150,150],[500,760,150,130],[330,520,80,70]],
+    "hills": [[40,180,150,250],[70,620,160,300],[40,1000,150,200],[850,220,150,270],[820,700,160,280],
+              [860,1040,140,160],[250,460,80,60],[640,600,80,70],[520,985,120,68]],
+    "road": { "half_width": 14, "points": [[440,-10],[425,240],[455,520],[430,800],[460,1110]] },
+    "post_station": [470, 122],
+    "labels": [
+      { "key": "place.byeokjegwan",  "pos": [494,132],  "size": 30, "align": "left" },
+      { "key": "place.yeoseokhyeon", "pos": [592,1016], "size": 26, "align": "left" },
+      { "key": "place.to_paju",      "pos": [440,74],   "size": 20, "align": "center" },
+      { "key": "place.to_hanseong",  "pos": [470,1088], "size": 20, "align": "center" },
+      { "key": "terrain.paddy", "pos": [305,247], "size": 16, "align": "center", "faint": true },
+      { "key": "terrain.paddy", "pos": [580,277], "size": 16, "align": "center", "faint": true },
+      { "key": "terrain.paddy", "pos": [325,717], "size": 16, "align": "center", "faint": true },
+      { "key": "terrain.paddy", "pos": [575,757], "size": 16, "align": "center", "faint": true }
+    ]
+  },
+  "commander": "li_rusong",
+  "exit": { "rect": [360,0,160,48], "follow_radius": 260, "retreat_y_open": 20, "retreat_y_closed": 60 },
+  "deployment": [
+    { "id": "li_rusong",       "type": "lirusong", "pos": [440,250], "facing_deg": 90,  "label_key": "unit.li_rusong" },
+    { "id": "jiading_left",    "type": "jiading",  "pos": [400,330], "facing_deg": 90,  "label_key": "unit.jiading_left" },
+    { "id": "jiading_right",   "type": "jiading",  "pos": [480,330], "facing_deg": 90,  "label_key": "unit.jiading_right" },
+    { "id": "liaodong_left",   "type": "liaodong", "pos": [190,380], "facing_deg": 90,  "label_key": "unit.liaodong_left" },
+    { "id": "liaodong_center", "type": "liaodong", "pos": [440,410], "facing_deg": 90,  "label_key": "unit.liaodong_center" },
+    { "id": "liaodong_right",  "type": "liaodong", "pos": [690,380], "facing_deg": 90,  "label_key": "unit.liaodong_right" },
+    { "id": "van_yari",        "type": "yari",     "pos": [450,640], "facing_deg": -90, "label_key": "unit.van_yari",        "vanguard": true },
+    { "id": "van_teppo_left",  "type": "teppo",    "pos": [320,660], "facing_deg": -90, "label_key": "unit.van_teppo_left",  "vanguard": true },
+    { "id": "van_teppo_right", "type": "teppo",    "pos": [590,660], "facing_deg": -90, "label_key": "unit.van_teppo_right", "vanguard": true },
+    { "id": "van_samurai",     "type": "samurai",  "pos": [450,720], "facing_deg": -90, "label_key": "unit.van_samurai",     "vanguard": true },
+    { "id": "tachibana",       "type": "tachibana","pos": [470,775], "facing_deg": -90, "label_key": "unit.tachibana",       "vanguard": true }
+  ],
+  "groups": {
+    "jp_main": { "facing_deg": -90, "rally_facing_deg": -90, "units": [
+      { "id": "kobayakawa",       "type": "kobayakawa", "spawn": [480,1140], "rally": [500,975], "label_key": "unit.kobayakawa" },
+      { "id": "main_teppo_left",  "type": "teppo",      "spawn": [330,1150], "rally": [330,930], "label_key": "unit.main_teppo_left" },
+      { "id": "main_teppo_right", "type": "teppo",      "spawn": [640,1150], "rally": [640,920], "label_key": "unit.main_teppo_right" },
+      { "id": "main_yari_left",   "type": "yari",       "spawn": [400,1130], "rally": [400,880], "label_key": "unit.main_yari_left" },
+      { "id": "main_yari_right",  "type": "yari",       "spawn": [560,1130], "rally": [560,905], "label_key": "unit.main_yari_right" },
+      { "id": "main_samurai",     "type": "samurai",    "spawn": [480,1175], "rally": [480,860], "label_key": "unit.main_samurai" }
+    ]},
+    "jp_wings": { "rally_facing_deg": -90, "units": [
+      { "id": "wing_samurai_left",  "type": "samurai", "spawn": [-50,430], "facing_deg": 0,   "rally": [360,210], "label_key": "unit.wing_samurai_left" },
+      { "id": "wing_samurai_right", "type": "samurai", "spawn": [930,400], "facing_deg": 180, "rally": [520,210], "label_key": "unit.wing_samurai_right" }
+    ]},
+    "ming_yang": { "facing_deg": 90, "rally_facing_deg": 90, "units": [
+      { "id": "yang_left",  "type": "liaodong", "spawn": [320,-40], "rally": [320,170], "label_key": "unit.yang_left" },
+      { "id": "yang_right", "type": "liaodong", "spawn": [560,-40], "rally": [560,170], "label_key": "unit.yang_right" }
+    ]}
+  },
+  "flow": {
+    "scout_warning": { "at_sec": 1280, "early_at_sec": 640, "early_vanguard_broken": 3, "lead_sec": 160 },
+    "phase2": { "spawn_group": "jp_main", "open_exit": true },
+    "phase3": { "after_phase2_sec": 720, "spawn_group": "jp_wings",
+                "grand_assault": { "general": "kobayakawa", "morale_add": 12, "cap_over_type": 10 } },
+    "reinforcements": [
+      { "id": "yang_yuan", "spawn_group": "ming_yang", "after_phase3_sec": 200,
+        "danger": { "after_phase2_sec": 160, "enemy_within": 220, "men_below": 0.7 } }
+    ]
+  },
+  "ai": { "vanguard_hold_sec": 360, "vanguard_trigger_dist": 200 },
+  "result": { "decisive_rate": 0.6, "decisive_enemy_broken": 6, "minor_rate": 0.35 }
+}

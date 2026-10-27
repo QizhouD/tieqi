@@ -1,0 +1,33 @@
+// 目前只有专有名词，其余由 L1 起草、作者审校；缺键时回退到 zh-Hant。
+{
+  "schema": 1,
+  "language": "en",
+  "fonts": { "body": "NotoSerifTC-Regular.otf", "brush": "LXGWWenKaiTC-Bold.ttf" },
+  "strings": {
+    "place.byeokjegwan": "Byeokjegwan",
+    "place.yeoseokhyeon": "Yeoseok Pass",
+    "place.to_paju": "To Paju",
+    "place.to_hanseong": "To Hanseong",
+    "unit.li_rusong": "Li Rusong",
+    "unit.yang_left": "Yang Yuan (Left)",
+    "unit.yang_right": "Yang Yuan (Right)",
+    "unit.tachibana": "Tachibana Muneshige",
+    "unit.kobayakawa": "Kobayakawa Takakage",
+    "type.jiading": "Liaodong Retainer Cavalry",
+    "type.liaodong": "Liaodong Cavalry",
+    "type.lirusong": "Commander's Guard",
+    "type.teppo": "Teppō Ashigaru",
+    "type.yari": "Yari Ashigaru",
+    "type.samurai": "Samurai",
+    "type.tachibana": "Vanguard General",
+    "type.kobayakawa": "Main Army General",
+    "glyph.cavalry": "騎",
+    "glyph.li": "李",
+    "glyph.gun": "銃",
+    "glyph.pike": "槍",
+    "glyph.samurai": "武",
+    "glyph.tachibana": "立",
+    "glyph.kobayakawa": "隆",
+    "glyph.routed": "潰"
+  }
+}

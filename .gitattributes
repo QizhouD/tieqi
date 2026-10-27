@@ -1,0 +1,13 @@
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary
+*.ttf binary
+*.otf binary
+*.wav binary
+*.ogg binary
+*.flac binary
+reference/** linguist-vendored
+docs/** linguist-documentation
+data/**/*.json linguist-language=JSON-with-Comments

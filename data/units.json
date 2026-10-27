@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "units": {
+    "jiading": {
+      "side": "ming", "class": "cavalry", "ai_role": "none",
+      "name_key": "type.jiading", "glyph_key": "glyph.cavalry",
+      "men": 400, "walk": 4.25, "run": 8.75, "turn": 0.225,
+      "impact": 1.6, "melee": 1.05, "defense": 1.0, "armor": 0.8, "morale": 90,
+      "frontage": 60, "depth": 24,
+      "traits": ["three_eyed_gun", "elite"]
+    },
+    "liaodong": {
+      "side": "ming", "class": "cavalry", "ai_role": "none",
+      "name_key": "type.liaodong", "glyph_key": "glyph.cavalry",
+      "men": 500, "walk": 4.5, "run": 8.5, "turn": 0.25,
+      "impact": 1.15, "melee": 0.85, "defense": 0.85, "armor": 1.0, "morale": 72,
+      "frontage": 64, "depth": 24,
+      "traits": ["three_eyed_gun"]
+    },
+    "lirusong": {
+      "side": "ming", "class": "cavalry", "ai_role": "none",
+      "name_key": "type.lirusong", "glyph_key": "glyph.li",
+      "men": 200, "walk": 4.25, "run": 8.25, "turn": 0.275,
+      "impact": 1.2, "melee": 1.15, "defense": 1.1, "armor": 0.7, "morale": 95,
+      "frontage": 40, "depth": 20, "aura": 170,
+      "traits": ["three_eyed_gun", "general"]
+    },
+    "teppo": {
+      "side": "jp", "class": "infantry", "ai_role": "gunner",
+      "name_key": "type.teppo", "glyph_key": "glyph.gun",
+      "men": 500, "walk": 1.25, "run": 0, "turn": 0.1125,
+      "impact": 0, "melee": 0.55, "defense": 0.6, "armor": 1.0, "morale": 66,
+      "frontage": 66, "depth": 22, "range": 175, "reload": 48,
+      "traits": []
+    },
+    "yari": {
+      "side": "jp", "class": "infantry", "ai_role": "pike_line",
+      "name_key": "type.yari", "glyph_key": "glyph.pike",
+      "men": 600, "walk": 1.125, "run": 0, "turn": 0.0625,
+      "impact": 0, "melee": 0.85, "defense": 1.3, "armor": 0.95, "morale": 70,
+      "frontage": 66, "depth": 28,
+      "traits": ["pike"]
+    },
+    "samurai": {
+      "side": "jp", "class": "infantry", "ai_role": "shock",
+      "name_key": "type.samurai", "glyph_key": "glyph.samurai",
+      "men": 400, "walk": 1.375, "run": 2.25, "turn": 0.125,
+      "impact": 1.1, "melee": 1.4, "defense": 1.05, "armor": 0.85, "morale": 82,
+      "frontage": 56, "depth": 26,
+      "traits": ["momentum"]
+    },
+    "tachibana": {
+      "side": "jp", "class": "infantry", "ai_role": "van_general",
+      "name_key": "type.tachibana", "glyph_key": "glyph.tachibana",
+      "men": 200, "walk": 1.5, "run": 2.25, "turn": 0.15,
+      "impact": 1.15, "melee": 1.35, "defense": 1.1, "armor": 0.75, "morale": 95,
+      "frontage": 40, "depth": 20, "aura": 150,
+      "traits": ["general", "momentum", "momentum_boost"]
+    },
+    "kobayakawa": {
+      "side": "jp", "class": "infantry", "ai_role": "main_general",
+      "name_key": "type.kobayakawa", "glyph_key": "glyph.kobayakawa",
+      "men": 250, "walk": 1.25, "run": 0, "turn": 0.125,
+      "impact": 0, "melee": 1.05, "defense": 1.15, "armor": 0.75, "morale": 95,
+      "frontage": 44, "depth": 22, "aura": 240,
+      "traits": ["general"]
+    }
+  }
+}
