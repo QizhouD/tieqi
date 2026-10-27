@@ -190,31 +190,44 @@ TEST_CASE("impact applies the C2 charge result") {
     jiading.runDist = 35.f;
     const std::size_t before = battle.units().size();
     testing::BattleAccess::contacts(battle);
+    const Unit &broken = battle.unit(7);
+    const Unit &rider = battle.unit(1);
 
-    CHECK(near(teppo.men, 500.f - 58.333f));
-    CHECK(near(teppo.men, 441.667f));
-    CHECK(teppo.morale == 25.f);
-    CHECK(teppo.state == UnitState::Broken);
-    CHECK(teppo.brokenSec == 9.6f);
-    CHECK(near(teppo.pos.y, 486.f));
-    CHECK(near(teppo.pos.x, 700.f));
-    CHECK(near(jiading.men, 400.f - 2.629f));
-    CHECK(jiading.recoverSec == 48.f);
-    CHECK(jiading.speed == 0.f);
-    CHECK_FALSE(jiading.charging);
+    float remnantMen = 0.f;
+    int remnants = 0;
+    for (const Unit &unit : battle.units()) {
+        if (unit.origin == broken.id && unit.isFragment) {
+            remnantMen += unit.men;
+            remnants += 1;
+            CHECK(near(unit.men, 441.667f / 3.f));
+        }
+    }
+    CHECK(remnants == 3);
+    CHECK(near(remnantMen, 441.667f));
+    CHECK(broken.morale == 25.f);
+    CHECK(broken.state == UnitState::Broken);
+    CHECK(broken.brokenSec == 9.6f);
+    CHECK(near(broken.pos.y, 486.f));
+    CHECK(near(broken.pos.x, 700.f));
+    CHECK(near(rider.men, 400.f - 2.629f));
+    CHECK(rider.recoverSec == 48.f);
+    CHECK(rider.speed == 0.f);
+    CHECK_FALSE(rider.charging);
     CHECK(battle.stats().impacts == 1);
     CHECK(near(battle.stats().bestImpact, 3.3333f));
     CHECK(battle.stats().brokenJp == 1);
-    CHECK(battle.units().size() == before);
+    CHECK(battle.units().size() == before + 2);
 
     const std::vector<Event> events = battle.drainEvents();
-    REQUIRE(events.size() == 2);
+    REQUIRE(events.size() == 3);
     CHECK(events[0].type == Event::Type::Impact);
     CHECK(near(events[0].value, 3.3333f));
     CHECK(events[0].side == ContactSide::Front);
     CHECK((events[0].flags & kBreaks) != 0);
     CHECK(events[1].type == Event::Type::Broken);
     CHECK(events[1].value == 3.f);
+    CHECK(events[2].type == Event::Type::Shattered);
+    CHECK(events[2].value == 3.f);
 }
 
 TEST_CASE("only the moving side takes 0.85 of the overlap") {

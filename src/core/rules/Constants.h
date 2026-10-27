@@ -194,5 +194,19 @@ inline constexpr float kShotMorale = 7.f;
 inline constexpr float kShotMoraleScale = 9.f;
 inline constexpr float kShotSlow = 0.8f;
 inline constexpr float kPreviewMeleeFavored = 1.4f;
+inline constexpr float kFragMenFloor = 0.12f;
+inline constexpr float kFragFrontMin = 22.f;
+inline constexpr float kFragDepthMin = 14.f;
+inline constexpr float kFragFrontExp = 0.6f;
+inline constexpr float kFragDepthExp = 0.3f;
+inline constexpr float kShatterKnock = 8.75f;
+inline constexpr float kShatterSpread = 1.9f;
+inline constexpr float kShatterJitter = 0.3f;
+inline constexpr float kShatterSpeed = 18.75f;
+inline constexpr float kShatterSpeedSpan = 10.f;
+inline constexpr float kShatterSeek = 400.f;
+inline constexpr float kMergeDistance = 46.f;
+inline constexpr float kSplitMinMen = 160.f;
+inline constexpr float kSplitGap = 2.f;
 
 } // namespace tq

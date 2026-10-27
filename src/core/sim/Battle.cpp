@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <map>
 #include <numbers>
 #include <stdexcept>
 #include <utility>
@@ -99,6 +100,11 @@ Battle::Battle(const GameDefs &defs, const ScenarioDef &scenario, std::uint64_t 
         unit.stillSec = kInitialStillSec;
         unit.reloadSec = type.range > 0.f ? kReloadRollSec * rng_.uniform() : 0.f;
         unit.vanguard = place.vanguard;
+        if (type.side == Side::Ming) {
+            totalMing_ += type.men;
+        } else {
+            totalJp_ += type.men;
+        }
         units_.push_back(std::move(unit));
     }
 }
@@ -234,6 +240,50 @@ void Battle::apply(const Command &cmd) {
             unit->order = {};
             unit->order.type = Order::Type::Attack;
             unit->order.target = cmd.target;
+        }
+        return;
+    }
+    if (cmd.type == Command::Type::Split) {
+        std::vector<UnitId> ids;
+        ids.reserve(selected.size());
+        for (const Unit *unit : selected) {
+            ids.push_back(unit->id);
+        }
+        for (UnitId id : ids) {
+            if (canSplit(*this, id)) {
+                splitUnit(id);
+            }
+        }
+        return;
+    }
+    if (cmd.type == Command::Type::Join) {
+        std::vector<UnitId> ids;
+        ids.reserve(selected.size());
+        for (const Unit *unit : selected) {
+            ids.push_back(unit->id);
+        }
+        const std::vector<std::vector<UnitId>> groups = joinGroups(*this, ids);
+        for (const std::vector<UnitId> &group : groups) {
+            UnitId anchor = group.front();
+            for (UnitId id : group) {
+                if (units_[id].men > units_[anchor].men || (units_[id].men == units_[anchor].men && id < anchor)) {
+                    anchor = id;
+                }
+            }
+            const float face = units_[anchor].facing;
+            const Vec2 point = units_[anchor].pos;
+            for (UnitId id : group) {
+                Unit &unit = units_[id];
+                unit.rejoin = true;
+                unit.order = {};
+                unit.order.face = face;
+                if (id == anchor) {
+                    unit.order.type = Order::Type::Hold;
+                } else {
+                    unit.order.type = Order::Type::Move;
+                    unit.order.point = point;
+                }
+            }
         }
         return;
     }
@@ -467,30 +517,33 @@ void Battle::contactsStep() {
             if (!sat(unitBox(first, kContactInflate), unitBox(second, kContactInflate))) {
                 continue;
             }
-            if (first.charging && fastEnough(first, typeOf(first))) {
-                impact(first, second);
+            if (units_[live[i]].charging && fastEnough(units_[live[i]], typeOf(units_[live[i]]))) {
+                impact(units_[live[i]], units_[live[j]]);
             }
-            if (alive(first) && alive(second) && second.charging && fastEnough(second, typeOf(second))) {
-                impact(second, first);
+            if (alive(units_[live[i]]) && alive(units_[live[j]]) && units_[live[j]].charging &&
+                fastEnough(units_[live[j]], typeOf(units_[live[j]]))) {
+                impact(units_[live[j]], units_[live[i]]);
             }
-            if (!alive(first) || !alive(second)) {
+            if (!alive(units_[live[i]]) || !alive(units_[live[j]])) {
                 continue;
             }
-            first.contacts.push_back(second.id);
-            second.contacts.push_back(first.id);
-            if (const std::optional<SatHit> hit = sat(unitBox(first, 0.f), unitBox(second, 0.f))) {
+            Unit &left = units_[live[i]];
+            Unit &right = units_[live[j]];
+            left.contacts.push_back(right.id);
+            right.contacts.push_back(left.id);
+            if (const std::optional<SatHit> hit = sat(unitBox(left, 0.f), unitBox(right, 0.f))) {
                 float weight = kSeparateEven;
-                if (first.state == UnitState::Routing) {
+                if (left.state == UnitState::Routing) {
                     weight = kSeparateRout;
-                } else if (second.state == UnitState::Routing) {
+                } else if (right.state == UnitState::Routing) {
                     weight = kSeparateRoutOther;
-                } else if (isMoving(first) && !isMoving(second)) {
+                } else if (isMoving(left) && !isMoving(right)) {
                     weight = kSeparateMover;
-                } else if (isMoving(second) && !isMoving(first)) {
+                } else if (isMoving(right) && !isMoving(left)) {
                     weight = kSeparateHolder;
                 }
-                first.pos = first.pos - hit->axis * (hit->overlap * weight);
-                second.pos = second.pos + hit->axis * (hit->overlap * (1.f - weight));
+                left.pos = left.pos - hit->axis * (hit->overlap * weight);
+                right.pos = right.pos + hit->axis * (hit->overlap * (1.f - weight));
             }
         }
     }
@@ -569,7 +622,7 @@ void Battle::impact(Unit &attacker, Unit &target) {
     }
     events_.push_back(event);
     if (breaks) {
-        breakUnit(target);
+        breakUnit(target, attacker.id);
     }
 }
 
@@ -590,7 +643,7 @@ void Battle::mingVolley(Unit &attacker, Unit &target) {
     events_.push_back(event);
 }
 
-void Battle::breakUnit(Unit &unit) {
+void Battle::breakUnit(Unit &unit, UnitId from) {
     if (!fighting(unit)) {
         return;
     }
@@ -656,6 +709,18 @@ void Battle::breakUnit(Unit &unit) {
         gainedEvent.value = static_cast<float>(gained);
         events_.push_back(gainedEvent);
     }
+    if (from == kNoUnit) {
+        if (const Unit *contact = primaryContact(unit)) {
+            from = contact->id;
+        }
+    }
+    if (from == kNoUnit) {
+        if (const Unit *enemy = nearestEnemy(unit, kShatterSeek)) {
+            from = enemy->id;
+        }
+    }
+    const UnitId self = unit.id;
+    shatter(self, parts, from);
 }
 
 void Battle::kill(Unit &unit, float amount) {
@@ -831,6 +896,7 @@ void Battle::tryFire(Unit &shooter) {
 }
 
 void Battle::combatTick() {
+    const UnitId born = static_cast<UnitId>(units_.size());
     std::vector<UnitId> live;
     for (const Unit &unit : units_) {
         if (alive(unit)) {
@@ -922,11 +988,12 @@ void Battle::combatTick() {
         }
     }
 
-    for (Unit &unit : units_) {
-        if (!alive(unit)) {
+    for (UnitId id : live) {
+        if (!alive(units_[id])) {
             continue;
         }
-        if (fighting(unit)) {
+        if (fighting(units_[id])) {
+            Unit &unit = units_[id];
             const float cap = capOf(unit, typeOf(unit));
             if (unit.contacts.empty() && unit.morale < cap) {
                 const float extra = nearGeneral(unit) ? kMoraleGeneral : 0.f;
@@ -938,7 +1005,8 @@ void Battle::combatTick() {
             } else {
                 unit.state = unit.morale < kMoraleWaver ? UnitState::Wavering : UnitState::Steady;
             }
-        } else if (unit.state == UnitState::Routing) {
+        } else if (units_[id].state == UnitState::Routing) {
+            Unit &unit = units_[id];
             kill(unit, kRoutAttrition * unit.maxMen);
             if (!alive(unit)) {
                 continue;
@@ -956,6 +1024,259 @@ void Battle::combatTick() {
             }
         }
     }
+    mergeStep(born);
+}
+
+Unit Battle::makeUnit(std::uint16_t typeIndex, Vec2 pos, float facing, bool countTotal, bool rollReload) {
+    const UnitType &type = defs_.types.at(typeIndex);
+    Unit unit;
+    unit.type = typeIndex;
+    unit.side = type.side;
+    unit.pos = pos;
+    unit.prevPos = pos;
+    unit.facing = facing;
+    unit.prevFacing = facing;
+    unit.frontage = type.frontage;
+    unit.depth = type.depth;
+    unit.men = type.men;
+    unit.maxMen = type.men;
+    unit.morale = type.morale;
+    unit.order.type = Order::Type::Hold;
+    unit.order.face = facing;
+    unit.stillSec = kInitialStillSec;
+    if (rollReload && type.range > 0.f) {
+        unit.reloadSec = kReloadRollSec * rng_.uniform();
+    }
+    if (countTotal) {
+        if (type.side == Side::Ming) {
+            totalMing_ += type.men;
+        } else {
+            totalJp_ += type.men;
+        }
+    }
+    return unit;
+}
+
+std::uint16_t Battle::nextFrag(UnitId origin) {
+    if (fragCount_.size() <= origin) {
+        fragCount_.resize(static_cast<std::size_t>(origin) + 1);
+    }
+    fragCount_[origin] = static_cast<std::uint16_t>(fragCount_[origin] + 1);
+    return fragCount_[origin];
+}
+
+void Battle::shatter(UnitId id, int parts, UnitId from) {
+    const Vec2 selfPos = units_[id].pos;
+    float base = units_[id].side == Side::Ming ? -std::numbers::pi_v<float> / 2.f : std::numbers::pi_v<float> / 2.f;
+    if (from != kNoUnit && from < units_.size()) {
+        const Vec2 fromPos = units_[from].pos;
+        base = std::atan2(selfPos.y - fromPos.y, selfPos.x - fromPos.x);
+    }
+    units_[id].facing = base;
+    if (parts <= 1) {
+        units_[id].knock = Vec2{std::cos(base), std::sin(base)} * kShatterKnock;
+        units_[id].scatterAngle = std::nullopt;
+        return;
+    }
+
+    const float share = units_[id].men / static_cast<float>(parts);
+    const float morale = units_[id].morale;
+    const UnitId origin = units_[id].origin == kNoUnit ? id : units_[id].origin;
+    const bool keepVan = units_[id].vanguard;
+    const std::uint16_t typeIndex = units_[id].type;
+    const std::string label = units_[id].labelKey;
+    std::vector<UnitId> partIds;
+    partIds.push_back(id);
+    for (int extra = 1; extra < parts; ++extra) {
+        Unit created = makeUnit(typeIndex, selfPos, base, false, true);
+        created.id = static_cast<UnitId>(units_.size());
+        created.labelKey = label;
+        partIds.push_back(created.id);
+        units_.push_back(std::move(created));
+    }
+    for (int index = 0; index < parts; ++index) {
+        Unit &part = units_[partIds[static_cast<std::size_t>(index)]];
+        const float angle = base + (static_cast<float>(index) / static_cast<float>(parts - 1) - 0.5f) * kShatterSpread +
+                            (rng_.uniform() - 0.5f) * kShatterJitter;
+        const float speed = kShatterSpeed + kShatterSpeedSpan * rng_.uniform();
+        part.fragNo = nextFrag(origin);
+        part.men = share;
+        part.maxMen = share;
+        part.morale = morale;
+        part.state = UnitState::Broken;
+        part.brokenSec = kBrokenSec;
+        part.order = {};
+        part.order.type = Order::Type::Hold;
+        part.charging = false;
+        part.speed = 0.f;
+        part.momentum = 0;
+        part.everBroken = true;
+        part.isFragment = true;
+        part.origin = origin;
+        part.knock = Vec2{std::cos(angle), std::sin(angle)} * speed;
+        part.scatterAngle = angle;
+        part.facing = angle;
+        part.routSec = 0.f;
+        part.breaking = false;
+        part.recoverSec = 0.f;
+        part.vanguard = index == 0 ? keepVan : false;
+        sizeFrag(part, typeOf(part));
+    }
+    Event event;
+    event.type = Event::Type::Shattered;
+    event.tick = tick_;
+    event.a = id;
+    event.pos = units_[id].pos;
+    event.value = static_cast<float>(parts);
+    events_.push_back(event);
+}
+
+void Battle::splitUnit(UnitId id) {
+    const float facing = units_[id].facing;
+    const Vec2 pos = units_[id].pos;
+    const float halfMen = units_[id].men * 0.5f;
+    const float halfMax = units_[id].maxMen * 0.5f;
+    const UnitId origin = units_[id].origin == kNoUnit ? id : units_[id].origin;
+    const std::string label = units_[id].labelKey;
+    Unit created = makeUnit(units_[id].type, pos, facing, false, false);
+    created.id = static_cast<UnitId>(units_.size());
+    created.labelKey = label;
+    created.morale = units_[id].morale;
+    created.state = units_[id].state;
+    created.recoverSec = units_[id].recoverSec;
+    created.reloadSec = units_[id].reloadSec;
+    created.stillSec = units_[id].stillSec;
+    created.momentum = units_[id].momentum;
+    created.everBroken = units_[id].everBroken;
+    created.vanguard = false;
+    const UnitId other = created.id;
+    units_.push_back(std::move(created));
+
+    units_[id].fragNo = nextFrag(origin);
+    units_[other].fragNo = nextFrag(origin);
+    for (UnitId part : {id, other}) {
+        Unit &unit = units_[part];
+        unit.men = halfMen;
+        unit.maxMen = halfMax;
+        unit.origin = origin;
+        unit.isFragment = false;
+        unit.rejoin = false;
+        sizeFrag(unit, typeOf(unit));
+    }
+    const Vec2 right{-std::sin(facing), std::cos(facing)};
+    const float off = units_[id].frontage * 0.5f + kSplitGap;
+    units_[id].pos = pos - right * off;
+    units_[other].pos = pos + right * off;
+    clampPos(units_[id]);
+    clampPos(units_[other]);
+    units_[id].prevPos = units_[id].pos;
+    units_[other].prevPos = units_[other].pos;
+    for (UnitId part : {id, other}) {
+        Unit &unit = units_[part];
+        unit.order = {};
+        unit.order.type = Order::Type::Hold;
+        unit.order.face = facing;
+    }
+    Event event;
+    event.type = Event::Type::Split;
+    event.tick = tick_;
+    event.a = id;
+    event.b = other;
+    event.pos = units_[id].pos;
+    events_.push_back(event);
+}
+
+void Battle::mergeStep(UnitId limit) {
+    std::vector<UnitId> candidates;
+    const UnitId count = std::min(limit, static_cast<UnitId>(units_.size()));
+    for (UnitId id = 0; id < count; ++id) {
+        const Unit &unit = units_[id];
+        const bool knocked = unit.knock.x != 0.f || unit.knock.y != 0.f;
+        if (!alive(unit) || !(unit.isFragment || unit.rejoin) || !fighting(unit) || !unit.contacts.empty() || knocked ||
+            unit.origin == kNoUnit) {
+            continue;
+        }
+        candidates.push_back(id);
+    }
+    for (std::size_t i = 0; i < candidates.size(); ++i) {
+        for (std::size_t j = i + 1; j < candidates.size(); ++j) {
+            Unit &left = units_[candidates[i]];
+            Unit &right = units_[candidates[j]];
+            if (!alive(left) || !alive(right) || left.origin != right.origin) {
+                continue;
+            }
+            if (length(right.pos - left.pos) > kMergeDistance) {
+                continue;
+            }
+            const float total = left.men + right.men;
+            if (total > 0.f) {
+                left.morale = (left.morale * left.men + right.morale * right.men) / total;
+            }
+            left.men = total;
+            left.maxMen += right.maxMen;
+            right.state = UnitState::Gone;
+            right.gone = GoneReason::Merged;
+            left.rejoin = left.rejoin || right.rejoin;
+            left.fragNo = 0;
+            int remaining = 0;
+            for (const Unit &other : units_) {
+                if (alive(other) && other.origin == left.origin) {
+                    remaining += 1;
+                }
+            }
+            if (remaining == 1) {
+                left.isFragment = false;
+                left.rejoin = false;
+            }
+            sizeFrag(left, typeOf(left));
+            Event event;
+            event.type = Event::Type::Merged;
+            event.tick = tick_;
+            event.a = left.id;
+            event.b = right.id;
+            event.pos = left.pos;
+            event.value = left.men;
+            events_.push_back(event);
+        }
+    }
+}
+
+bool canSplit(const Battle &battle, UnitId id) {
+    if (id >= battle.units().size()) {
+        return false;
+    }
+    const Unit &unit = battle.unit(id);
+    const bool fighting = unit.state == UnitState::Steady || unit.state == UnitState::Wavering;
+    return fighting && unit.contacts.empty() && !battle.typeOf(unit).general && !unit.deploying &&
+           unit.men >= kSplitMinMen;
+}
+
+std::vector<std::vector<UnitId>> joinGroups(const Battle &battle, std::span<const UnitId> selection) {
+    std::map<UnitId, std::vector<UnitId>> grouped;
+    for (UnitId id : selection) {
+        if (id >= battle.units().size()) {
+            continue;
+        }
+        const Unit &unit = battle.unit(id);
+        const bool fighting = unit.state == UnitState::Steady || unit.state == UnitState::Wavering;
+        if (!fighting || unit.origin == kNoUnit || unit.isFragment) {
+            continue;
+        }
+        std::vector<UnitId> &group = grouped[unit.origin];
+        if (std::find(group.begin(), group.end(), id) == group.end()) {
+            group.push_back(id);
+        }
+    }
+    std::vector<std::vector<UnitId>> result;
+    for (auto &[origin, group] : grouped) {
+        (void)origin;
+        if (group.size() < 2) {
+            continue;
+        }
+        std::sort(group.begin(), group.end());
+        result.push_back(std::move(group));
+    }
+    return result;
 }
 
 } // namespace tq

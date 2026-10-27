@@ -50,4 +50,24 @@ struct Unit {
     UnitId origin = kNoUnit;
 };
 
+enum class NameSuffix : std::uint8_t { None, Remnant, Detachment, Combined };
+
+struct NameParts {
+    NameSuffix suffix = NameSuffix::None;
+    int numeral = 0;
+};
+
+inline NameParts displayName(const Unit &unit) {
+    NameParts parts;
+    if (unit.fragNo > 0) {
+        parts.suffix = unit.isFragment ? NameSuffix::Remnant : NameSuffix::Detachment;
+        parts.numeral = static_cast<int>((unit.fragNo - 1) % 10) + 1;
+        return parts;
+    }
+    if (unit.isFragment || unit.rejoin) {
+        parts.suffix = NameSuffix::Combined;
+    }
+    return parts;
+}
+
 } // namespace tq

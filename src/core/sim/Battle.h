@@ -68,7 +68,12 @@ class Battle {
     const Unit *nearGeneral(const Unit &unit) const;
     void impact(Unit &attacker, Unit &target);
     void mingVolley(Unit &attacker, Unit &target);
-    void breakUnit(Unit &unit);
+    void breakUnit(Unit &unit, UnitId from = kNoUnit);
+    void shatter(UnitId id, int parts, UnitId from);
+    void mergeStep(UnitId limit);
+    void splitUnit(UnitId id);
+    Unit makeUnit(std::uint16_t typeIndex, Vec2 pos, float facing, bool countTotal, bool rollReload);
+    std::uint16_t nextFrag(UnitId origin);
     void kill(Unit &unit, float amount);
     void generalDown(Unit &unit);
     void disperse(Unit &unit);
@@ -90,6 +95,12 @@ class Battle {
     std::uint32_t tick_ = 0;
     int phase_ = 0;
     bool exitOpen_ = false;
+    float totalMing_ = 0.f;
+    float totalJp_ = 0.f;
+    std::vector<std::uint16_t> fragCount_;
 };
+
+bool canSplit(const Battle &battle, UnitId id);
+std::vector<std::vector<UnitId>> joinGroups(const Battle &battle, std::span<const UnitId> selection);
 
 } // namespace tq

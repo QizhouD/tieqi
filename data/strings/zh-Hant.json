@@ -272,6 +272,7 @@
 
     "suffix.remnant": "{name}·殘{n}",
     "suffix.detachment": "{name}·分{n}",
+    "suffix.combined": "{name}·合",
 
     "num.1": "一",
     "num.2": "二",

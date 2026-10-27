@@ -113,4 +113,16 @@ MeleeDetail meleeCalc(const Unit &attacker, const UnitType &attackerType, const 
     return detail;
 }
 
+void sizeFrag(Unit &unit, const UnitType &type) {
+    if (type.men <= 0.f) {
+        return;
+    }
+    const double ratio = std::clamp(static_cast<double>(unit.maxMen) / static_cast<double>(type.men),
+                                    static_cast<double>(kFragMenFloor), 1.0);
+    const double front = static_cast<double>(type.frontage) * std::pow(ratio, static_cast<double>(kFragFrontExp));
+    const double depth = static_cast<double>(type.depth) * std::pow(ratio, static_cast<double>(kFragDepthExp));
+    unit.frontage = static_cast<float>(std::max(static_cast<double>(kFragFrontMin), front));
+    unit.depth = static_cast<float>(std::max(static_cast<double>(kFragDepthMin), depth));
+}
+
 } // namespace tq
