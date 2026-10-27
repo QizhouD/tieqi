@@ -24,10 +24,22 @@ add_library(tq_core STATIC
 target_include_directories(tq_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 tq_apply_warnings(tq_core)
 
+execute_process(
+    COMMAND git rev-parse --short=12 HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE TQ_BUILD_ID
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+if(NOT TQ_BUILD_ID)
+    set(TQ_BUILD_ID "unknown")
+endif()
+
 add_library(tq_data STATIC
     src/data/data.cpp
     src/data/Load.cpp
-    src/data/Strings.cpp)
+    src/data/Strings.cpp
+    src/data/Replay.cpp)
+target_compile_definitions(tq_data PRIVATE "TQ_BUILD_ID=\"${TQ_BUILD_ID}\"")
 target_link_libraries(tq_data PUBLIC tq_core nlohmann_json::nlohmann_json)
 tq_apply_warnings(tq_data)
 
@@ -38,7 +50,10 @@ if(TQ_DEV_TOOLS)
 endif()
 tq_apply_warnings(tieqi)
 
-add_executable(tq_headless tools/headless/main.cpp)
+add_executable(tq_headless
+    tools/headless/main.cpp
+    tools/headless/Policy.cpp
+    tools/headless/Run.cpp)
 target_link_libraries(tq_headless PRIVATE tq_core tq_data)
 tq_apply_warnings(tq_headless)
 
@@ -54,7 +69,10 @@ if(TQ_BUILD_TESTS)
         tests/core/melee.cpp
         tests/core/formation.cpp
         tests/core/flow.cpp
-        tests/core/ai.cpp)
+        tests/core/ai.cpp
+        tests/replay/replay.cpp
+        tools/headless/Policy.cpp
+        tools/headless/Run.cpp)
     target_link_libraries(tq_tests PRIVATE tq_core tq_data doctest::doctest)
     file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}" TQ_SOURCE_DIR_FWD)
     target_compile_definitions(tq_tests PRIVATE "TQ_SOURCE_DIR=\"${TQ_SOURCE_DIR_FWD}\"")
