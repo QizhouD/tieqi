@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "duel_flat",
+  "name_key": "scn.duel_flat",
+  "start_clock": "07:00",
+  "map": {
+    "width": 880,
+    "height": 1100,
+    "paddies": [],
+    "hills": [],
+    "road": { "half_width": 14, "points": [] },
+    "post_station": [470, 122],
+    "labels": []
+  },
+  "commander": "li_rusong",
+  "exit": { "rect": [360, 0, 160, 48], "follow_radius": 260, "retreat_y_open": 20, "retreat_y_closed": 60 },
+  "deployment": [
+    { "id": "li_rusong", "type": "lirusong", "pos": [100, 60], "facing_deg": 90, "label_key": "unit.li_rusong" }
+  ],
+  "groups": {},
+  "ai": { "vanguard_hold_sec": 360, "vanguard_trigger_dist": 200 },
+  "result": { "decisive_rate": 0.6, "decisive_enemy_broken": 6, "minor_rate": 0.35 }
+}

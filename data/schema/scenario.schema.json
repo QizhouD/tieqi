@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scenario.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "name_key", "start_clock", "map", "commander", "exit", "deployment", "groups", "ai", "result"],
+  "properties": {
+    "schema": { "const": 1 },
+    "id": { "type": "string" },
+    "name_key": { "type": "string" },
+    "start_clock": { "type": "string" },
+    "map": { "type": "object" },
+    "commander": { "type": "string" },
+    "exit": { "type": "object" },
+    "deployment": { "type": "array" },
+    "groups": { "type": "object" },
+    "flow": { "type": "object" },
+    "ai": { "type": "object" },
+    "result": { "type": "object" }
+  }
+}

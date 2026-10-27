@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "units.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "units"],
+  "properties": {
+    "schema": { "const": 1 },
+    "units": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/unit" }
+    }
+  },
+  "$defs": {
+    "unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["side", "class", "ai_role", "name_key", "glyph_key", "men", "walk", "run", "turn", "impact", "melee", "defense", "armor", "morale", "frontage", "depth", "traits"],
+      "properties": {
+        "side": { "enum": ["ming", "jp"] },
+        "class": { "enum": ["cavalry", "infantry"] },
+        "ai_role": { "enum": ["none", "gunner", "pike_line", "shock", "van_general", "main_general"] },
+        "name_key": { "type": "string" },
+        "glyph_key": { "type": "string" },
+        "men": { "type": "number", "exclusiveMinimum": 0 },
+        "walk": { "type": "number", "exclusiveMinimum": 0 },
+        "run": { "type": "number", "minimum": 0 },
+        "turn": { "type": "number", "exclusiveMinimum": 0 },
+        "impact": { "type": "number", "minimum": 0 },
+        "melee": { "type": "number", "exclusiveMinimum": 0 },
+        "defense": { "type": "number", "exclusiveMinimum": 0 },
+        "armor": { "type": "number", "exclusiveMinimum": 0 },
+        "morale": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+        "frontage": { "type": "number", "exclusiveMinimum": 0 },
+        "depth": { "type": "number", "exclusiveMinimum": 0 },
+        "range": { "type": "number", "exclusiveMinimum": 0 },
+        "reload": { "type": "number", "exclusiveMinimum": 0 },
+        "aura": { "type": "number", "exclusiveMinimum": 0 },
+        "traits": {
+          "type": "array",
+          "items": { "enum": ["three_eyed_gun", "elite", "general", "pike", "momentum", "momentum_boost"] }
+        }
+      }
+    }
+  }
+}

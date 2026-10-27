@@ -12,4 +12,7 @@ inline constexpr float kTerrainHillInfantry = 0.85f;
 inline constexpr float kTerrainRoad = 1.1f;
 inline constexpr float kTerrainOpen = 1.f;
 
+// 组的出生点可以落在地图外，但不能超过这一距离。
+inline constexpr float kSpawnOutsideMeters = 90.f;
+
 } // namespace tq

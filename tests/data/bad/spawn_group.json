@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "id": "bad",
+  "name_key": "scn.byeokjegwan",
+  "start_clock": "07:00",
+  "map": {
+    "width": 880, "height": 1100,
+    "paddies": [], "hills": [],
+    "road": { "half_width": 14, "points": [] },
+    "post_station": [470, 122],
+    "labels": []
+  },
+  "commander": "li_rusong",
+  "exit": { "rect": [360, 0, 160, 48], "follow_radius": 260, "retreat_y_open": 20, "retreat_y_closed": 60 },
+  "deployment": [
+    { "id": "li_rusong", "type": "lirusong", "pos": [100, 60], "facing_deg": 90, "label_key": "unit.li_rusong" }
+  ],
+  "groups": {
+    "jp_main": { "facing_deg": -90, "rally_facing_deg": -90, "units": [
+      { "id": "kobayakawa", "type": "kobayakawa", "spawn": [480, 1140], "rally": [500, 975], "label_key": "unit.kobayakawa" }
+    ]}
+  },
+  "flow": {
+    "scout_warning": { "at_sec": 1280, "early_at_sec": 640, "early_vanguard_broken": 3, "lead_sec": 160 },
+    "phase2": { "spawn_group": "missing", "open_exit": true },
+    "phase3": { "after_phase2_sec": 720, "spawn_group": "jp_main",
+                "grand_assault": { "general": "kobayakawa", "morale_add": 12, "cap_over_type": 10 } },
+    "reinforcements": []
+  },
+  "ai": { "vanguard_hold_sec": 360, "vanguard_trigger_dist": 200 },
+  "result": { "decisive_rate": 0.6, "decisive_enemy_broken": 6, "minor_rate": 0.35 }
+}

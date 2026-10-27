@@ -18,7 +18,10 @@ add_library(tq_core STATIC src/core/core.cpp)
 target_include_directories(tq_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 tq_apply_warnings(tq_core)
 
-add_library(tq_data STATIC src/data/data.cpp)
+add_library(tq_data STATIC
+    src/data/data.cpp
+    src/data/Load.cpp
+    src/data/Strings.cpp)
 target_link_libraries(tq_data PUBLIC tq_core nlohmann_json::nlohmann_json)
 tq_apply_warnings(tq_data)
 
@@ -38,8 +41,11 @@ if(TQ_BUILD_TESTS)
     add_executable(tq_tests
         tests/placeholder.cpp
         tests/core/geometry.cpp
-        tests/core/terrain.cpp)
+        tests/core/terrain.cpp
+        tests/data/load.cpp)
     target_link_libraries(tq_tests PRIVATE tq_core tq_data doctest::doctest)
+    file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}" TQ_SOURCE_DIR_FWD)
+    target_compile_definitions(tq_tests PRIVATE "TQ_SOURCE_DIR=\"${TQ_SOURCE_DIR_FWD}\"")
     tq_apply_warnings(tq_tests)
     add_test(NAME tq_tests COMMAND tq_tests)
 endif()

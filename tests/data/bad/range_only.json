@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "units": {
+    "jiading": {
+      "side": "ming", "class": "cavalry", "ai_role": "none",
+      "name_key": "type.jiading", "glyph_key": "glyph.cavalry",
+      "men": 400, "walk": 4.25, "run": 8.75, "turn": 0.225,
+      "impact": 1.6, "melee": 1.05, "defense": 1.0, "armor": 0.8, "morale": 90,
+      "frontage": 60, "depth": 24,
+      "range": 175, "traits": ["elite"]
+    }
+  }
+}
