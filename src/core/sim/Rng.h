@@ -4,7 +4,7 @@
 
 namespace tq {
 
-// PCG32 XSH RR。uniform() 取高 24 位，结果在 [0, 1)。
+// PCG32 XSH RR. uniform() takes the top 24 bits and returns [0, 1).
 class Rng {
   public:
     explicit Rng(std::uint64_t seed);

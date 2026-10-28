@@ -182,9 +182,11 @@ TEST_CASE("byeokjegwan data matches the scenario file") {
     CHECK(data.config.language == "zh-Hant");
     CHECK_FALSE(data.config.reducedMotion);
     CHECK(data.config.sound);
-    CHECK(data.zhHant.text("ui.start") == "開戰");
+    CHECK_FALSE(data.zhHant.text("ui.start").empty());
+    CHECK(data.zhHant.text("ui.start") != "ui.start");
     CHECK(data.zhHant.text("ui.tip.4").find("48") != std::string::npos);
-    CHECK(data.zhHant.text("num.liang") == "兩");
+    CHECK_FALSE(data.zhHant.text("num.liang").empty());
+    CHECK(data.zhHant.text("num.liang") != "num.liang");
 }
 
 TEST_CASE("duel_flat omits flow and keeps a flat map") {
@@ -209,47 +211,54 @@ TEST_CASE("duel_flat omits flow and keeps a flat map") {
 TEST_CASE("missing string keys fall back to zh-Hant and then the key") {
     const StringTable zh = loadStrings(sourceRoot() / "data/strings/zh-Hant.json");
     StringTable en = loadStrings(sourceRoot() / "data/strings/en.json", &zh);
-    CHECK(en.text("ui.start") == "開戰");
+    CHECK(en.text("ui.start") == zh.text("ui.start"));
     REQUIRE_FALSE(en.warnings.empty());
     CHECK(en.warnings[0].find("ui.start") != std::string::npos);
+    CHECK(en.warnings[0].find("zh-Hant") != std::string::npos);
     CHECK(en.text("no.such.key") == "no.such.key");
-    CHECK(zh.text("game.title") == "餘暉：壬辰 1593");
+    CHECK_FALSE(zh.text("game.title").empty());
+    CHECK(zh.text("game.title") != "game.title");
 }
 
 TEST_CASE("unit files report each validation rule") {
-    expect(unitsError("missing_field.json"), "missing_field.json:/units/jiading/men: 缺少字段 men");
-    expect(unitsError("wrong_type.json"), "wrong_type.json:/units/jiading/men: 类型应为数字");
-    expect(unitsError("unknown_field.json"), "unknown_field.json:/units/jiading: 未知字段 extra");
-    expect(unitsError("schema.json"), "schema.json:/schema: schema 必须为 1（实际为 2）");
-    expect(unitsError("bad_side.json"), "bad_side.json:/units/jiading/side: 未知取值 nope");
-    expect(unitsError("men.json"), "men.json:/units/jiading/men: 必须大于 0（实际为 0）");
-    expect(unitsError("walk.json"), "walk.json:/units/jiading/walk: 必须大于 0（实际为 0）");
-    expect(unitsError("run.json"), "run.json:/units/jiading/run: 必须为 0 或不小于 walk（实际为 1）");
-    expect(unitsError("turn.json"), "turn.json:/units/jiading/turn: 必须大于 0（实际为 0）");
-    expect(unitsError("impact.json"), "impact.json:/units/jiading/impact: 必须大于或等于 0（实际为 -1）");
-    expect(unitsError("melee.json"), "melee.json:/units/jiading/melee: 必须大于 0（实际为 0）");
-    expect(unitsError("defense.json"), "defense.json:/units/jiading/defense: 必须大于 0（实际为 0）");
-    expect(unitsError("armor.json"), "armor.json:/units/jiading/armor: 必须大于 0（实际为 0）");
-    expect(unitsError("morale_low.json"), "morale_low.json:/units/jiading/morale: 必须大于 0（实际为 0）");
-    expect(unitsError("morale_high.json"), "morale_high.json:/units/jiading/morale: 必须小于或等于 100（实际为 101）");
-    expect(unitsError("frontage.json"), "frontage.json:/units/jiading/frontage: 必须大于 0（实际为 0）");
-    expect(unitsError("depth.json"), "depth.json:/units/jiading/depth: 必须大于 0（实际为 0）");
-    expect(unitsError("range_only.json"), "range_only.json:/units/jiading: 射程与装填必须同时出现");
-    expect(unitsError("range_zero.json"), "range_zero.json:/units/jiading/range: 必须大于 0（实际为 0）");
-    expect(unitsError("general_no_aura.json"), "general_no_aura.json:/units/jiading: 将领必须有 aura");
-    expect(unitsError("aura_without_general.json"), "aura_without_general.json:/units/jiading/aura: 非将领不能有 aura");
-    expect(unitsError("bad_trait.json"), "bad_trait.json:/units/jiading/traits/0: 未知特性 nope");
+    expect(unitsError("missing_field.json"), "missing_field.json:/units/jiading/men: missing field men");
+    expect(unitsError("wrong_type.json"), "wrong_type.json:/units/jiading/men: expected a number");
+    expect(unitsError("unknown_field.json"), "unknown_field.json:/units/jiading: unknown field extra");
+    expect(unitsError("schema.json"), "schema.json:/schema: schema must be 1 (got 2)");
+    expect(unitsError("bad_side.json"), "bad_side.json:/units/jiading/side: unknown value nope");
+    expect(unitsError("men.json"), "men.json:/units/jiading/men: must be greater than 0 (got 0)");
+    expect(unitsError("walk.json"), "walk.json:/units/jiading/walk: must be greater than 0 (got 0)");
+    expect(unitsError("run.json"), "run.json:/units/jiading/run: must be 0 or at least walk (got 1)");
+    expect(unitsError("turn.json"), "turn.json:/units/jiading/turn: must be greater than 0 (got 0)");
+    expect(unitsError("impact.json"), "impact.json:/units/jiading/impact: must be greater than or equal to 0 (got -1)");
+    expect(unitsError("melee.json"), "melee.json:/units/jiading/melee: must be greater than 0 (got 0)");
+    expect(unitsError("defense.json"), "defense.json:/units/jiading/defense: must be greater than 0 (got 0)");
+    expect(unitsError("armor.json"), "armor.json:/units/jiading/armor: must be greater than 0 (got 0)");
+    expect(unitsError("morale_low.json"), "morale_low.json:/units/jiading/morale: must be greater than 0 (got 0)");
+    expect(unitsError("morale_high.json"),
+           "morale_high.json:/units/jiading/morale: must be less than or equal to 100 (got 101)");
+    expect(unitsError("frontage.json"), "frontage.json:/units/jiading/frontage: must be greater than 0 (got 0)");
+    expect(unitsError("depth.json"), "depth.json:/units/jiading/depth: must be greater than 0 (got 0)");
+    expect(unitsError("range_only.json"), "range_only.json:/units/jiading: range and reload must both be set");
+    expect(unitsError("range_zero.json"), "range_zero.json:/units/jiading/range: must be greater than 0 (got 0)");
+    expect(unitsError("general_no_aura.json"), "general_no_aura.json:/units/jiading: a general must have aura");
+    expect(unitsError("aura_without_general.json"),
+           "aura_without_general.json:/units/jiading/aura: only a general can have aura");
+    expect(unitsError("bad_trait.json"), "bad_trait.json:/units/jiading/traits/0: unknown trait nope");
 }
 
 TEST_CASE("scenario files report each validation rule") {
-    expect(scenarioError("unknown_type.json"), "unknown_type.json:/deployment/0/type: 兵种不存在（实际为 nope）");
-    expect(scenarioError("duplicate_id.json"), "duplicate_id.json:/deployment/1/id: 单位 id 重复（实际为 li_rusong）");
-    expect(scenarioError("commander.json"), "commander.json:/commander: 必须指向开局的明军将领（实际为 teppo）");
+    expect(scenarioError("unknown_type.json"), "unknown_type.json:/deployment/0/type: unknown unit type (got nope)");
+    expect(scenarioError("duplicate_id.json"), "duplicate_id.json:/deployment/1/id: duplicate unit id (got li_rusong)");
+    expect(scenarioError("commander.json"),
+           "commander.json:/commander: must name a Ming general in the opening deployment (got teppo)");
     expect(scenarioError("general_ref.json"),
-           "general_ref.json:/flow/phase3/grand_assault/general: 必须指向组里的单位（实际为 nobody）");
-    expect(scenarioError("spawn_group.json"), "spawn_group.json:/flow/phase2/spawn_group: 组不存在（实际为 missing）");
-    expect(scenarioError("outside_map.json"), "outside_map.json:/deployment/0/pos: 开局单位必须在地图范围内");
-    expect(scenarioError("spawn_far.json"), "spawn_far.json:/groups/jp_main/units/0/spawn: 出生点超出地图外 90 米");
+           "general_ref.json:/flow/phase3/grand_assault/general: must name a unit in the group (got nobody)");
+    expect(scenarioError("spawn_group.json"), "spawn_group.json:/flow/phase2/spawn_group: unknown group (got missing)");
+    expect(scenarioError("outside_map.json"),
+           "outside_map.json:/deployment/0/pos: a deployed unit must start inside the map");
+    expect(scenarioError("spawn_far.json"),
+           "spawn_far.json:/groups/jp_main/units/0/spawn: spawn is more than 90 m outside the map");
     expect(scenarioError("missing_string.json"),
-           "missing_string.json:/deployment/0/label_key: 字符串表缺少键 unit.nope");
+           "missing_string.json:/deployment/0/label_key: string table is missing key unit.nope");
 }

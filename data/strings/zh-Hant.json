@@ -246,6 +246,7 @@
     "ui.army.ming_exited": "兵 {men} / {max} · 可戰 {n} 部 · 已撤出 {k} 部",
     "ui.army.jp": "兵 {men} / {max} · 已崩潰 {n} 隊",
     "ui.army.jp_waiting": "兵 {men} / {max} · 已崩潰 {n} 隊 · 本隊未到",
+    "ui.list_sep": "、",
     "ui.shichen_names": "子丑寅卯辰巳午未申酉戌亥",
     "ui.shichen_early": "初",
     "ui.shichen_late": "正",

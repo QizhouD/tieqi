@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.28)
 
 project(tieqi LANGUAGES CXX)
 
-option(TQ_DEV_TOOLS "编译 ImGui 开发工具" OFF)
-option(TQ_BUILD_TESTS "编译测试" ON)
-option(TQ_WARNINGS_AS_ERRORS "把警告当错误" OFF)
+option(TQ_DEV_TOOLS "Build the ImGui dev tools" OFF)
+option(TQ_BUILD_TESTS "Build tests" ON)
+option(TQ_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 
 include(cmake/Dependencies.cmake)
 

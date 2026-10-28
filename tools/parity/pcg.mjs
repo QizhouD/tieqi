@@ -1,4 +1,4 @@
-// 与 tq::Rng 相同：PCG32 XSH-RR，initseq = 1，uniform 取高位之外的 24 位再收成 float32。
+// Same as tq::Rng: PCG32 XSH-RR, initseq = 1, uniform takes 24 bits and stores them as float32.
 const MASK64 = (1n << 64n) - 1n;
 const MULT = 6364136223846793005n;
 

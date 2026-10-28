@@ -2,7 +2,7 @@
 
 namespace tq {
 
-// 几何与地形。来源是开发文档「规则规格」；代码里不再写这些字面量。
+// Geometry and terrain. The values live in the rules spec; this file is where the code reads them.
 inline constexpr float kContactSidePad = 14.f;
 
 inline constexpr float kTerrainPaddyCavalry = 0.6f;
@@ -12,7 +12,7 @@ inline constexpr float kTerrainHillInfantry = 0.85f;
 inline constexpr float kTerrainRoad = 1.1f;
 inline constexpr float kTerrainOpen = 1.f;
 
-// 组的出生点可以落在地图外，但不能超过这一距离。
+// A group's spawn may lie outside the map, but not farther than this.
 inline constexpr float kSpawnOutsideMeters = 90.f;
 
 inline constexpr float kTickSeconds = 0.8f;

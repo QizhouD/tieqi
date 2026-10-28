@@ -14,7 +14,7 @@
 
 namespace tq {
 
-// 同名文件优先（wav、ogg、flac），没有文件就用合成音。
+// Prefer a file with the same name (wav, ogg, flac). Otherwise use the synthesized cue.
 class AudioManager {
   public:
     void loadDefaults(const std::filesystem::path &audioDir);

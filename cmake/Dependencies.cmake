@@ -29,7 +29,7 @@ if(TQ_DEV_TOOLS)
     set(IMGUI_SFML_FIND_SFML OFF)
     FetchContent_Declare(imgui-sfml
         GIT_REPOSITORY https://github.com/SFML/imgui-sfml.git
-        GIT_TAG e8ee3667f1b1f731e5c9c32be4c544915291f987 # master 分支，2026-08-21
+        GIT_TAG e8ee3667f1b1f731e5c9c32be4c544915291f987 # master, 2026-08-21
         SYSTEM)
     FetchContent_MakeAvailable(imgui-sfml)
 endif()

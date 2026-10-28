@@ -1,26 +1,5 @@
-const LABELS = {
-    李如松: "li_rusong",
-    家丁左營: "jiading_left",
-    家丁右營: "jiading_right",
-    遼騎左營: "liaodong_left",
-    遼騎中營: "liaodong_center",
-    遼騎右營: "liaodong_right",
-    立花長槍隊: "van_yari",
-    立花鐵砲左隊: "van_teppo_left",
-    立花鐵砲右隊: "van_teppo_right",
-    立花武士隊: "van_samurai",
-    立花宗茂: "tachibana",
-    小早川隆景: "kobayakawa",
-    本隊鐵砲左隊: "main_teppo_left",
-    本隊鐵砲右隊: "main_teppo_right",
-    本隊長槍左隊: "main_yari_left",
-    本隊長槍右隊: "main_yari_right",
-    本隊武士隊: "main_samurai",
-    左翼武士隊: "wing_samurai_left",
-    右翼武士隊: "wing_samurai_right",
-    楊元左營: "yang_left",
-    楊元右營: "yang_right",
-};
+const LABELS = ANCHORS;
+
 
 function sim() {
     return window.__S();
@@ -35,7 +14,7 @@ function tagScenes() {
         if (scene) {
             unit.scene = scene;
         } else if (!unit.origin && !String(unit.label).includes("·")) {
-            throw new Error("未知单位 " + unit.label);
+            throw new Error("unknown unit " + unit.label);
         }
     }
 }

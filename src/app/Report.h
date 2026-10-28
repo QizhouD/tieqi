@@ -13,7 +13,7 @@
 
 namespace tq {
 
-// 飘字和结算遮罩以外，每种事件都有战报、横幅，或两者都有。飘字留给 A5。
+// Except floaters and the settlement overlay, every event is a report, a banner, or both. Floaters are A5.
 enum class EventPresentation : std::uint8_t { Report, Banner, ReportAndBanner, Floater, Settlement };
 
 enum class LogTone : std::uint8_t { Neutral, Ming, Jp };

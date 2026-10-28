@@ -15,7 +15,7 @@ ctest --preset dev
 - 改规则必须同步 docs/DEVELOPMENT.md 的"规则规格"
 - 每个任务对应"任务拆分"里的一张卡，分支名 task/<卡号>-<短名>
 - 不确定时在 PR 里提问，不要猜
-- 游戏内中文一律繁体（zh-Hant），文案以 data/strings/zh-Hant.json 为准
+- 游戏内中文一律繁体（zh-Hant），文案以 data/strings/zh-Hant.json 为准。源代码（含注释、日志、测试）一律英文，不出现中文；玩家可见的文字只放 data/strings/；中文只出现在 data/、docs/、reference/。
 
 ## 目录
 src/core 规则核心 · src/data 数据加载 · src/app 表现层 · tools/headless 无头对战

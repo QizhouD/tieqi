@@ -259,11 +259,11 @@ const Unit *nearGeneral(const Battle &battle, const Unit &unit) {
 
 void addTag(std::vector<RosterTag> &tags, const std::string &text, TagInk ink) { tags.push_back(RosterTag{text, ink}); }
 
-std::string joined(const std::vector<std::string> &names) {
+std::string joined(const std::vector<std::string> &names, std::string_view separator) {
     std::string out;
     for (std::size_t index = 0; index < names.size(); ++index) {
         if (index > 0) {
-            out += "\u3001";
+            out += separator;
         }
         out += names[index];
     }
@@ -429,7 +429,7 @@ std::vector<ModRow> modifierRows(const StringTable &strings, const Battle &battl
             rows.push_back(std::move(row));
             continue;
         }
-        // 原型只把攻方自己的冲击或近战写成裸数字，抗冲和守方近战仍是倍率。
+        // The attacker's own impact or melee is a plain number. Resist and the defender's melee stay multipliers.
         if (baseMod(mod.kind) && (mod.kind != ModKind::Melee || meleeCount == 1)) {
             row.figure = fixed(mod.value, 2);
             row.ink = ModRow::Ink::Plain;
@@ -692,7 +692,7 @@ EndCard formatEnd(const StringTable &strings, const BattleResult &result, const 
     } else if (result.end == BattleEnd::Withdrawn) {
         card.body = strings.text("end.withdraw");
         if (!followers.empty()) {
-            card.body += fill(strings.text("end.follow"), {{"names", joined(followers)}});
+            card.body += fill(strings.text("end.follow"), {{"names", joined(followers, strings.text("ui.list_sep"))}});
         }
     } else if (result.end == BattleEnd::CommanderKilled) {
         card.body = strings.text("end.dead");

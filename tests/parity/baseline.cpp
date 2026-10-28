@@ -141,7 +141,8 @@ TEST_CASE("slow full-battle baseline stays inside the published bands") {
     const float passiveYangMedian = percentile(passiveYang, 0.5);
     const float scriptedYangMedian = percentile(scriptedYang, 0.5);
     INFO("yang median passive " << passiveYangMedian << " scripted " << scriptedYangMedian);
-    // 原型 passive 全是 2003。移植 2000 早 3 tick，是 0.1 累加，允许早最多 4 tick。
+    // The prototype passive median is 2003. The port's 2000 is 3 ticks early from 0.1 accumulation; up to 4 ticks early
+    // is allowed.
     CHECK(passiveYangMedian >= 2003.f - 4.f);
     CHECK(passiveYangMedian <= 2003.f);
     CHECK(scriptedYangMedian >= 1663.f);

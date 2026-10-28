@@ -8,7 +8,7 @@
 
 namespace tq {
 
-// 方阵、棋子、命令线、胜算箭头和框选矩形。
+// Blocks, chits, order lines, the odds arrow, and the drag box.
 class UnitView {
   public:
     void draw(Window &window, const Battle &battle, const StringTable &strings, const sf::Font &glyphFont,

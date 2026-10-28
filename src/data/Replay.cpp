@@ -51,7 +51,7 @@ Command::Type commandType(const std::string &file, const std::string &name) {
     if (name == "join") {
         return Command::Type::Join;
     }
-    fail(file, "未知命令 " + name);
+    fail(file, "unknown command " + name);
 }
 
 } // namespace
@@ -88,7 +88,7 @@ void saveReplay(const std::filesystem::path &path, const Replay &replay) {
     root["commands"] = std::move(commands);
     std::ofstream out(path, std::ios::binary);
     if (!out) {
-        fail(path.string(), "无法写入");
+        fail(path.string(), "could not write");
     }
     out << root.dump(2) << '\n';
 }
@@ -97,7 +97,7 @@ Replay loadReplay(const std::filesystem::path &path) {
     const std::string file = path.string();
     std::ifstream in(path, std::ios::binary);
     if (!in) {
-        fail(file, "无法读取");
+        fail(file, "could not read");
     }
     Json root;
     try {
@@ -106,20 +106,20 @@ Replay loadReplay(const std::filesystem::path &path) {
         fail(file, error.what());
     }
     if (!root.is_object() || !root.contains("schema") || root["schema"] != 1) {
-        fail(file, "schema 必须为 1");
+        fail(file, "schema must be 1");
     }
     for (auto it = root.begin(); it != root.end(); ++it) {
         const std::string key = it.key();
         if (key != "schema" && key != "build" && key != "scenario" && key != "seed" && key != "ai" &&
             key != "commands") {
-            fail(file, "未知字段 " + key);
+            fail(file, "unknown field " + key);
         }
     }
     if (!root.contains("build") || !root["build"].is_string() || !root.contains("scenario") ||
         !root["scenario"].is_string() || !root.contains("seed") || !root["seed"].is_number_unsigned() ||
         !root.contains("ai") || !root["ai"].is_boolean() || !root.contains("commands") ||
         !root["commands"].is_array()) {
-        fail(file, "缺少构建号、场景、种子、ai 或命令列表");
+        fail(file, "missing build, scenario, seed, ai, or commands");
     }
     Replay replay;
     replay.build = root["build"].get<std::string>();
@@ -130,26 +130,26 @@ Replay loadReplay(const std::filesystem::path &path) {
         if (!item.is_object() || !item.contains("tick") || !item["tick"].is_number_unsigned() ||
             !item.contains("type") || !item["type"].is_string() || !item.contains("units") ||
             !item["units"].is_array()) {
-            fail(file, "命令格式不对");
+            fail(file, "bad command");
         }
         ReplayCommand command;
         command.tick = item["tick"].get<std::uint32_t>();
         command.type = commandType(file, item["type"].get<std::string>());
         for (const Json &unit : item["units"]) {
             if (!unit.is_string()) {
-                fail(file, "命令单位必须是场景 id");
+                fail(file, "command units must be scene ids");
             }
             command.units.push_back(unit.get<std::string>());
         }
         if (item.contains("point")) {
             if (!item["point"].is_array() || item["point"].size() != 2) {
-                fail(file, "point 必须是两个数");
+                fail(file, "point must be two numbers");
             }
             command.point = Vec2{item["point"][0].get<float>(), item["point"][1].get<float>()};
         }
         if (item.contains("target")) {
             if (!item["target"].is_string()) {
-                fail(file, "target 必须是场景 id");
+                fail(file, "target must be a scene id");
             }
             command.target = item["target"].get<std::string>();
         }

@@ -39,7 +39,7 @@ bool parse(int argc, char **argv, Args &args) {
         const std::string flag = argv[i];
         auto need = [&](const char *name) -> std::string {
             if (i + 1 >= argc) {
-                std::cerr << "缺少参数 " << name << '\n';
+                std::cerr << "missing value for " << name << '\n';
                 return {};
             }
             return argv[++i];
@@ -59,7 +59,7 @@ bool parse(int argc, char **argv, Args &args) {
             } else if (value == "scripted") {
                 args.policy = tq::PolicyKind::Scripted;
             } else {
-                std::cerr << "策略只能是 passive 或 scripted\n";
+                std::cerr << "policy must be passive or scripted\n";
                 return false;
             }
         } else if (flag == "--no-ai") {
@@ -78,7 +78,7 @@ bool parse(int argc, char **argv, Args &args) {
             usage();
             return false;
         } else {
-            std::cerr << "未知参数 " << flag << '\n';
+            std::cerr << "unknown argument " << flag << '\n';
             return false;
         }
     }
@@ -103,7 +103,7 @@ std::filesystem::path findData(const Args &args) {
         }
         cursor = cursor.parent_path();
     }
-    throw tq::DataError("找不到 data/units.json");
+    throw tq::DataError("could not find data/units.json");
 }
 
 std::string field(const std::optional<std::uint32_t> &value) {
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
         if (args.out) {
             std::ofstream out(*args.out, std::ios::binary);
             if (!out) {
-                std::cerr << "无法写入 " << args.out->string() << '\n';
+                std::cerr << "could not write " << args.out->string() << '\n';
                 return 1;
             }
             out << csv.str();

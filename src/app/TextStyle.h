@@ -4,8 +4,8 @@
 
 namespace tq {
 
-// 棋子字三种语言都用 brush。标题、横幅、飘字只有 zh-Hant 用 brush；
-// ko、en 以及其他语言用 body，再由调用方加上 SFML 的 Bold。
+// Piece glyphs use the brush face in every language. Titles, banners, and floaters use brush only for zh-Hant.
+// Korean, English, and other languages use the body face, and the caller adds SFML Bold.
 enum class TextRole { Body, Title, Banner, Floater, Glyph };
 enum class FontFace { Body, Brush };
 

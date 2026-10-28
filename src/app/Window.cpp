@@ -275,7 +275,7 @@ sf::Keyboard::Key Window::keyFromName(const std::string &name) {
 void Window::loadScript(const std::filesystem::path &file) {
     std::ifstream in(file);
     if (!in) {
-        throw std::runtime_error("找不到脚本: " + file.string());
+        throw std::runtime_error("script not found: " + file.string());
     }
     script_ = parseScript(in);
     scriptPos_ = 0;
@@ -322,7 +322,7 @@ void Window::advanceScript() {
                 applyUiView();
             }
         } else {
-            std::cerr << "未知脚本动作: " << event.action << '\n';
+            std::cerr << "unknown script action: " << event.action << '\n';
         }
     }
 }
@@ -339,7 +339,7 @@ void Window::takeScreenshot(const std::filesystem::path &file) {
     sf::Texture texture(size);
     texture.update(window_);
     if (!texture.copyToImage().saveToFile(file)) {
-        std::cerr << "截图失败: " << file.string() << '\n';
+        std::cerr << "screenshot failed: " << file.string() << '\n';
     }
 }
 

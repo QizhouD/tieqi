@@ -8,7 +8,7 @@
 
 namespace tq {
 
-// fallback 指向的表必须比本表活得更久。缺键时先查 fallback，再退回键名本身。
+// The fallback table must outlive this one. A missing key checks the fallback, then the key itself.
 struct StringTable {
     std::string language;
     std::string fontBody;

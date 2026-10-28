@@ -17,7 +17,7 @@ std::uint32_t Rng::next() {
 }
 
 float Rng::uniform() {
-    // 24 位用双精度除，避免最大值在单精度里被舍入成 1。
+    // Divide the 24 bits in double precision so the maximum does not round to 1 in float.
     return static_cast<float>(static_cast<double>(next() >> 8U) / 16777216.0);
 }
 

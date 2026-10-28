@@ -38,7 +38,7 @@ inline bool contains(const Ellipse &hill, Vec2 point) {
     return alongX * alongX + alongY * alongY < 1.f;
 }
 
-// 水田（含边界）、山地椭圆、大路，先命中先返回。
+// Paddy (including the edge), hill ellipse, then road. The first hit wins.
 inline Terrain terrainAt(const MapDef &map, Vec2 point) {
     for (const Aabb &paddy : map.paddies) {
         if (contains(paddy, point)) {

@@ -1,0 +1,67 @@
+{
+  "labels": {
+    "李如松": "li_rusong",
+    "家丁左營": "jiading_left",
+    "家丁右營": "jiading_right",
+    "遼騎左營": "liaodong_left",
+    "遼騎中營": "liaodong_center",
+    "遼騎右營": "liaodong_right",
+    "立花長槍隊": "van_yari",
+    "立花鐵砲左隊": "van_teppo_left",
+    "立花鐵砲右隊": "van_teppo_right",
+    "立花武士隊": "van_samurai",
+    "立花宗茂": "tachibana",
+    "小早川隆景": "kobayakawa",
+    "本隊鐵砲左隊": "main_teppo_left",
+    "本隊鐵砲右隊": "main_teppo_right",
+    "本隊長槍左隊": "main_yari_left",
+    "本隊長槍右隊": "main_yari_right",
+    "本隊武士隊": "main_samurai",
+    "左翼武士隊": "wing_samurai_left",
+    "右翼武士隊": "wing_samurai_right",
+    "楊元左營": "yang_left",
+    "楊元右營": "yang_right"
+  },
+  "patches": {
+    "breakaway": {
+      "from": "  u.morale -= 5;\n  logEv(`${u.label} 脫離接戰`, u.side);",
+      "to": "  u.morale -= 5;\n  if (window.__ev) window.__ev('Breakaway', u, null, 0);\n  logEv(`${u.label} 脫離接戰`, u.side);"
+    },
+    "impact": {
+      "from": "  logEv(`${a.label} 自${SIDE_TXT[c.side]}衝擊 ${t.label}，衝擊 ×${r.toFixed(1)}${c.pikeFront ? '，撞上槍陣' : ''}`, a.side, breaks || c.pikeFront);",
+      "to": "  if (window.__ev) window.__ev('Impact', a, t, r);\n  logEv(`${a.label} 自${SIDE_TXT[c.side]}衝擊 ${t.label}，衝擊 ×${r.toFixed(1)}${c.pikeFront ? '，撞上槍陣' : ''}`, a.side, breaks || c.pikeFront);"
+    },
+    "broken": {
+      "from": "  u.morale = Math.min(u.morale, 25);\n  logEv(`${u.label} ${reason === '破陣' ? '陣腳被衝破，' : ''}崩潰${parts > 1 ? '，散作' + '兩三'[parts-2] + '股' : ''}`, u.side === 'ming' ? 'jp' : 'ming', true);",
+      "to": "  u.morale = Math.min(u.morale, 25);\n  if (window.__ev) window.__ev('Broken', u, null, parts);\n  logEv(`${u.label} ${reason === '破陣' ? '陣腳被衝破，' : ''}崩潰${parts > 1 ? '，散作' + '兩三'[parts-2] + '股' : ''}`, u.side === 'ming' ? 'jp' : 'ming', true);"
+    },
+    "momentum": {
+      "from": "    v.momentum = Math.min(3, v.momentum + add_); v.momT = 0;\n    floatText(v.x, v.y-26, '氣勢', C.indigo, 18);",
+      "to": "    v.momentum = Math.min(3, v.momentum + add_); v.momT = 0;\n    if (window.__ev) window.__ev('MomentumGained', v, null, add_);\n    floatText(v.x, v.y-26, '氣勢', C.indigo, 18);"
+    },
+    "rallied": {
+      "from": "          logEv(`${u.label} 重新集結`, u.side);",
+      "to": "          if (window.__ev) window.__ev('Rallied', u, null, 0);\n          logEv(`${u.label} 重新集結`, u.side);"
+    },
+    "merged": {
+      "from": "    logEv(`${a.baseLabel} ${b.frag ? '收攏殘部' : '合兵'}，兵 ${Math.round(tot)}`, a.side);",
+      "to": "    a.fragSeq = 0;\n    if (window.__ev) window.__ev('Merged', a, b, tot);\n    logEv(`${a.baseLabel} ${b.frag ? '收攏殘部' : '合兵'}，兵 ${Math.round(tot)}`, a.side);"
+    },
+    "phase2": {
+      "from": "  logEv('日軍本隊自礪石峴壓上，北口撤退路線已開', 'jp', true);",
+      "to": "  logEv('日軍本隊自礪石峴壓上，北口撤退路線已開', 'jp', true);\n  if (window.__ev) window.__ev('PhaseChanged', null, null, 2);"
+    },
+    "assault": {
+      "from": "    logEv('小早川隆景下令總攻，日軍士氣大振', 'jp', true);\n  } else logEv('日軍本隊失去主將，總攻未能發動', 'ming', true);",
+      "to": "    if (window.__ev) window.__ev('GrandAssault', k, null, 0);\n    logEv('小早川隆景下令總攻，日軍士氣大振', 'jp', true);\n  } else {\n    if (window.__ev) window.__ev('GrandAssault', null, null, 0);\n    logEv('日軍本隊失去主將，總攻未能發動', 'ming', true);\n  }\n  if (window.__ev) window.__ev('PhaseChanged', null, null, 3);"
+    },
+    "reinforcement": {
+      "from": "  logEv('楊元率押後的一千騎趕到，可聽調遣', 'ming', true);",
+      "to": "  logEv('楊元率押後的一千騎趕到，可聽調遣', 'ming', true);\n  if (window.__ev) window.__ev('Reinforcement', null, null, 0);"
+    },
+    "battle-end": {
+      "from": "  $('endGrade').textContent = grade;",
+      "to": "  const __gv = grade === '大勝' ? 1 : grade === '小勝' ? 2 : grade === '慘勝' ? 3 : 4;\n  if (window.__ev) window.__ev('BattleEnded', null, null, __gv);\n  S.endKind = kind === 'dead' ? 'commander_killed' : kind === 'win' ? 'withdrawn' : kind === 'fled' ? 'commander_fled' : kind === 'rout' ? 'routed' : 'swept';\n  S.endGradeName = __gv === 1 ? 'decisive' : __gv === 2 ? 'minor' : __gv === 3 ? 'pyrrhic' : 'defeat';\n  S.endRate = rate;\n  $('endGrade').textContent = grade;"
+    }
+  }
+}

@@ -9,7 +9,7 @@
 
 namespace tq {
 
-// 字体和纹理按路径缓存。返回的引用在 clear() 之前一直有效。
+// Fonts and textures are cached by path. The returned reference stays valid until clear().
 class ResourceManager {
   public:
     const sf::Font &font(const std::filesystem::path &file);

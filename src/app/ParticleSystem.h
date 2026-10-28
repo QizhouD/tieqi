@@ -9,7 +9,7 @@
 
 namespace tq {
 
-// 从框架搬来的粒子批。SFML 3 没有 Quads，每个粒子画成两个三角形。
+// Particle batch. SFML 3 has no quads, so each particle is two triangles.
 class ParticleSystem {
   public:
     struct Particle {

@@ -29,13 +29,13 @@ async function load(file) {
 }
 
 function eventText(event) {
-    if (!event) return "（无）";
+    if (!event) return "(none)";
     const value = event.value == null ? "" : " value " + event.value;
     return `${event.type} ${event.a || "-"}#${event.aSeq} -> ${event.b || "-"}#${event.bSeq}${value}`;
 }
 
 function unitText(unit) {
-    if (!unit) return "（无）";
+    if (!unit) return "(none)";
     return `${unit.id}#${unit.seq} ${unit.state} ${unit.order}${unit.target ? "->" + unit.target + "#" + unit.targetSeq : ""} (${unit.x.toFixed(2)},${unit.y.toFixed(2)}) men ${unit.men.toFixed(2)} mor ${unit.morale.toFixed(2)} face ${unit.facing.toFixed(4)} still ${unit.still.toFixed(2)} reload ${unit.reload.toFixed(3)}`;
 }
 
@@ -57,17 +57,17 @@ function sameEvent(left, right) {
 function unitDelta(left, right) {
     const reasons = [];
     if (!near(left.x, right.x, POS) || !near(left.y, right.y, POS)) {
-        reasons.push(`位置 (${left.x.toFixed(3)},${left.y.toFixed(3)}) / (${right.x.toFixed(3)},${right.y.toFixed(3)})`);
+        reasons.push(`position (${left.x.toFixed(3)},${left.y.toFixed(3)}) / (${right.x.toFixed(3)},${right.y.toFixed(3)})`);
     }
-    if (!near(left.facing, right.facing, ANGLE)) reasons.push("朝向");
-    if (!near(left.men, right.men, MEN)) reasons.push(`兵力 ${left.men.toFixed(3)} / ${right.men.toFixed(3)}`);
-    if (!near(left.morale, right.morale, MEN)) reasons.push(`士气 ${left.morale.toFixed(3)} / ${right.morale.toFixed(3)}`);
-    if (left.state !== right.state) reasons.push(`状态 ${left.state} / ${right.state}`);
-    if (left.order !== right.order) reasons.push(`命令 ${left.order} / ${right.order}`);
+    if (!near(left.facing, right.facing, ANGLE)) reasons.push("facing");
+    if (!near(left.men, right.men, MEN)) reasons.push(`men ${left.men.toFixed(3)} / ${right.men.toFixed(3)}`);
+    if (!near(left.morale, right.morale, MEN)) reasons.push(`morale ${left.morale.toFixed(3)} / ${right.morale.toFixed(3)}`);
+    if (left.state !== right.state) reasons.push(`state ${left.state} / ${right.state}`);
+    if (left.order !== right.order) reasons.push(`order ${left.order} / ${right.order}`);
     if (left.target !== right.target || left.targetSeq !== right.targetSeq) {
-        reasons.push(`目标 ${left.target}#${left.targetSeq} / ${right.target}#${right.targetSeq}`);
+        reasons.push(`target ${left.target}#${left.targetSeq} / ${right.target}#${right.targetSeq}`);
     }
-    if (!near(left.still, right.still, STILL)) reasons.push("停步");
+    if (!near(left.still, right.still, STILL)) reasons.push("still");
     return reasons;
 }
 
@@ -79,8 +79,8 @@ function related(proto, port, ids) {
         seen.add(key);
         const [id, seqText] = key.split("#");
         const seq = Number(seqText);
-        lines.push("  原型 " + unitText(findUnit(proto, id, seq)));
-        lines.push("  移植 " + unitText(findUnit(port, id, seq)));
+        lines.push("  prototype " + unitText(findUnit(proto, id, seq)));
+        lines.push("  port " + unitText(findUnit(port, id, seq)));
     }
     return lines;
 }
@@ -98,7 +98,7 @@ export async function compareFiles(protoFile, portFile) {
             const left = protoEvents[i];
             const right = portEvents[i];
             if (!left || !right || !sameEvent(left, right)) {
-                return report(tick, "事件", left, right, proto, port, floats);
+                return report(tick, "event", left, right, proto, port, floats);
             }
         }
         const protoUnits = proto.states.get(tick) || [];
@@ -113,19 +113,19 @@ export async function compareFiles(protoFile, portFile) {
             const left = findUnit(protoUnits, id, seq);
             const right = findUnit(portUnits, id, seq);
             if (!left || !right) {
-                return report(tick, "单位", left, right, proto, port, floats, key);
+                return report(tick, "unit", left, right, proto, port, floats, key);
             }
             const reasons = unitDelta(left, right);
             if (reasons.length) {
-                const onlyPose = reasons.every((reason) => reason.startsWith("位置") || reason === "朝向");
+                const onlyPose = reasons.every((reason) => reason.startsWith("position") || reason === "facing");
                 const pose = Math.hypot(left.x - right.x, left.y - right.y);
                 if (onlyPose && pose <= 0.05 && Math.abs(left.facing - right.facing) <= 1e-3) {
                     if (floats.length < 8) {
-                        floats.push(`tick ${tick} ${key} 位移 ${pose.toExponential(2)} 朝向 ${(left.facing - right.facing).toExponential(2)}`);
+                        floats.push(`tick ${tick} ${key} offset ${pose.toExponential(2)} facing ${(left.facing - right.facing).toExponential(2)}`);
                     }
                     continue;
                 }
-                return report(tick, reasons.join("，"), left, right, proto, port, floats, key);
+                return report(tick, reasons.join(", "), left, right, proto, port, floats, key);
             }
         }
     }
@@ -145,15 +145,15 @@ function report(tick, why, left, right, proto, port, floats, key) {
         if (event.b) ids.push(event.b + "#" + event.bSeq);
     }
     const lines = [];
-    lines.push(`第一处不一致：tick ${tick} ${why}`);
-    if (left && left.type) lines.push("原型事件 " + eventText(left));
-    if (right && right.type) lines.push("移植事件 " + eventText(right));
-    if (left && left.men != null) lines.push("原型单位 " + unitText(left));
-    if (right && right.men != null) lines.push("移植单位 " + unitText(right));
-    lines.push("本 tick");
+    lines.push(`first mismatch: tick ${tick} ${why}`);
+    if (left && left.type) lines.push("prototype event " + eventText(left));
+    if (right && right.type) lines.push("port event " + eventText(right));
+    if (left && left.men != null) lines.push("prototype unit " + unitText(left));
+    if (right && right.men != null) lines.push("port unit " + unitText(right));
+    lines.push("this tick");
     lines.push(...related(protoUnits, portUnits, ids));
     if (prevProto.length || prevPort.length) {
-        lines.push("上一 tick");
+        lines.push("previous tick");
         lines.push(...related(prevProto, prevPort, ids));
     }
     return { match: false, tick, why, floats, text: lines.join("\n") };
@@ -162,16 +162,16 @@ function report(tick, why, left, right, proto, port, floats, key) {
 async function main() {
     const [protoFile, portFile] = process.argv.slice(2);
     if (!protoFile || !portFile) {
-        console.error("用法：node compare.mjs 原型.jsonl 移植.jsonl");
+        console.error("usage: node compare.mjs prototype.jsonl port.jsonl");
         process.exit(2);
     }
     const result = await compareFiles(protoFile, portFile);
     if (result.floats.length) {
-        console.log("浮点尾差（未追）");
+        console.log("float tail (not chased)");
         for (const line of result.floats) console.log(line);
     }
     if (result.match) {
-        console.log(`一致，共 ${result.ticks} 个 tick`);
+        console.log(`match, ${result.ticks} ticks`);
         return;
     }
     console.log(result.text);
