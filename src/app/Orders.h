@@ -89,6 +89,9 @@ std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const
 
 OrderEffect applyKey(OrderState &state, const Battle &battle, OrderKey key, const std::vector<float> &speeds);
 
+// 待确认时点“确认进攻”。没有待确认目标就不下命令。
+std::vector<Command> confirmPending(OrderState &state, const Battle &battle);
+
 void noteEvents(OrderState &state, const Battle &battle, std::span<const Event> events);
 
 bool isPointerAction(std::string_view action);

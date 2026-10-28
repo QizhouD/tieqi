@@ -16,6 +16,7 @@ struct LaunchOptions {
     std::filesystem::path dataRoot;
     bool scenarioSet = false;
     bool seedSet = false;
+    bool perf = false;
 };
 
 struct AssetRootRequest {

@@ -57,6 +57,8 @@ LaunchOptions parseLaunch(int argc, char **argv) {
             options.script = std::filesystem::absolute(requireValue(argc, argv, i));
         } else if (arg == "--data-root") {
             options.dataRoot = std::filesystem::absolute(requireValue(argc, argv, i));
+        } else if (arg == "--perf") {
+            options.perf = true;
         } else {
             throw std::runtime_error("未知参数: " + arg);
         }

@@ -28,6 +28,7 @@ class Window {
     void draw(const sf::Drawable &drawable);
     sf::RenderTarget &target();
     void close();
+    void unlimitedFrameRate();
 
     bool isOpen() const { return !done_; }
     bool scripted() const { return scripted_; }
@@ -43,6 +44,13 @@ class Window {
     void snapCamera(sf::Vector2f target);
     void followCamera(sf::Vector2f target, float elapsed);
     void beginUi();
+    void beginPixels();
+    struct PixelMap {
+        float originX = 0.f;
+        float originY = 0.f;
+        float scale = 1.f;
+    };
+    PixelMap pixelMap() const;
     void beginWorld();
     // 棋子画在地图矩形里。视口裁到地图，超出地图的单位不画进深色边。
     void beginMap();
@@ -72,6 +80,7 @@ class Window {
     std::vector<ScriptEvent> script_;
     std::size_t scriptPos_ = 0;
     bool scripted_ = false;
+    bool scriptClockStarted_ = false;
     sf::Clock scriptClock_;
     std::set<sf::Keyboard::Key> held_;
     std::filesystem::path pendingShot_;

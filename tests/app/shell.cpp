@@ -62,10 +62,10 @@ TEST_CASE("window fit stays inside 90 percent of the desktop") {
 
 TEST_CASE("battlefield centers the map below the bar and left of the panel") {
     const ScreenRect field = battlefieldRect();
-    CHECK(field.x == doctest::Approx(0.f));
-    CHECK(field.y == doctest::Approx(56.f));
-    CHECK(field.w == doctest::Approx(1220.f));
-    CHECK(field.h == doctest::Approx(944.f));
+    CHECK(field.x == doctest::Approx(17.f));
+    CHECK(field.y == doctest::Approx(55.f));
+    CHECK(field.w == doctest::Approx(1216.f));
+    CHECK(field.h == doctest::Approx(932.f));
 
     const MapCamera camera = mapCamera(field, 880.f, 1100.f);
     const float scale = std::min((field.w - 20.f) / 880.f, (field.h - 20.f) / 1100.f);
@@ -203,4 +203,15 @@ TEST_CASE("launch options accept the documented flags") {
     CHECK(options.seedSet);
     REQUIRE(options.timeScale.has_value());
     CHECK(*options.timeScale == doctest::Approx(5.f));
+}
+
+TEST_CASE("perf flag is recognized") {
+    char arg0[] = "tieqi";
+    char perfFlag[] = "--perf";
+    char seedFlag[] = "--seed";
+    char seed[] = "1";
+    char *argv[] = {arg0, perfFlag, seedFlag, seed};
+    const LaunchOptions options = parseLaunch(4, argv);
+    CHECK(options.perf);
+    CHECK(options.seed == 1);
 }

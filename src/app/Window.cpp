@@ -73,6 +73,7 @@ void Window::create() {
     }
     pixelSize_ = window_.getSize();
     window_.setFramerateLimit(60);
+    window_.setVerticalSyncEnabled(false);
     window_.setKeyRepeatEnabled(false);
     applyUiView();
 }
@@ -115,6 +116,27 @@ void Window::applyView(sf::Vector2f center, sf::Vector2f size, ScreenRect screen
 }
 
 void Window::beginUi() { applyUiView(); }
+
+void Window::beginPixels() {
+    const float width = static_cast<float>(std::max(1u, pixelSize_.x));
+    const float height = static_cast<float>(std::max(1u, pixelSize_.y));
+    sf::View view(sf::FloatRect({0.f, 0.f}, {width, height}));
+    window_.setView(view);
+}
+
+Window::PixelMap Window::pixelMap() const {
+    const float width = static_cast<float>(std::max(1u, pixelSize_.x));
+    const float height = static_cast<float>(std::max(1u, pixelSize_.y));
+    const Viewport box = letterbox(width, height, static_cast<float>(kWindowWidth), static_cast<float>(kWindowHeight));
+    PixelMap map;
+    map.originX = box.x * width;
+    map.originY = box.y * height;
+    map.scale = box.h * height / static_cast<float>(kWindowHeight);
+    if (!(map.scale > 0.f)) {
+        map.scale = 1.f;
+    }
+    return map;
+}
 
 void Window::beginWorld() {
     const ScreenRect field = battlefieldRect();
@@ -259,10 +281,14 @@ void Window::loadScript(const std::filesystem::path &file) {
     scriptPos_ = 0;
     scripted_ = true;
     held_.clear();
-    scriptClock_.restart();
+    scriptClockStarted_ = false;
 }
 
 void Window::advanceScript() {
+    if (!scriptClockStarted_) {
+        scriptClock_.restart();
+        scriptClockStarted_ = true;
+    }
     const float now = scriptClock_.getElapsedTime().asSeconds();
     while (scriptPos_ < script_.size() && script_[scriptPos_].time <= now) {
         const ScriptEvent event = script_[scriptPos_];
@@ -290,8 +316,9 @@ void Window::advanceScript() {
             unsigned height = 0;
             std::istringstream size(event.arg);
             if ((size >> width >> height) && width > 0 && height > 0) {
+                window_.setMinimumSize(sf::Vector2u{width, height});
                 window_.setSize({width, height});
-                pixelSize_ = window_.getSize();
+                pixelSize_ = {width, height};
                 applyUiView();
             }
         } else {
@@ -334,5 +361,10 @@ void Window::draw(const sf::Drawable &drawable) { window_.draw(drawable); }
 sf::RenderTarget &Window::target() { return window_; }
 
 void Window::close() { done_ = true; }
+
+void Window::unlimitedFrameRate() {
+    window_.setFramerateLimit(0);
+    window_.setVerticalSyncEnabled(false);
+}
 
 } // namespace tq

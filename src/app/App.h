@@ -1,10 +1,12 @@
 #pragma once
 
 #include "app/AudioManager.h"
+#include "app/Hud.h"
 #include "app/Launch.h"
 #include "app/MapView.h"
 #include "app/Orders.h"
 #include "app/ResourceManager.h"
+#include "app/TextCache.h"
 #include "app/TextStyle.h"
 #include "app/UnitView.h"
 #include "app/Window.h"
@@ -28,6 +30,8 @@ class App {
     void stepSim();
     void drawFrame();
     void handleInput();
+    void applyHud(HudAction action);
+    void restart();
     void issue(Command command);
     void queueSfx();
     void playDue();
@@ -50,7 +54,10 @@ class App {
     MapView mapView_;
     UnitView unitView_;
     OrderState orders_;
+    Hud hud_;
     bool running_ = false;
+    std::uint64_t seed_ = 1;
+    bool aiEnabled_ = true;
 
     struct Cue {
         float time = 0.f;
@@ -60,6 +67,8 @@ class App {
     std::vector<Cue> cues_;
     float soundTime_ = 0.f;
     float accumulator_ = 0.f;
+    bool perf_ = false;
+    TextCacheGuard textCache_;
 };
 
 } // namespace tq

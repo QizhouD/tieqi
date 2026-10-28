@@ -9,7 +9,10 @@
 #include <SFML/System/String.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <iomanip>
 #include <iostream>
+#include <numeric>
 #include <optional>
 #include <string_view>
 
@@ -104,6 +107,7 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
 
     language_ = data_.config.language;
     speed_ = data_.config.defaultSpeed;
+    perf_ = options.perf;
     reducedMotion_ = data_.config.reducedMotion;
     audio_.setMasterVolume(70.f);
 
@@ -117,12 +121,17 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
             speed_ = saved.speed;
         }
     }
+    if (perf_) {
+        speed_ = 2.f;
+    }
     audio_.setMuted(!data_.config.sound || audio_.masterVolume() <= 0.f);
     audio_.loadDefaults(root_ / "assets" / "audio");
 
+    seed_ = seed;
+    aiEnabled_ = ai;
     BattleOptions battleOptions;
-    battleOptions.aiEnabled = ai;
-    battle_.emplace(data_.defs, data_.scenario, seed, battleOptions);
+    battleOptions.aiEnabled = aiEnabled_;
+    battle_.emplace(data_.defs, data_.scenario, seed_, battleOptions);
 
     window_.open(utf8(active().text("game.title")));
     const MapDef &map = data_.scenario.map;
@@ -166,6 +175,7 @@ void App::stepSim() {
         }
     }
     noteEvents(orders_, *battle_, events);
+    hud_.note(*battle_, active(), events);
 }
 
 void App::queueSfx() {
@@ -196,6 +206,29 @@ void App::drawFrame() {
     window_.beginMap();
     unitView_.draw(window_, *battle_, active(), fontFor(active(), glyph.face), fontFor(active(), body.face), soundTime_,
                    std::clamp(accumulator_, 0.f, 1.f), orders_);
+    window_.beginPixels();
+    const Window::PixelMap pixels = window_.pixelMap();
+    const TextStyle title = textStyle(active().language, TextRole::Title);
+    HudFrame frame;
+    frame.battle = &*battle_;
+    frame.orders = &orders_;
+    frame.strings = &active();
+    frame.body = &fontFor(active(), FontFace::Body);
+    frame.title = &fontFor(active(), title.face);
+    frame.titleBold = title.bold;
+    frame.exit = &data_.scenario.exit;
+    frame.startClock = data_.scenario.startClock;
+    frame.alpha = std::clamp(accumulator_, 0.f, 1.f);
+    frame.wallTime = soundTime_;
+    frame.running = running_;
+    frame.muted = audio_.muted();
+    frame.reducedMotion = reducedMotion_;
+    frame.speed = speed_;
+    frame.speeds = &data_.config.playerSpeeds;
+    frame.originX = pixels.originX;
+    frame.originY = pixels.originY;
+    frame.scale = pixels.scale;
+    hud_.draw(window_.target(), frame);
 }
 
 void App::issue(Command command) {
@@ -208,6 +241,65 @@ void App::issue(Command command) {
     battle_->submit(std::move(command));
 }
 
+void App::applyHud(HudAction action) {
+    if (!battle_) {
+        return;
+    }
+    const std::vector<float> &speeds = data_.config.playerSpeeds;
+    if (action == HudAction::ToggleRun) {
+        toggleRunning(running_, *battle_);
+        return;
+    }
+    if (action == HudAction::ToggleSound) {
+        audio_.setMuted(!audio_.muted());
+        return;
+    }
+    if (action == HudAction::Restart) {
+        restart();
+        return;
+    }
+    if (action == HudAction::Speed0 || action == HudAction::Speed1 || action == HudAction::Speed2) {
+        const std::size_t index = action == HudAction::Speed0 ? 0 : action == HudAction::Speed1 ? 1 : 2;
+        if (index < speeds.size()) {
+            speed_ = speeds[index];
+        }
+        return;
+    }
+    if (action == HudAction::ConfirmAttack) {
+        for (Command command : confirmPending(orders_, *battle_)) {
+            issue(std::move(command));
+        }
+        return;
+    }
+    OrderKey key = OrderKey::Cancel;
+    if (action == HudAction::Hold) {
+        key = OrderKey::Hold;
+    } else if (action == HudAction::Retreat) {
+        key = OrderKey::Retreat;
+    } else if (action == HudAction::Split) {
+        key = OrderKey::Split;
+    } else if (action == HudAction::Join) {
+        key = OrderKey::Join;
+    }
+    OrderEffect effect = applyKey(orders_, *battle_, key, speeds);
+    for (Command &command : effect.commands) {
+        issue(std::move(command));
+    }
+}
+
+void App::restart() {
+    BattleOptions options;
+    options.aiEnabled = aiEnabled_;
+    battle_.emplace(data_.defs, data_.scenario, seed_, options);
+    orders_ = {};
+    hud_.reset();
+    accumulator_ = 0.f;
+    running_ = false;
+    replayCursor_ = 0;
+    const TextStyle title = textStyle(active().language, TextRole::Title);
+    mapView_.build(data_.scenario, active(), fontFor(active(), title.face), title.bold);
+}
+
 void App::handleInput() {
     if (!battle_) {
         return;
@@ -216,6 +308,13 @@ void App::handleInput() {
     const float mapW = data_.scenario.map.width;
     const float mapH = data_.scenario.map.height;
     for (const PointerSample &sample : window_.takePointers()) {
+        const Hud::Input input = hud_.handle(sample);
+        if (input.action != HudAction::None) {
+            applyHud(input.action);
+        }
+        if (input.consumed) {
+            continue;
+        }
         for (Command command : applyPointer(orders_, *battle_, sample, mapW, mapH, alpha)) {
             issue(std::move(command));
         }
@@ -238,10 +337,41 @@ void App::handleInput() {
     }
 }
 
+namespace {
+
+void printPerf(std::vector<float> samples) {
+    if (samples.empty()) {
+        std::cout << "perf mean 0.0 ms p95 0.0 ms max 0.0 ms\n";
+        return;
+    }
+    const double sum = std::accumulate(samples.begin(), samples.end(), 0.0);
+    const double mean = sum / static_cast<double>(samples.size());
+    std::sort(samples.begin(), samples.end());
+    const std::size_t count = samples.size();
+    const auto rank = static_cast<std::size_t>(std::ceil(0.95 * static_cast<double>(count)));
+    const std::size_t index = std::min(count - 1, rank == 0 ? 0 : rank - 1);
+    std::cout << std::fixed << std::setprecision(1);
+    std::cout << "perf mean " << mean << " ms p95 " << samples[index] << " ms max " << samples.back() << " ms\n";
+}
+
+} // namespace
+
 void App::run() {
+    if (perf_) {
+        window_.unlimitedFrameRate();
+        speed_ = 2.f;
+        running_ = true;
+    }
     sf::Clock frameClock;
+    std::vector<float> samples;
+    bool frameOpen = false;
     while (window_.isOpen()) {
-        const float frame = std::min(frameClock.restart().asSeconds(), 0.25f);
+        const float raw = frameClock.restart().asSeconds();
+        if (perf_ && frameOpen) {
+            samples.push_back(raw * 1000.f);
+        }
+        frameOpen = true;
+        const float frame = std::min(raw, 0.25f);
         window_.poll();
         handleInput();
         if (window_.wasKeyPressed(sf::Keyboard::Key::F6)) {
@@ -259,6 +389,11 @@ void App::run() {
         window_.beginDraw();
         drawFrame();
         window_.endDraw();
+        if (perf_ && battle_ && battle_->isOver()) {
+            samples.push_back(frameClock.restart().asSeconds() * 1000.f);
+            printPerf(samples);
+            window_.close();
+        }
     }
 }
 

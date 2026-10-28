@@ -218,6 +218,7 @@ TEST_CASE("speed, touch confirm, shift, box and selection keys") {
         playControlScript(mouse, mouseIn, data.config.timeScale, data.config.playerSpeeds, mapW, mapH, 1.f);
     REQUIRE(clicked.commands.size() == 1);
     CHECK(clicked.commands[0].type == Command::Type::Attack);
+    CHECK(clicked.state.hover == enemy);
 
     Battle shift = makeBattle(data);
     const UnitId right = named(shift, "jiading_right");
@@ -303,4 +304,59 @@ TEST_CASE("right click moves on empty ground and attacks an enemy") {
     CHECK(play.commands[1].type == Command::Type::Attack);
     CHECK(play.commands[1].target == enemy);
     CHECK(play.state.selected == std::vector<UnitId>{left});
+}
+
+TEST_CASE("mouse script clicks hover before they press") {
+    ScriptEvent click;
+    click.action = "click";
+    click.arg = "10 20";
+    const std::vector<PointerSample> samples = samplesForScript(click);
+    REQUIRE(samples.size() == 3);
+    CHECK(samples[0].type == PointerSample::Type::Move);
+    CHECK(samples[1].type == PointerSample::Type::Down);
+    CHECK(samples[2].type == PointerSample::Type::Up);
+    CHECK(samples[0].x == doctest::Approx(10.f));
+    CHECK(samples[0].y == doctest::Approx(20.f));
+
+    ScriptEvent right;
+    right.action = "rclick";
+    right.arg = "3 4";
+    const std::vector<PointerSample> rightSamples = samplesForScript(right);
+    REQUIRE(rightSamples.size() == 3);
+    CHECK(rightSamples[0].type == PointerSample::Type::Move);
+    CHECK(rightSamples[1].button == kPointerRight);
+
+    ScriptEvent shift;
+    shift.action = "shiftclick";
+    shift.arg = "5 6";
+    const std::vector<PointerSample> shiftSamples = samplesForScript(shift);
+    REQUIRE(shiftSamples.size() == 3);
+    CHECK(shiftSamples[0].type == PointerSample::Type::Move);
+    CHECK(shiftSamples[0].shift);
+
+    ScriptEvent touch;
+    touch.action = "touchclick";
+    touch.arg = "7 8";
+    const std::vector<PointerSample> touchSamples = samplesForScript(touch);
+    REQUIRE(touchSamples.size() == 2);
+    CHECK(touchSamples[0].type == PointerSample::Type::Down);
+    CHECK(touchSamples[0].device == PointerSample::Device::Touch);
+}
+
+TEST_CASE("confirm attack orders the pending target") {
+    const GameData data = loadByeok();
+    Battle battle = makeBattle(data);
+    battle.step();
+    const UnitId enemy = named(battle, "van_teppo_right");
+    OrderState state;
+    state.selected = {named(battle, "jiading_left")};
+    state.pending = enemy;
+    const std::vector<Command> issued = confirmPending(state, battle);
+    REQUIRE(issued.size() == 1);
+    CHECK(issued[0].type == Command::Type::Attack);
+    CHECK(issued[0].target == enemy);
+    CHECK_FALSE(state.pending.has_value());
+
+    OrderState idle;
+    CHECK(confirmPending(idle, battle).empty());
 }
