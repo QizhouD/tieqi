@@ -2,6 +2,7 @@
 
 #include "app/AudioManager.h"
 #include "app/Launch.h"
+#include "app/MapView.h"
 #include "app/ResourceManager.h"
 #include "app/TextStyle.h"
 #include "app/Window.h"
@@ -42,6 +43,7 @@ class App {
     ResourceManager resources_;
     AudioManager audio_;
     Window window_;
+    MapView mapView_;
 
     struct Cue {
         float time = 0.f;

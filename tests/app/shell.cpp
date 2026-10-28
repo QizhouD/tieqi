@@ -38,6 +38,56 @@ TEST_CASE("text style keeps brush off Korean and English titles") {
     }
 }
 
+TEST_CASE("window fit stays inside 90 percent of the desktop") {
+    const WindowFit small = fitWindow(1366, 768);
+    CHECK(small.minW == 1229);
+    CHECK(small.minH == 691);
+    CHECK(small.defaultW == 1229);
+    CHECK(small.defaultH == 691);
+
+    const WindowFit hd = fitWindow(1920, 1080);
+    CHECK(hd.minW == 1280);
+    CHECK(hd.minH == 800);
+    CHECK(hd.defaultW == 1555);
+    CHECK(hd.defaultH == 972);
+    CHECK(hd.defaultW <= 1728);
+    CHECK(hd.defaultH <= 972);
+
+    const WindowFit wide = fitWindow(2560, 1440);
+    CHECK(wide.defaultW == 1600);
+    CHECK(wide.defaultH == 1000);
+    CHECK(wide.minW == 1280);
+    CHECK(wide.minH == 800);
+}
+
+TEST_CASE("battlefield centers the map below the bar and left of the panel") {
+    const ScreenRect field = battlefieldRect();
+    CHECK(field.x == doctest::Approx(0.f));
+    CHECK(field.y == doctest::Approx(56.f));
+    CHECK(field.w == doctest::Approx(1220.f));
+    CHECK(field.h == doctest::Approx(944.f));
+
+    const MapCamera camera = mapCamera(field, 880.f, 1100.f);
+    const float scale = std::min((field.w - 20.f) / 880.f, (field.h - 20.f) / 1100.f);
+    CHECK(camera.scale == doctest::Approx(scale));
+    CHECK(camera.originX == doctest::Approx(field.x + (field.w - 880.f * scale) * 0.5f));
+    CHECK(camera.originY == doctest::Approx(field.y + (field.h - 1100.f * scale) * 0.5f));
+
+    const Vec2 origin = worldFromLogical(camera.originX, camera.originY, 880.f, 1100.f);
+    CHECK(origin.x == doctest::Approx(0.f));
+    CHECK(origin.y == doctest::Approx(0.f));
+    const Vec2 center = worldFromLogical(camera.originX + 440.f * scale, camera.originY + 550.f * scale, 880.f, 1100.f);
+    CHECK(center.x == doctest::Approx(440.f));
+    CHECK(center.y == doctest::Approx(550.f));
+}
+
+TEST_CASE("map rng matches the prototype mulberry32 stream") {
+    MapRng rng(1593);
+    CHECK(rng() == doctest::Approx(0.7827615959).epsilon(1e-6));
+    CHECK(rng() == doctest::Approx(0.9247896769).epsilon(1e-6));
+    CHECK(rng() == doctest::Approx(0.5550176848).epsilon(1e-6));
+}
+
 TEST_CASE("letterbox keeps the logical aspect") {
     const auto aspect = [](float pixelW, float pixelH, Viewport box) { return (box.w * pixelW) / (box.h * pixelH); };
     const float logical = 1600.f / 1000.f;

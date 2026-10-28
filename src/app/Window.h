@@ -3,6 +3,7 @@
 #include "app/Script.h"
 #include "app/Viewport.h"
 
+#include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/Keyboard.hpp>
@@ -23,6 +24,7 @@ class Window {
     void beginDraw();
     void endDraw();
     void draw(const sf::Drawable &drawable);
+    sf::RenderTarget &target();
     void close();
 
     bool isOpen() const { return !done_; }
