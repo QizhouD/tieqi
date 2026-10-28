@@ -95,6 +95,9 @@ inline float chitPixels(float pixelsPerMeter, float maxMen, float typeMen) {
     return base;
 }
 
+// 和位置一样落后一个 tick：alpha 为 0 时画上一拍结束时的 brokenSec。
+inline float presentedBrokenSec(float brokenSec, float alpha) { return brokenSec + kTickSeconds * (1.f - alpha); }
+
 inline ChitFace chitFace(UnitState state, float brokenSec) {
     if (state == UnitState::Broken) {
         const float progress = std::clamp(1.f - brokenSec / kBrokenSec, 0.f, 1.f);

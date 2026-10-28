@@ -1,5 +1,6 @@
 #pragma once
 
+#include "app/Pointer.h"
 #include "app/Script.h"
 #include "app/Viewport.h"
 
@@ -9,6 +10,7 @@
 #include <SFML/Window/Keyboard.hpp>
 
 #include <filesystem>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -31,6 +33,8 @@ class Window {
     bool scripted() const { return scripted_; }
     bool wasKeyPressed(sf::Keyboard::Key key) const;
     bool isKeyDown(sf::Keyboard::Key key) const;
+    const std::vector<sf::Keyboard::Key> &pressedKeys() const { return pressed_; }
+    std::vector<PointerSample> takePointers();
     sf::Vector2u pixelSize() const { return pixelSize_; }
     sf::Vector2u logicalSize() const { return {kWindowWidth, kWindowHeight}; }
 
@@ -38,6 +42,7 @@ class Window {
     void setWorld(sf::Vector2u worldSize);
     void snapCamera(sf::Vector2f target);
     void followCamera(sf::Vector2f target, float elapsed);
+    void beginUi();
     void beginWorld();
     // 棋子画在地图矩形里。视口裁到地图，超出地图的单位不画进深色边。
     void beginMap();
@@ -50,6 +55,7 @@ class Window {
     void applyView(sf::Vector2f center, sf::Vector2f size, ScreenRect screen);
     void advanceScript();
     void takeScreenshot(const std::filesystem::path &file);
+    void addPointer(PointerSample sample);
     static sf::Keyboard::Key keyFromName(const std::string &name);
 
     sf::RenderWindow window_;
@@ -61,6 +67,8 @@ class Window {
     bool fullscreen_ = false;
 
     std::vector<sf::Keyboard::Key> pressed_;
+    std::vector<PointerSample> pointers_;
+    std::optional<unsigned> touchFinger_;
     std::vector<ScriptEvent> script_;
     std::size_t scriptPos_ = 0;
     bool scripted_ = false;

@@ -9,6 +9,8 @@
 #include <SFML/System/String.hpp>
 
 #include <algorithm>
+#include <iostream>
+#include <optional>
 #include <string_view>
 
 namespace tq {
@@ -43,6 +45,33 @@ void submitRecorded(Battle &battle, const ReplayCommand &command) {
     }
     if (!issued.units.empty()) {
         battle.submit(std::move(issued));
+    }
+}
+
+std::optional<OrderKey> orderKeyFromKeyboard(sf::Keyboard::Key key) {
+    switch (key) {
+    case sf::Keyboard::Key::Space:
+        return OrderKey::Space;
+    case sf::Keyboard::Key::Num1:
+        return OrderKey::Speed1;
+    case sf::Keyboard::Key::Num2:
+        return OrderKey::Speed2;
+    case sf::Keyboard::Key::Num3:
+        return OrderKey::Speed3;
+    case sf::Keyboard::Key::H:
+        return OrderKey::Hold;
+    case sf::Keyboard::Key::R:
+        return OrderKey::Retreat;
+    case sf::Keyboard::Key::F:
+        return OrderKey::Split;
+    case sf::Keyboard::Key::G:
+        return OrderKey::Join;
+    case sf::Keyboard::Key::A:
+        return OrderKey::All;
+    case sf::Keyboard::Key::Escape:
+        return OrderKey::Cancel;
+    default:
+        return std::nullopt;
     }
 }
 
@@ -130,11 +159,13 @@ void App::stepSim() {
         replayCursor_ += 1;
     }
     battle_->step();
-    for (const Event &event : battle_->drainEvents()) {
+    const std::vector<Event> events = battle_->drainEvents();
+    for (const Event &event : events) {
         if (event.type == Event::Type::Impact) {
             mapView_.addScar(event.pos, event.value);
         }
     }
+    noteEvents(orders_, *battle_, events);
 }
 
 void App::queueSfx() {
@@ -161,9 +192,50 @@ void App::drawFrame() {
         return;
     }
     const TextStyle glyph = textStyle(active().language, TextRole::Glyph);
+    const TextStyle body = textStyle(active().language, TextRole::Body);
     window_.beginMap();
-    unitView_.draw(window_, *battle_, active(), fontFor(active(), glyph.face), soundTime_,
-                   std::clamp(accumulator_, 0.f, 1.f), selected_, hover_);
+    unitView_.draw(window_, *battle_, active(), fontFor(active(), glyph.face), fontFor(active(), body.face), soundTime_,
+                   std::clamp(accumulator_, 0.f, 1.f), orders_);
+}
+
+void App::issue(Command command) {
+    if (!battle_ || command.units.empty()) {
+        return;
+    }
+    if (window_.scripted()) {
+        std::cout << commandText(command) << '\n';
+    }
+    battle_->submit(std::move(command));
+}
+
+void App::handleInput() {
+    if (!battle_) {
+        return;
+    }
+    const float alpha = std::clamp(accumulator_, 0.f, 1.f);
+    const float mapW = data_.scenario.map.width;
+    const float mapH = data_.scenario.map.height;
+    for (const PointerSample &sample : window_.takePointers()) {
+        for (Command command : applyPointer(orders_, *battle_, sample, mapW, mapH, alpha)) {
+            issue(std::move(command));
+        }
+    }
+    for (sf::Keyboard::Key key : window_.pressedKeys()) {
+        const std::optional<OrderKey> order = orderKeyFromKeyboard(key);
+        if (!order) {
+            continue;
+        }
+        OrderEffect effect = applyKey(orders_, *battle_, *order, data_.config.playerSpeeds);
+        if (effect.toggleRun) {
+            toggleRunning(running_, *battle_);
+        }
+        if (effect.speed) {
+            speed_ = *effect.speed;
+        }
+        for (Command &command : effect.commands) {
+            issue(std::move(command));
+        }
+    }
 }
 
 void App::run() {
@@ -171,12 +243,13 @@ void App::run() {
     while (window_.isOpen()) {
         const float frame = std::min(frameClock.restart().asSeconds(), 0.25f);
         window_.poll();
+        handleInput();
         if (window_.wasKeyPressed(sf::Keyboard::Key::F6)) {
             queueSfx();
         }
         soundTime_ += frame;
         playDue();
-        if (battle_ && !battle_->isOver()) {
+        if (battle_ && running_ && !battle_->isOver()) {
             accumulator_ += frame * data_.config.timeScale / kTickSeconds * speed_;
             for (int n = 0; accumulator_ >= 1.f && n < data_.config.maxTicksPerFrame; ++n) {
                 stepSim();

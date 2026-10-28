@@ -120,6 +120,22 @@ inline Vec2 worldFromLogical(float x, float y, float mapW, float mapH) {
     return {(x - camera.originX) / camera.scale, (y - camera.originY) / camera.scale};
 }
 
+inline Vec2 logicalFromWorld(float x, float y, float mapW, float mapH) {
+    const MapCamera camera = mapCamera(battlefieldRect(), mapW, mapH);
+    return {camera.originX + x * camera.scale, camera.originY + y * camera.scale};
+}
+
+// 窗口像素换到 1600×1000 的逻辑像素。有黑边时先去掉 letterbox。
+inline Vec2 logicalFromPixel(float pixelX, float pixelY, float pixelW, float pixelH,
+                             float logicalW = static_cast<float>(kWindowWidth),
+                             float logicalH = static_cast<float>(kWindowHeight)) {
+    if (!(pixelW > 0.f) || !(pixelH > 0.f) || !(logicalW > 0.f) || !(logicalH > 0.f)) {
+        return {};
+    }
+    const Viewport box = letterbox(pixelW, pixelH, logicalW, logicalH);
+    return {(pixelX / pixelW - box.x) / box.w * logicalW, (pixelY / pixelH - box.y) / box.h * logicalH};
+}
+
 // 与原型 buildMap 相同的 Mulberry32，种子 1593。只给底图纹理用。
 class MapRng {
   public:

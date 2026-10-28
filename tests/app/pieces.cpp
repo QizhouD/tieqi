@@ -48,6 +48,17 @@ TEST_CASE("piece interpolation, blocks and chits follow the prototype") {
     const ChitFace closed = chitFace(UnitState::Broken, kBrokenSec);
     CHECK(closed.scaleX == doctest::Approx(1.f));
     CHECK_FALSE(closed.back);
+    const float snapshot = kBrokenSec * 0.5f;
+    CHECK(presentedBrokenSec(snapshot, 0.f) == doctest::Approx(snapshot + kTickSeconds));
+    CHECK(presentedBrokenSec(snapshot, 0.5f) == doctest::Approx(snapshot + kTickSeconds * 0.5f));
+    CHECK(presentedBrokenSec(snapshot, 1.f) == doctest::Approx(snapshot));
+    const ChitFace lagged = chitFace(UnitState::Broken, presentedBrokenSec(snapshot, 0.f));
+    const ChitFace halfway = chitFace(UnitState::Broken, presentedBrokenSec(snapshot, 0.5f));
+    const ChitFace settled = chitFace(UnitState::Broken, presentedBrokenSec(snapshot, 1.f));
+    CHECK(lagged.scaleX > halfway.scaleX);
+    CHECK(halfway.scaleX > settled.scaleX);
+    CHECK_FALSE(lagged.back);
+    CHECK(chitFace(UnitState::Broken, presentedBrokenSec(kBrokenSec, 0.f)).scaleX == doctest::Approx(1.f));
     const ChitFace turned = chitFace(UnitState::Broken, kBrokenSec * 0.25f);
     CHECK(turned.back);
     CHECK(turned.scaleX == doctest::Approx(std::sqrt(0.5f)).epsilon(0.02));
@@ -127,6 +138,9 @@ TEST_CASE("a scripted replay's broken unit flips with the battle event") {
                 const ChitFace face = chitFace(unit.state, unit.brokenSec);
                 CHECK_FALSE(face.back);
                 CHECK(face.scaleX == doctest::Approx(1.f));
+                const ChitFace drawn = chitFace(unit.state, presentedBrokenSec(unit.brokenSec, 0.f));
+                CHECK_FALSE(drawn.back);
+                CHECK(drawn.scaleX == doctest::Approx(1.f));
                 CHECK(timerArc(unit.state, unit.recoverSec, unit.reloadSec, type.range) == ArcKind::None);
                 CHECK(menFraction(unit.men, unit.maxMen) == doctest::Approx(unit.men / unit.maxMen));
                 CHECK(moraleFraction(unit.morale) == doctest::Approx(std::clamp(unit.morale / 100.f, 0.f, 1.f)));
