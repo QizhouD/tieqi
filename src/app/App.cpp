@@ -157,6 +157,13 @@ void App::drawFrame() {
     window_.beginWorld();
     const bool exitOpen = battle_ && battle_->exitOpen();
     mapView_.draw(window_, soundTime_, exitOpen);
+    if (!battle_) {
+        return;
+    }
+    const TextStyle glyph = textStyle(active().language, TextRole::Glyph);
+    window_.beginMap();
+    unitView_.draw(window_, *battle_, active(), fontFor(active(), glyph.face), soundTime_,
+                   std::clamp(accumulator_, 0.f, 1.f), selected_, hover_);
 }
 
 void App::run() {

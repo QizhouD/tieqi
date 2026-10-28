@@ -39,11 +39,15 @@ class Window {
     void snapCamera(sf::Vector2f target);
     void followCamera(sf::Vector2f target, float elapsed);
     void beginWorld();
+    // 棋子画在地图矩形里。视口裁到地图，超出地图的单位不画进深色边。
+    void beginMap();
+    float pixelsPerMeter() const;
     sf::FloatRect visibleWorld() const;
 
   private:
     void create();
     void applyUiView();
+    void applyView(sf::Vector2f center, sf::Vector2f size, ScreenRect screen);
     void advanceScript();
     void takeScreenshot(const std::filesystem::path &file);
     static sf::Keyboard::Key keyFromName(const std::string &name);

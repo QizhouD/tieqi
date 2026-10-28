@@ -54,7 +54,8 @@ add_executable(tieqi
     src/app/SaveData.cpp
     src/app/Script.cpp
     src/app/Synth.cpp
-    src/app/MapView.cpp)
+    src/app/MapView.cpp
+    src/app/UnitView.cpp)
 target_link_libraries(tieqi PRIVATE tq_core tq_data SFML::Graphics SFML::Audio)
 add_custom_command(TARGET tieqi POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:tieqi>/data
@@ -88,6 +89,7 @@ if(TQ_BUILD_TESTS)
         tests/parity/duel.cpp
         tests/parity/baseline.cpp
         tests/app/shell.cpp
+        tests/app/pieces.cpp
         src/app/Launch.cpp
         src/app/SaveData.cpp
         src/app/Script.cpp

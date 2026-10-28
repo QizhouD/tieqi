@@ -12,6 +12,8 @@ inline constexpr unsigned kWindowWidth = 1600;
 inline constexpr unsigned kWindowHeight = 1000;
 inline constexpr unsigned kMinWindowWidth = 1280;
 inline constexpr unsigned kMinWindowHeight = 800;
+// A4 做顶栏和面板时按原型在 1600×1000 下量到的画布重设战场矩形：
+// 画布 (17, 55)、1216×932。.field 外框是 (16, 54)、1218×934，多出来的是 1px 边框。
 inline constexpr unsigned kTopBarHeight = 56;
 inline constexpr unsigned kSidePanelWidth = 380;
 inline constexpr float kDesktopFit = 0.9f;
