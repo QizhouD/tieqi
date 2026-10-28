@@ -11,8 +11,8 @@
 
 namespace tq {
 
-// 棋子和方阵的尺寸、朝向、翻面都从单位快照算出来，画的时候不再改模拟。
-// 公式对照原型 drawBlock / drawChit，以及表现层规格。
+// Chit and block size, facing, and the flip come from the unit snapshot and do not write the simulation.
+// Formulas follow the prototype drawBlock / drawChit and the presentation spec.
 
 struct Rgba {
     std::uint8_t r = 0;
@@ -63,7 +63,7 @@ inline int blockDots(float frontage, float depth, float men, float maxMen) {
     return static_cast<int>(std::lround(static_cast<float>(columns * rows) * men / maxMen));
 }
 
-// 点的左上角，局部坐标：x 沿纵深，正面在 +x；y 沿正面宽度。
+// Top-left of a point. Local x runs along depth, with the front at +x. Local y runs across the frontage.
 inline Vec2 blockDotLocal(float depth, float frontage, int index, int columns, Vec2 jitter) {
     const int safeColumns = std::max(1, columns);
     const int row = index / safeColumns;
@@ -80,7 +80,7 @@ inline Vec2 routingJitter(std::uint32_t id, int index) {
     return {static_cast<float>(along) * 1.6f, static_cast<float>(across) * 1.6f};
 }
 
-// 原型 cur 是游戏秒速度。本项目 speed 已除以 8，线长仍按 cur × 0.12 米。
+// Prototype cur is meters per battle second. speed here is already divided by 8; the line is still cur * 0.12 m.
 inline float chargeLineLength(std::uint32_t id, int lane, float speedMetersPerSecond) {
     const int mod = (static_cast<int>(id) + lane * 3) % 4;
     return 10.f + static_cast<float>(mod) * 4.f + speedMetersPerSecond * 0.96f;
@@ -95,7 +95,7 @@ inline float chitPixels(float pixelsPerMeter, float maxMen, float typeMen) {
     return base;
 }
 
-// 和位置一样落后一个 tick：alpha 为 0 时画上一拍结束时的 brokenSec。
+// Like position, this lags one tick: alpha 0 draws brokenSec from the end of the previous tick.
 inline float presentedBrokenSec(float brokenSec, float alpha) { return brokenSec + kTickSeconds * (1.f - alpha); }
 
 inline ChitFace chitFace(UnitState state, float brokenSec) {

@@ -6,11 +6,11 @@
 
 namespace tq {
 
-// 框架脚本：`<秒> down|up|press <键>`、`<秒> shot <文件>`、`<秒> quit`。
-// `#` 开头是注释。另外接受 `<秒> resize <宽> <高>`，用来截不同窗口比例。
-// 指针坐标是逻辑像素：click、rclick、shiftclick、touchclick、move 是 x y；
-// drag、shiftdrag 是 x0 y0 x1 y1。click、rclick、shiftclick 会先在同一点补一次 move，
-// 这样脚本截图里的悬停和真鼠标一致。touchclick 不悬停，不补 move。
+// Script lines: `<seconds> down|up|press <key>`, `<seconds> shot <file>`, `<seconds> quit`.
+// A line starting with `#` is a comment. `<seconds> resize <width> <height>` captures another window size.
+// Pointer coordinates are logical pixels. click, rclick, shiftclick, touchclick, and move take x y.
+// drag and shiftdrag take x0 y0 x1 y1. click, rclick, and shiftclick first move to that point,
+// so a scripted shot hovers the way a real mouse does. touchclick does not hover and does not move first.
 struct ScriptEvent {
     float time = 0.f;
     std::string action;

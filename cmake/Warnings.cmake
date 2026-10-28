@@ -1,5 +1,5 @@
-# 警告只加在本项目的目标上，不改第三方库自己的编译选项。
-# MSVC 加 /utf-8：源码是 UTF-8，注释有中文；不加 /utf-8 时 MSVC 会按系统代码页读源码。
+# Warnings apply only to this project's targets, not to third-party compile options.
+# MSVC /utf-8: sources are UTF-8. Without it MSVC reads the file in the system code page.
 
 function(tq_apply_warnings target)
     if(MSVC)

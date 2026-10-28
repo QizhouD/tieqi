@@ -10,6 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Source language
+        shell: bash
+        run: |
+          if command -v python3 >/dev/null 2>&1; then
+            python3 tools/check_source_language.py
+          else
+            python tools/check_source_language.py
+          fi
+
       - name: MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
         with:
@@ -53,6 +62,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Source language
+        shell: bash
+        run: |
+          if command -v python3 >/dev/null 2>&1; then
+            python3 tools/check_source_language.py
+          else
+            python tools/check_source_language.py
+          fi
 
       - name: SFML system dependencies
         run: |

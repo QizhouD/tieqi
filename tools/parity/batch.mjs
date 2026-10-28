@@ -19,7 +19,7 @@ function readArgs(argv) {
         else if (flag === "--phase") out.phase = next();
         else if (flag === "--max-ticks") out.maxTicks = Number(next());
         else if (flag === "--policy") out.policies = [next()];
-        else throw new Error("未知参数 " + flag);
+        else throw new Error("unknown argument " + flag);
     }
     return out;
 }
@@ -54,7 +54,7 @@ function runPort(seed, policy, outFile, maxTicks) {
         child.on("error", reject);
         child.on("close", (code) => {
             if (code !== 0 && code !== 1) {
-                reject(new Error(`tq_headless 退出 ${code}\n${text}`));
+                reject(new Error(`tq_headless exited ${code}\n${text}`));
                 return;
             }
             resolve(text);
@@ -73,7 +73,7 @@ async function main() {
             for (let seed = args.from; seed <= args.to; seed++) {
                 const protoFile = path.join(work, `proto-${policy}-${seed}.jsonl`);
                 const portFile = path.join(work, `port-${policy}-${seed}.jsonl`);
-                process.stdout.write(`${policy} 种子 ${seed} … `);
+                process.stdout.write(`${policy} seed ${seed} … `);
                 await session.battle({
                     seed,
                     policy,
@@ -83,15 +83,15 @@ async function main() {
                 await runPort(seed, policy, portFile, args.maxTicks);
                 const result = await compareFiles(protoFile, portFile);
                 if (result.match) {
-                    console.log("一致");
+                    console.log("match");
                     fs.rmSync(protoFile, { force: true });
                     fs.rmSync(portFile, { force: true });
                     continue;
                 }
-                const floatNote = result.floats.length ? `，此前浮点 ${result.floats.length}` : "";
+                const floatNote = result.floats.length ? `, float tail ${result.floats.length}` : "";
                 console.log(`tick ${result.tick} ${result.why}${floatNote}`);
                 const note = path.join(work, `diff-${policy}-${seed}.txt`);
-                const floatText = result.floats.length ? "浮点尾差（未追）\n" + result.floats.join("\n") + "\n" : "";
+                const floatText = result.floats.length ? "float tail (not chased)\n" + result.floats.join("\n") + "\n" : "";
                 fs.writeFileSync(note, floatText + result.text + "\n");
                 found.push({ policy, seed, tick: result.tick, why: result.why, note });
                 fs.rmSync(protoFile, { force: true });
@@ -105,7 +105,7 @@ async function main() {
     const report = path.join(work, "diffs.txt");
     const lines = found.length
         ? found.map((item) => `${item.policy} seed ${item.seed} tick ${item.tick} ${item.why}`)
-        : ["没有不一致"];
+        : ["no mismatches"];
     fs.writeFileSync(report, lines.join("\n") + "\n");
     console.log(lines.join("\n"));
     if (found.length) process.exitCode = 1;

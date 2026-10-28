@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 using namespace tq;
 
@@ -25,14 +26,55 @@ UnitId named(const Battle &battle, const char *id) {
     return *found;
 }
 
+std::string fill(std::string text, std::initializer_list<std::pair<const char *, std::string>> pairs) {
+    for (const auto &pair : pairs) {
+        const std::string token = std::string("{") + pair.first + "}";
+        std::size_t at = 0;
+        while ((at = text.find(token, at)) != std::string::npos) {
+            text.replace(at, token.size(), pair.second);
+            at += pair.second.size();
+        }
+    }
+    return text;
+}
+
+std::string codepointAt(std::string_view text, std::size_t index) {
+    std::size_t seen = 0;
+    for (std::size_t i = 0; i < text.size();) {
+        const auto lead = static_cast<unsigned char>(text[i]);
+        std::size_t length = 1;
+        if ((lead & 0xE0) == 0xC0) {
+            length = 2;
+        } else if ((lead & 0xF0) == 0xE0) {
+            length = 3;
+        } else if ((lead & 0xF8) == 0xF0) {
+            length = 4;
+        }
+        if (i + length > text.size()) {
+            length = 1;
+        }
+        if (seen == index) {
+            return std::string(text.substr(i, length));
+        }
+        i += length;
+        ++seen;
+    }
+    return {};
+}
+
+std::string shichenAt(const StringTable &strings, int index, bool early) {
+    return codepointAt(strings.text("ui.shichen_names"), static_cast<std::size_t>(index)) +
+           strings.text(early ? "ui.shichen_early" : "ui.shichen_late");
+}
+
 } // namespace
 
 TEST_CASE("clock and shichen follow the prototype") {
     const StringTable strings = loadByeok().zhHant;
     CHECK(formatClock(0.f) == "00:00");
     CHECK(formatClock(125.f) == "02:05");
-    CHECK(formatShichen(strings, "07:00", 0.f) == "辰初");
-    CHECK(formatShichen(strings, "07:00", 3600.f) == "戌初");
+    CHECK(formatShichen(strings, "07:00", 0.f) == shichenAt(strings, 4, true));
+    CHECK(formatShichen(strings, "07:00", 3600.f) == shichenAt(strings, 10, true));
     CHECK(groupNumber(999) == "999");
     CHECK(groupNumber(1000) == "1,000");
     CHECK(groupNumber(1234567) == "1,234,567");
@@ -112,23 +154,30 @@ TEST_CASE("journal lines match the string table") {
     Journal journal;
     journal.append(battle, strings, std::vector<Event>{impact, broken, volley, volley, phase, scout, failed, quiet});
 
+    const std::string impactText = fill(strings.text("log.impact"), {{"a", strings.text("unit.jiading_left")},
+                                                                     {"side", strings.text("side.front")},
+                                                                     {"b", strings.text("unit.van_teppo_right")},
+                                                                     {"r", "2.7"}});
+    const std::string brokenText =
+        fill(strings.text("log.broken_impact_scatter"),
+             {{"a", strings.text("unit.van_teppo_right")}, {"parts", strings.text("num.3")}});
+    const std::string volleyPattern = strings.text("log.volley");
+    const std::string volleyTail = volleyPattern.substr(volleyPattern.rfind('}') + 1);
     bool sawImpact = false;
     bool sawBroken = false;
     bool sawVolley = false;
     int volleys = 0;
     for (const LogEntry &line : journal.lines()) {
-        if (line.text.find("衝擊 ×2.7") != std::string::npos) {
+        if (line.text == impactText) {
             sawImpact = true;
             CHECK(line.important);
-            CHECK(line.text == "家丁左營 自正面衝擊 立花鐵砲右隊，衝擊 ×2.7");
             CHECK(line.time == "00:08");
         }
-        if (line.text.find("散作") != std::string::npos) {
+        if (line.text == brokenText) {
             sawBroken = true;
-            CHECK(line.text == "立花鐵砲右隊 陣腳被衝破，崩潰，散作三股");
             CHECK(line.important);
         }
-        if (line.text.find("齊射") != std::string::npos) {
+        if (!volleyTail.empty() && line.text.find(volleyTail) != std::string::npos) {
             sawVolley = true;
             volleys += 1;
         }
@@ -138,7 +187,7 @@ TEST_CASE("journal lines match the string table") {
     CHECK(sawVolley);
     CHECK(volleys == 1);
     CHECK(journal.objectiveKey() == "obj.warning");
-    CHECK(journal.banner().title == "斥候來報");
+    CHECK(journal.banner().title == strings.text("banner.scout"));
     CHECK(journal.lines().size() == 6);
 
     Event phase3;
@@ -147,14 +196,15 @@ TEST_CASE("journal lines match the string table") {
     const std::size_t before = journal.lines().size();
     journal.append(battle, strings, std::vector<Event>{phase3});
     CHECK(journal.lines().size() == before);
-    CHECK(journal.banner().title == "三 · 撤退");
+    CHECK(journal.banner().title == strings.text("banner.phase3"));
     CHECK(journal.objectiveKey() == "obj.phase3");
 
     Event down;
     down.type = Event::Type::GeneralDown;
     down.a = general;
     journal.append(battle, strings, std::vector<Event>{down});
-    CHECK(journal.lines().front().text == "李如松 陣亡");
+    CHECK(journal.lines().front().text ==
+          fill(strings.text("log.general_down"), {{"a", strings.text("unit.li_rusong")}}));
     CHECK(journal.lines().front().important);
 
     float mingMen = 0.f;
@@ -166,7 +216,10 @@ TEST_CASE("journal lines match the string table") {
     CHECK(battle.enlisted(Side::Ming) == doctest::Approx(mingMen));
     const ArmyCard army = armyCard(strings, battle);
     CHECK(army.ming.find(groupNumber(std::lround(mingMen))) != std::string::npos);
-    CHECK(army.jp.find("本隊未到") != std::string::npos);
+    const std::string waiting = strings.text("ui.army.jp_waiting");
+    const std::string waitingTail = waiting.substr(waiting.rfind('}') + 1);
+    CHECK_FALSE(waitingTail.empty());
+    CHECK(army.jp.find(waitingTail) != std::string::npos);
 }
 
 TEST_CASE("preview card and end numbers come from the battle") {
@@ -179,8 +232,9 @@ TEST_CASE("preview card and end numbers come from the battle") {
     const PreviewCard card = previewCard(strings, battle, orders);
     CHECK(card.visible);
     CHECK_FALSE(card.confirm);
-    CHECK(card.title.find("衝擊預估") != std::string::npos);
-    CHECK(card.title.find("家丁左營") != std::string::npos);
+    const std::string charge = strings.text("ui.preview_charge");
+    CHECK(card.title.find(charge.substr(0, charge.find('{'))) != std::string::npos);
+    CHECK(card.title.find(strings.text("unit.jiading_left")) != std::string::npos);
     const Preview preview = previewAttack(battle, orders.selected.front(), *orders.hover);
     char ratio[32];
     std::snprintf(ratio, sizeof(ratio), "%.2f", static_cast<double>(preview.ratio));
@@ -220,20 +274,21 @@ TEST_CASE("preview card and end numbers come from the battle") {
     stats.exitedMen = 1.f;
     LogEntry important;
     important.time = "01:00";
-    important.text = "要事";
+    important.text = "note";
     important.important = true;
-    const EndCard end = formatEnd(strings, result, stats, 3000.f, 125.f, {"楊元左營"}, {important});
-    CHECK(end.grade == "小勝");
+    const std::string follower = strings.text("unit.yang_left");
+    const EndCard end = formatEnd(strings, result, stats, 3000.f, 125.f, {follower}, {important});
+    CHECK(end.grade == strings.text("grade.minor"));
     CHECK(end.victory);
-    CHECK(end.eyebrow == "戰報 · 歷時 02:05");
+    CHECK(end.eyebrow == fill(strings.text("end.report"), {{"time", "02:05"}}));
     CHECK(end.stats.size() == 5);
     CHECK(end.stats[0].value == "1,234 / 3,000");
     CHECK(end.stats[1].value == "10");
     CHECK(end.stats[2].value == "20");
-    CHECK(end.stats[3].value == "3 隊");
+    CHECK(end.stats[3].value == fill(strings.text("ui.stat.teams"), {{"n", "3"}}));
     CHECK(end.stats[4].value == "\u00d72.0");
-    CHECK(end.body.find("李如松撤往坡州") != std::string::npos);
-    CHECK(end.body.find("楊元左營") != std::string::npos);
+    CHECK(end.body.find(strings.text("end.withdraw")) != std::string::npos);
+    CHECK(end.body.find(follower) != std::string::npos);
     CHECK(end.events.size() == 1);
 }
 
@@ -244,7 +299,7 @@ TEST_CASE("roster shows the selected company") {
     orders.selected = {named(battle, "jiading_left")};
     const RosterCard one = rosterCard(data.zhHant, battle, orders);
     CHECK(one.mode == RosterCard::Mode::One);
-    CHECK(one.name == "家丁左營");
+    CHECK(one.name == data.zhHant.text("unit.jiading_left"));
     CHECK(one.showOrders);
     CHECK(one.canSplit);
     CHECK_FALSE(one.canJoin);

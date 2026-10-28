@@ -12,7 +12,7 @@
 
 namespace tq {
 
-// a − b，归一化到 (−π, π]。恰好 −π 折成 +π，与规格的开区间一致。
+// a - b, wrapped to (-pi, pi]. Exactly -pi becomes +pi, matching the spec's open interval.
 inline float angDiff(float a, float b) {
     const float pi = std::numbers::pi_v<float>;
     const float twoPi = 2.f * pi;
@@ -82,7 +82,7 @@ inline std::optional<SatHit> sat(const Obb &a, const Obb &b) {
     return SatHit{axis, minOverlap};
 }
 
-// a 位于防守方的哪一面。朝向 0 向东，π/2 向南。
+// Which side of the defender a is on. Facing 0 is east and pi/2 is south.
 inline ContactSide sideOf(Vec2 defenderPos, float facing, float depth, float frontage, Vec2 attackerPos) {
     const float along = std::cos(facing);
     const float across = std::sin(facing);

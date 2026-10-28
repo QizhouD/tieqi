@@ -202,7 +202,7 @@ void MapView::build(const ScenarioDef &scenario, const StringTable &strings, con
     const auto size = sf::Vector2u{static_cast<unsigned>(std::ceil(map_.width * kMapPixelsPerMeter)),
                                    static_cast<unsigned>(std::ceil(map_.height * kMapPixelsPerMeter))};
     if (!base_.resize(size) || !scars_.resize(size)) {
-        throw std::runtime_error("无法创建底图纹理");
+        throw std::runtime_error("could not create the map texture");
     }
     base_.setSmooth(true);
     scars_.setSmooth(true);
@@ -408,7 +408,7 @@ void MapView::paintBase(const StringTable &strings, const sf::Font &titleFont, b
               Baseline::Alphabetic, titleBold);
     base_.display();
     if (!base_.generateMipmap()) {
-        std::cerr << "底图 mipmap 生成失败\n";
+        std::cerr << "map mipmap failed\n";
     }
 }
 

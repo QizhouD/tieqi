@@ -5,7 +5,7 @@
 
 namespace tq {
 
-// 可执行文件旁边的 settings.txt。缺文件或坏行都忽略。
+// settings.txt beside the executable. A missing file or a bad line is ignored.
 struct SaveData {
     std::string language = "zh-Hant";
     float volume = 70.f;

@@ -18,7 +18,7 @@ namespace {
 
 std::string requireValue(int argc, char **argv, int &index) {
     if (index + 1 >= argc) {
-        throw std::runtime_error(std::string("缺少参数值: ") + argv[index]);
+        throw std::runtime_error(std::string("missing value for ") + argv[index]);
     }
     index += 1;
     return argv[index];
@@ -38,7 +38,7 @@ LaunchOptions parseLaunch(int argc, char **argv) {
             try {
                 options.seed = std::stoull(text);
             } catch (const std::exception &) {
-                throw std::runtime_error("种子不是整数: " + text);
+                throw std::runtime_error("seed is not an integer: " + text);
             }
             options.seedSet = true;
         } else if (arg == "--time-scale") {
@@ -46,10 +46,10 @@ LaunchOptions parseLaunch(int argc, char **argv) {
             try {
                 options.timeScale = std::stof(text);
             } catch (const std::exception &) {
-                throw std::runtime_error("时间压缩不是数字: " + text);
+                throw std::runtime_error("time scale is not a number: " + text);
             }
             if (!(*options.timeScale > 0.f)) {
-                throw std::runtime_error("时间压缩必须大于 0");
+                throw std::runtime_error("time scale must be greater than 0");
             }
         } else if (arg == "--replay") {
             options.replay = std::filesystem::absolute(requireValue(argc, argv, i));
@@ -60,7 +60,7 @@ LaunchOptions parseLaunch(int argc, char **argv) {
         } else if (arg == "--perf") {
             options.perf = true;
         } else {
-            throw std::runtime_error("未知参数: " + arg);
+            throw std::runtime_error("unknown argument: " + arg);
         }
     }
     return options;

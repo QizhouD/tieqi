@@ -17,7 +17,7 @@
 
 namespace tq {
 
-// 逻辑分辨率固定，窗口任意比例都用黑边保住纵横比。脚本输入沿用框架。
+// The logical resolution is fixed. Any window aspect keeps black bars. Scripted input follows the shell.
 class Window {
   public:
     void open(const sf::String &title);
@@ -39,7 +39,7 @@ class Window {
     sf::Vector2u pixelSize() const { return pixelSize_; }
     sf::Vector2u logicalSize() const { return {kWindowWidth, kWindowHeight}; }
 
-    // 世界镜头留给底图。UI 始终盖在逻辑分辨率上，不跟着镜头走。
+    // The world camera is for the map. UI stays on the logical resolution and does not follow the camera.
     void setWorld(sf::Vector2u worldSize);
     void snapCamera(sf::Vector2f target);
     void followCamera(sf::Vector2f target, float elapsed);
@@ -52,7 +52,8 @@ class Window {
     };
     PixelMap pixelMap() const;
     void beginWorld();
-    // 棋子画在地图矩形里。视口裁到地图，超出地图的单位不画进深色边。
+    // Pieces are drawn in the map rectangle. The viewport is clipped to the map, so units outside it do not paint the
+    // dark margin.
     void beginMap();
     float pixelsPerMeter() const;
     sf::FloatRect visibleWorld() const;

@@ -12,7 +12,8 @@ inline constexpr unsigned kWindowWidth = 1600;
 inline constexpr unsigned kWindowHeight = 1000;
 inline constexpr unsigned kMinWindowWidth = 1280;
 inline constexpr unsigned kMinWindowHeight = 800;
-// 原型在 1600×1000 下量到的战场画布。`.field` 外框是 (16, 54)、1218×934，多出来的是 1px 边框。
+// Battlefield canvas measured from the prototype at 1600x1000. The .field frame is (16, 54), 1218x934; the extra is a
+// 1px border.
 inline constexpr float kBattlefieldX = 17.f;
 inline constexpr float kBattlefieldY = 55.f;
 inline constexpr float kBattlefieldW = 1216.f;
@@ -21,7 +22,7 @@ inline constexpr float kDesktopFit = 0.9f;
 inline constexpr float kMapMarginPx = 10.f;
 inline constexpr float kMapPixelsPerMeter = 1.5f;
 
-// 归一化视口。窗口和逻辑画面比例不同时留黑边，画面本身不拉伸。
+// Normalized viewport. A window with a different aspect gets black bars, and the picture is not stretched.
 struct Viewport {
     float x = 0.f;
     float y = 0.f;
@@ -46,7 +47,8 @@ inline Viewport letterbox(float pixelW, float pixelH, float viewW, float viewH) 
     return {0.f, (1.f - height) * 0.5f, 1.f, height};
 }
 
-// 默认窗口不超过桌面的 90%，没有最大尺寸。最小取 1280×800 与桌面 90% 中较小的一边。
+// The default window is at most 90% of the desktop and has no maximum. The minimum is the smaller of 1280x800 and 90%
+// of the desktop.
 struct WindowFit {
     unsigned defaultW = kWindowWidth;
     unsigned defaultH = kWindowHeight;
@@ -83,7 +85,7 @@ inline WindowFit fitWindow(unsigned desktopW, unsigned desktopH, unsigned logica
     return fit;
 }
 
-// 逻辑画面里的矩形。战场是原型画布，不是含 1px 边框的外框。
+// A rectangle in logical pixels. The battlefield is the prototype canvas, not the frame that includes the 1px border.
 struct ScreenRect {
     float x = 0.f;
     float y = 0.f;
@@ -105,7 +107,7 @@ inline float mapScale(float pixelW, float pixelH, float mapW, float mapH, float 
     return std::min((pixelW - 2.f * margin) / mapW, (pixelH - 2.f * margin) / mapH);
 }
 
-// 地图在战场里居中。origin 是世界坐标 (0, 0) 在逻辑画面上的像素位置。
+// The map is centered in the battlefield. origin is world (0, 0) in logical pixels.
 struct MapCamera {
     float scale = 1.f;
     float originX = 0.f;
@@ -127,7 +129,7 @@ inline Vec2 logicalFromWorld(float x, float y, float mapW, float mapH) {
     return {camera.originX + x * camera.scale, camera.originY + y * camera.scale};
 }
 
-// 窗口像素换到 1600×1000 的逻辑像素。有黑边时先去掉 letterbox。
+// Window pixels to the 1600x1000 logical pixels. Letterbox bars are removed first.
 inline Vec2 logicalFromPixel(float pixelX, float pixelY, float pixelW, float pixelH,
                              float logicalW = static_cast<float>(kWindowWidth),
                              float logicalH = static_cast<float>(kWindowHeight)) {
@@ -138,7 +140,7 @@ inline Vec2 logicalFromPixel(float pixelX, float pixelY, float pixelW, float pix
     return {(pixelX / pixelW - box.x) / box.w * logicalW, (pixelY / pixelH - box.y) / box.h * logicalH};
 }
 
-// 与原型 buildMap 相同的 Mulberry32，种子 1593。只给底图纹理用。
+// The same Mulberry32 as the prototype buildMap, seed 1593. Used only for the map texture.
 class MapRng {
   public:
     explicit MapRng(std::uint32_t seed) : seed_(static_cast<std::int32_t>(seed)) {}

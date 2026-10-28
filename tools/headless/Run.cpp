@@ -293,7 +293,7 @@ RunResult runBattle(const GameData &data, const RunRequest &request) {
         }
         events.open(*request.eventsOut, std::ios::binary);
         if (!events) {
-            throw std::runtime_error("无法写入 " + request.eventsOut->string());
+            throw std::runtime_error("could not write " + request.eventsOut->string());
         }
         writeStateLine(events, battle);
     }

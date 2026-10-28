@@ -38,20 +38,20 @@ std::string numText(double value) {
 Json readJson(const std::filesystem::path &path, Reader &reader) {
     std::ifstream in(path, std::ios::binary);
     if (!in) {
-        throw DataError(reader.file + ": 无法读取");
+        throw DataError(reader.file + ": could not read");
     }
     std::ostringstream text;
     text << in.rdbuf();
     try {
         return Json::parse(text.str(), nullptr, true, true);
     } catch (const Json::exception &error) {
-        throw DataError(reader.file + ": JSON 解析失败（" + error.what() + "）");
+        throw DataError(reader.file + ": JSON parse failed (" + error.what() + ")");
     }
 }
 
 void requireObject(const Json &json, const std::string &pointer, const Reader &reader) {
     if (!json.is_object()) {
-        reader.fail(pointer, "类型应为对象");
+        reader.fail(pointer, "expected an object");
     }
 }
 
@@ -66,7 +66,7 @@ void rejectUnknown(const Json &json, const std::string &pointer, const Reader &r
             }
         }
         if (!known) {
-            reader.fail(pointer, "未知字段 " + it.key());
+            reader.fail(pointer, "unknown field " + it.key());
         }
     }
 }
@@ -78,7 +78,7 @@ const Json *findField(const Json &json, const std::string &pointer, const char *
     const auto found = json.find(key);
     if (found == json.end()) {
         if (required) {
-            reader.fail(child(pointer, key), std::string("缺少字段 ") + key);
+            reader.fail(child(pointer, key), std::string("missing field ") + key);
         }
         return nullptr;
     }
@@ -87,7 +87,7 @@ const Json *findField(const Json &json, const std::string &pointer, const char *
 
 double readNumber(const Json &json, const std::string &pointer, const Reader &reader) {
     if (!json.is_number()) {
-        reader.fail(pointer, "类型应为数字");
+        reader.fail(pointer, "expected a number");
     }
     return json.get<double>();
 }
@@ -101,7 +101,7 @@ int fieldInt(const Json &json, const std::string &pointer, const char *key, cons
     const Json *value = findField(json, pointer, key, true, reader);
     const std::string at = child(pointer, key);
     if (!value->is_number_integer()) {
-        reader.fail(at, "类型应为整数");
+        reader.fail(at, "expected an integer");
     }
     return value->get<int>();
 }
@@ -110,7 +110,7 @@ bool fieldBool(const Json &json, const std::string &pointer, const char *key, co
     const Json *value = findField(json, pointer, key, true, reader);
     const std::string at = child(pointer, key);
     if (!value->is_boolean()) {
-        reader.fail(at, "类型应为布尔");
+        reader.fail(at, "expected a boolean");
     }
     return value->get<bool>();
 }
@@ -119,7 +119,7 @@ std::string fieldString(const Json &json, const std::string &pointer, const char
     const Json *value = findField(json, pointer, key, true, reader);
     const std::string at = child(pointer, key);
     if (!value->is_string()) {
-        reader.fail(at, "类型应为字符串");
+        reader.fail(at, "expected a string");
     }
     return value->get<std::string>();
 }
@@ -128,29 +128,29 @@ void requireSchema(const Json &json, const Reader &reader) {
     const Json *schema = findField(json, "", "schema", true, reader);
     if (!schema->is_number_integer() || schema->get<int>() != 1) {
         const std::string actual = schema->is_number() ? numText(schema->get<double>()) : "?";
-        reader.fail("/schema", "schema 必须为 1（实际为 " + actual + "）");
+        reader.fail("/schema", "schema must be 1 (got " + actual + ")");
     }
 }
 
 void greaterThanZero(double value, const std::string &pointer, const Reader &reader) {
     if (!(value > 0.0)) {
-        reader.fail(pointer, "必须大于 0（实际为 " + numText(value) + "）");
+        reader.fail(pointer, "must be greater than 0 (got " + numText(value) + ")");
     }
 }
 
 void requireKey(const StringTable &zh, const std::string &key, const std::string &pointer, const Reader &reader) {
     if (!zh.entries.contains(key)) {
-        reader.fail(pointer, "字符串表缺少键 " + key);
+        reader.fail(pointer, "string table is missing key " + key);
     }
 }
 
 std::vector<double> fixedNumbers(const Json &json, const std::string &pointer, std::size_t count,
                                  const Reader &reader) {
     if (!json.is_array()) {
-        reader.fail(pointer, "类型应为数组");
+        reader.fail(pointer, "expected an array");
     }
     if (json.size() != count) {
-        reader.fail(pointer, "长度应为 " + std::to_string(count));
+        reader.fail(pointer, "length must be " + std::to_string(count));
     }
     std::vector<double> values;
     values.reserve(count);
@@ -172,7 +172,7 @@ Side readSide(const std::string &text, const std::string &pointer, const Reader 
     if (text == "jp") {
         return Side::Jp;
     }
-    reader.fail(pointer, "未知取值 " + text);
+    reader.fail(pointer, "unknown value " + text);
 }
 
 UnitClass readClass(const std::string &text, const std::string &pointer, const Reader &reader) {
@@ -182,7 +182,7 @@ UnitClass readClass(const std::string &text, const std::string &pointer, const R
     if (text == "infantry") {
         return UnitClass::Infantry;
     }
-    reader.fail(pointer, "未知取值 " + text);
+    reader.fail(pointer, "unknown value " + text);
 }
 
 AiRole readRole(const std::string &text, const std::string &pointer, const Reader &reader) {
@@ -204,22 +204,22 @@ AiRole readRole(const std::string &text, const std::string &pointer, const Reade
     if (text == "main_general") {
         return AiRole::MainGeneral;
     }
-    reader.fail(pointer, "未知取值 " + text);
+    reader.fail(pointer, "unknown value " + text);
 }
 
 void readTraits(const Json &json, const std::string &pointer, UnitType &unit, const Reader &reader) {
     if (!json.is_array()) {
-        reader.fail(pointer, "类型应为数组");
+        reader.fail(pointer, "expected an array");
     }
     std::set<std::string> seen;
     for (std::size_t i = 0; i < json.size(); ++i) {
         const std::string at = child(pointer, std::to_string(i));
         if (!json[i].is_string()) {
-            reader.fail(at, "类型应为字符串");
+            reader.fail(at, "expected a string");
         }
         const std::string trait = json[i].get<std::string>();
         if (!seen.insert(trait).second) {
-            reader.fail(at, "特性重复（实际为 " + trait + "）");
+            reader.fail(at, "duplicate trait (got " + trait + ")");
         }
         if (trait == "three_eyed_gun") {
             unit.threeEyedGun = true;
@@ -234,7 +234,7 @@ void readTraits(const Json &json, const std::string &pointer, UnitType &unit, co
         } else if (trait == "momentum_boost") {
             unit.momentumBoost = true;
         } else {
-            reader.fail(at, "未知特性 " + trait);
+            reader.fail(at, "unknown trait " + trait);
         }
     }
 }
@@ -270,20 +270,20 @@ UnitType readUnit(const std::string &id, const Json &json, const std::string &po
     greaterThanZero(unit.men, child(pointer, "men"), reader);
     greaterThanZero(unit.walk, child(pointer, "walk"), reader);
     if (!(unit.run == 0.f || unit.run >= unit.walk)) {
-        reader.fail(child(pointer, "run"), "必须为 0 或不小于 walk（实际为 " + numText(unit.run) + "）");
+        reader.fail(child(pointer, "run"), "must be 0 or at least walk (got " + numText(unit.run) + ")");
     }
     greaterThanZero(unit.turn, child(pointer, "turn"), reader);
     if (unit.impact < 0.f) {
-        reader.fail(child(pointer, "impact"), "必须大于或等于 0（实际为 " + numText(unit.impact) + "）");
+        reader.fail(child(pointer, "impact"), "must be greater than or equal to 0 (got " + numText(unit.impact) + ")");
     }
     greaterThanZero(unit.melee, child(pointer, "melee"), reader);
     greaterThanZero(unit.defense, child(pointer, "defense"), reader);
     greaterThanZero(unit.armor, child(pointer, "armor"), reader);
     if (!(unit.morale > 0.f)) {
-        reader.fail(child(pointer, "morale"), "必须大于 0（实际为 " + numText(unit.morale) + "）");
+        reader.fail(child(pointer, "morale"), "must be greater than 0 (got " + numText(unit.morale) + ")");
     }
     if (unit.morale > 100.f) {
-        reader.fail(child(pointer, "morale"), "必须小于或等于 100（实际为 " + numText(unit.morale) + "）");
+        reader.fail(child(pointer, "morale"), "must be less than or equal to 100 (got " + numText(unit.morale) + ")");
     }
     greaterThanZero(unit.frontage, child(pointer, "frontage"), reader);
     greaterThanZero(unit.depth, child(pointer, "depth"), reader);
@@ -291,7 +291,7 @@ UnitType readUnit(const std::string &id, const Json &json, const std::string &po
     const bool hasRange = json.contains("range");
     const bool hasReload = json.contains("reload");
     if (hasRange != hasReload) {
-        reader.fail(pointer, "射程与装填必须同时出现");
+        reader.fail(pointer, "range and reload must both be set");
     }
     if (hasRange) {
         unit.range = static_cast<float>(readNumber(json.at("range"), child(pointer, "range"), reader));
@@ -303,12 +303,12 @@ UnitType readUnit(const std::string &id, const Json &json, const std::string &po
     readTraits(*traits, child(pointer, "traits"), unit, reader);
     if (unit.general) {
         if (!json.contains("aura")) {
-            reader.fail(pointer, "将领必须有 aura");
+            reader.fail(pointer, "a general must have aura");
         }
         unit.aura = static_cast<float>(readNumber(json.at("aura"), child(pointer, "aura"), reader));
         greaterThanZero(unit.aura, child(pointer, "aura"), reader);
     } else if (json.contains("aura")) {
-        reader.fail(child(pointer, "aura"), "非将领不能有 aura");
+        reader.fail(child(pointer, "aura"), "only a general can have aura");
     }
     return unit;
 }
@@ -324,7 +324,7 @@ MapDef readMap(const Json &json, const std::string &pointer, const StringTable &
 
     const Json *paddies = findField(json, pointer, "paddies", true, reader);
     if (!paddies->is_array()) {
-        reader.fail(child(pointer, "paddies"), "类型应为数组");
+        reader.fail(child(pointer, "paddies"), "expected an array");
     }
     for (std::size_t i = 0; i < paddies->size(); ++i) {
         const std::string at = child(child(pointer, "paddies"), std::to_string(i));
@@ -335,7 +335,7 @@ MapDef readMap(const Json &json, const std::string &pointer, const StringTable &
 
     const Json *hills = findField(json, pointer, "hills", true, reader);
     if (!hills->is_array()) {
-        reader.fail(child(pointer, "hills"), "类型应为数组");
+        reader.fail(child(pointer, "hills"), "expected an array");
     }
     for (std::size_t i = 0; i < hills->size(); ++i) {
         const std::string at = child(child(pointer, "hills"), std::to_string(i));
@@ -352,7 +352,7 @@ MapDef readMap(const Json &json, const std::string &pointer, const StringTable &
     greaterThanZero(map.road.halfWidth, child(roadAt, "half_width"), reader);
     const Json *points = findField(*road, roadAt, "points", true, reader);
     if (!points->is_array()) {
-        reader.fail(child(roadAt, "points"), "类型应为数组");
+        reader.fail(child(roadAt, "points"), "expected an array");
     }
     for (std::size_t i = 0; i < points->size(); ++i) {
         map.road.points.push_back(readPoint((*points)[i], child(child(roadAt, "points"), std::to_string(i)), reader));
@@ -363,7 +363,7 @@ MapDef readMap(const Json &json, const std::string &pointer, const StringTable &
 
     const Json *labels = findField(json, pointer, "labels", true, reader);
     if (!labels->is_array()) {
-        reader.fail(child(pointer, "labels"), "类型应为数组");
+        reader.fail(child(pointer, "labels"), "expected an array");
     }
     for (std::size_t i = 0; i < labels->size(); ++i) {
         const std::string at = child(child(pointer, "labels"), std::to_string(i));
@@ -382,12 +382,12 @@ MapDef readMap(const Json &json, const std::string &pointer, const StringTable &
         } else if (align == "center") {
             label.align = TextAlign::Center;
         } else {
-            reader.fail(child(at, "align"), "未知取值 " + align);
+            reader.fail(child(at, "align"), "unknown value " + align);
         }
         if ((*labels)[i].contains("faint")) {
             const Json &faint = (*labels)[i].at("faint");
             if (!faint.is_boolean()) {
-                reader.fail(child(at, "faint"), "类型应为布尔");
+                reader.fail(child(at, "faint"), "expected a boolean");
             }
             label.faint = faint.get<bool>();
         }
@@ -411,17 +411,17 @@ std::uint16_t requireType(const GameDefs &defs, const std::string &id, const std
                           const Reader &reader) {
     const std::optional<std::uint16_t> index = defs.indexOf(id);
     if (!index) {
-        reader.fail(pointer, "兵种不存在（实际为 " + id + "）");
+        reader.fail(pointer, "unknown unit type (got " + id + ")");
     }
     return *index;
 }
 
 void rememberId(std::set<std::string> &ids, const std::string &id, const std::string &pointer, const Reader &reader) {
     if (id.empty()) {
-        reader.fail(pointer, "不能为空");
+        reader.fail(pointer, "must not be empty");
     }
     if (!ids.insert(id).second) {
-        reader.fail(pointer, "单位 id 重复（实际为 " + id + "）");
+        reader.fail(pointer, "duplicate unit id (got " + id + ")");
     }
 }
 
@@ -436,7 +436,7 @@ Placement readDeployment(const Json &json, const std::string &pointer, const Gam
     const Json *pos = findField(json, pointer, "pos", true, reader);
     unit.pos = readPoint(*pos, child(pointer, "pos"), reader);
     if (!insideMap(unit.pos, map.width, map.height)) {
-        reader.fail(child(pointer, "pos"), "开局单位必须在地图范围内");
+        reader.fail(child(pointer, "pos"), "a deployed unit must start inside the map");
     }
     unit.facing = degreesToRadians(fieldNumber(json, pointer, "facing_deg", reader));
     unit.labelKey = fieldString(json, pointer, "label_key", reader);
@@ -444,7 +444,7 @@ Placement readDeployment(const Json &json, const std::string &pointer, const Gam
     if (json.contains("vanguard")) {
         const Json &flag = json.at("vanguard");
         if (!flag.is_boolean()) {
-            reader.fail(child(pointer, "vanguard"), "类型应为布尔");
+            reader.fail(child(pointer, "vanguard"), "expected a boolean");
         }
         unit.vanguard = flag.get<bool>();
     }
@@ -463,7 +463,7 @@ Placement readSpawn(const Json &json, const std::string &pointer, const GameDefs
     const Json *spawn = findField(json, pointer, "spawn", true, reader);
     unit.pos = readPoint(*spawn, child(pointer, "spawn"), reader);
     if (!spawnNearMap(unit.pos, map.width, map.height)) {
-        reader.fail(child(pointer, "spawn"), "出生点超出地图外 90 米");
+        reader.fail(child(pointer, "spawn"), "spawn is more than 90 m outside the map");
     }
     const Json *rally = findField(json, pointer, "rally", true, reader);
     unit.rally = readPoint(*rally, child(pointer, "rally"), reader);
@@ -472,7 +472,7 @@ Placement readSpawn(const Json &json, const std::string &pointer, const GameDefs
     } else if (group.contains("facing_deg")) {
         unit.facing = degreesToRadians(readNumber(group.at("facing_deg"), child(groupPointer, "facing_deg"), reader));
     } else {
-        reader.fail(pointer, "缺少字段 facing_deg");
+        reader.fail(pointer, "missing field facing_deg");
     }
     if (group.contains("rally_facing_deg")) {
         unit.rallyFacing =
@@ -483,7 +483,7 @@ Placement readSpawn(const Json &json, const std::string &pointer, const GameDefs
     if (json.contains("vanguard")) {
         const Json &flag = json.at("vanguard");
         if (!flag.is_boolean()) {
-            reader.fail(child(pointer, "vanguard"), "类型应为布尔");
+            reader.fail(child(pointer, "vanguard"), "expected a boolean");
         }
         unit.vanguard = flag.get<bool>();
     }
@@ -529,7 +529,7 @@ FlowDef readFlow(const Json &json, const std::string &pointer, const std::vector
 
     const Json *reinforcements = findField(json, pointer, "reinforcements", true, reader);
     if (!reinforcements->is_array()) {
-        reader.fail(child(pointer, "reinforcements"), "类型应为数组");
+        reader.fail(child(pointer, "reinforcements"), "expected an array");
     }
     for (std::size_t i = 0; i < reinforcements->size(); ++i) {
         const std::string at = child(child(pointer, "reinforcements"), std::to_string(i));
@@ -558,15 +558,15 @@ FlowDef readFlow(const Json &json, const std::string &pointer, const std::vector
         return false;
     };
     if (!groupExists(flow.phase2.spawnGroup)) {
-        reader.fail(child(phase2At, "spawn_group"), "组不存在（实际为 " + flow.phase2.spawnGroup + "）");
+        reader.fail(child(phase2At, "spawn_group"), "unknown group (got " + flow.phase2.spawnGroup + ")");
     }
     if (!groupExists(flow.phase3.spawnGroup)) {
-        reader.fail(child(phase3At, "spawn_group"), "组不存在（实际为 " + flow.phase3.spawnGroup + "）");
+        reader.fail(child(phase3At, "spawn_group"), "unknown group (got " + flow.phase3.spawnGroup + ")");
     }
     for (std::size_t i = 0; i < flow.reinforcements.size(); ++i) {
         if (!groupExists(flow.reinforcements[i].spawnGroup)) {
             reader.fail(child(child(child(pointer, "reinforcements"), std::to_string(i)), "spawn_group"),
-                        "组不存在（实际为 " + flow.reinforcements[i].spawnGroup + "）");
+                        "unknown group (got " + flow.reinforcements[i].spawnGroup + ")");
         }
     }
     bool generalFound = false;
@@ -579,7 +579,7 @@ FlowDef readFlow(const Json &json, const std::string &pointer, const std::vector
     }
     if (!generalFound) {
         reader.fail(child(assaultAt, "general"),
-                    "必须指向组里的单位（实际为 " + flow.phase3.grandAssault.general + "）");
+                    "must name a unit in the group (got " + flow.phase3.grandAssault.general + ")");
     }
     return flow;
 }
@@ -614,10 +614,10 @@ Config loadConfig(const std::filesystem::path &path) {
     greaterThanZero(config.timeScale, "/time_scale", reader);
     const Json *speeds = findField(json, "", "player_speeds", true, reader);
     if (!speeds->is_array()) {
-        reader.fail("/player_speeds", "类型应为数组");
+        reader.fail("/player_speeds", "expected an array");
     }
     if (speeds->empty()) {
-        reader.fail("/player_speeds", "不能为空");
+        reader.fail("/player_speeds", "must not be empty");
     }
     for (std::size_t i = 0; i < speeds->size(); ++i) {
         const double speed = readNumber((*speeds)[i], "/player_speeds/" + std::to_string(i), reader);
@@ -632,13 +632,14 @@ Config loadConfig(const std::filesystem::path &path) {
         }
     }
     if (!speedKnown) {
-        reader.fail("/default_speed", "默认速度不在 player_speeds 中（实际为 " + numText(config.defaultSpeed) + "）");
+        reader.fail("/default_speed",
+                    "default speed is not in player_speeds (got " + numText(config.defaultSpeed) + ")");
     }
     config.maxTicksPerFrame = fieldInt(json, "", "max_ticks_per_frame", reader);
     greaterThanZero(config.maxTicksPerFrame, "/max_ticks_per_frame", reader);
     config.language = fieldString(json, "", "language", reader);
     if (config.language != "zh-Hant" && config.language != "en" && config.language != "ko") {
-        reader.fail("/language", "未知取值 " + config.language);
+        reader.fail("/language", "unknown value " + config.language);
     }
     config.reducedMotion = fieldBool(json, "", "reduced_motion", reader);
     config.sound = fieldBool(json, "", "sound", reader);
@@ -663,7 +664,7 @@ StringTable loadStrings(const std::filesystem::path &path, const StringTable *fa
     requireObject(*strings, "/strings", reader);
     for (auto it = strings->begin(); it != strings->end(); ++it) {
         if (!it.value().is_string()) {
-            reader.fail("/strings/" + it.key(), "类型应为字符串");
+            reader.fail("/strings/" + it.key(), "expected a string");
         }
         table.entries.emplace(it.key(), it.value().get<std::string>());
     }
@@ -688,7 +689,7 @@ ScenarioDef loadScenario(const std::filesystem::path &path, const GameDefs &defs
 
     const Json *deployment = findField(json, "", "deployment", true, reader);
     if (!deployment->is_array()) {
-        reader.fail("/deployment", "类型应为数组");
+        reader.fail("/deployment", "expected an array");
     }
     std::set<std::string> ids;
     for (std::size_t i = 0; i < deployment->size(); ++i) {
@@ -706,7 +707,7 @@ ScenarioDef loadScenario(const std::filesystem::path &path, const GameDefs &defs
         group.id = it.key();
         const Json *units = findField(it.value(), at, "units", true, reader);
         if (!units->is_array()) {
-            reader.fail(child(at, "units"), "类型应为数组");
+            reader.fail(child(at, "units"), "expected an array");
         }
         for (std::size_t i = 0; i < units->size(); ++i) {
             group.units.push_back(readSpawn((*units)[i], child(child(at, "units"), std::to_string(i)), defs,
@@ -725,7 +726,8 @@ ScenarioDef loadScenario(const std::filesystem::path &path, const GameDefs &defs
     const bool mingGeneral =
         commander != nullptr && defs.types[commander->type].side == Side::Ming && defs.types[commander->type].general;
     if (!mingGeneral) {
-        reader.fail("/commander", "必须指向开局的明军将领（实际为 " + scenario.commander + "）");
+        reader.fail("/commander",
+                    "must name a Ming general in the opening deployment (got " + scenario.commander + ")");
     }
 
     const Json *exit = findField(json, "", "exit", true, reader);

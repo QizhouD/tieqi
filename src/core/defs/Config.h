@@ -5,7 +5,7 @@
 
 namespace tq {
 
-// 只给表现层用。规则核心不读它。
+// Presentation only. The rules core does not read this.
 struct Config {
     float timeScale = 0.f;
     std::vector<float> playerSpeeds;

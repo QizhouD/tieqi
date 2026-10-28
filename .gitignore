@@ -1,4 +1,4 @@
-# 构建产物
+# Build output
 build/
 out/
 cmake-build-*/
@@ -11,17 +11,17 @@ CMakeUserPresets.json
 *.user
 *.suo
 
-# 运行产物
+# Runtime output
 imgui.ini
 *.log
 runs.csv
 replays/
 screenshots/
 
-# 系统文件
+# System files
 .DS_Store
 Thumbs.db
 
-# 原型对照只在本机跑，不进构建
+# Prototype comparison stays on this machine and out of the build.
 tools/parity/node_modules/
 tools/parity/work/

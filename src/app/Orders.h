@@ -15,7 +15,7 @@
 
 namespace tq {
 
-// 拖动超过这么多逻辑像素才开始框选。点在单位上的拖动仍算点击。
+// A drag starts a box only after this many logical pixels. A drag that begins on a unit stays a click.
 inline constexpr float kDragThresholdPx = 6.f;
 
 enum class OrderKey : std::uint8_t { Space, Speed1, Speed2, Speed3, Hold, Retreat, Split, Join, All, Cancel };
@@ -54,7 +54,7 @@ struct PreviewPaint {
     float arrowAlpha = 1.f;
 };
 
-// 优绿、平金、劣朱。破阵和追击算优，枪阵算劣，和原型的 good / warn / bad 一致。
+// Favored is green, even is gold, unfavored is cinnabar. Breaks and pursuit are favored; a pike wall is not.
 inline PreviewPaint previewPaint(Verdict verdict) {
     switch (verdict) {
     case Verdict::Breaks:
@@ -81,7 +81,7 @@ inline void toggleRunning(bool &running, const Battle &battle) {
     }
 }
 
-// 多个命中取离中心最近的。距离相同保留更早出现的单位。
+// Several hits keep the one closest to the pointer. A tie keeps the earlier unit.
 UnitId pickUnit(const Battle &battle, float worldX, float worldY, float pixelsPerMeter, float alpha);
 
 std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const PointerSample &sample, float mapW,
@@ -89,7 +89,7 @@ std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const
 
 OrderEffect applyKey(OrderState &state, const Battle &battle, OrderKey key, const std::vector<float> &speeds);
 
-// 待确认时点“确认进攻”。没有待确认目标就不下命令。
+// Confirm Attack issues the pending attack. With nothing pending, it does not order.
 std::vector<Command> confirmPending(OrderState &state, const Battle &battle);
 
 void noteEvents(OrderState &state, const Battle &battle, std::span<const Event> events);
@@ -100,7 +100,7 @@ std::optional<OrderKey> orderKeyFromScript(const std::string &action, const std:
 
 std::string commandText(const Command &command);
 
-// 按脚本时间推进。事件在该时刻已经走完的 tick 之后生效，和窗口里先处理输入再 step 一致。
+// Advance by script time. An event applies after the ticks that finished before that timestamp.
 ControlPlayback playControlScript(Battle &battle, std::istream &script, float timeScale,
                                   const std::vector<float> &speeds, float mapW, float mapH, float speed);
 

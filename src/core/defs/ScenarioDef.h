@@ -68,7 +68,7 @@ struct ReinforcementDef {
     DangerDef danger;
 };
 
-// enabled 为 false 表示场景省略了 flow。C6 把它解释成停在阶段 1，撤退口不开。
+// enabled false means the scenario omitted flow. C6 keeps that as phase 1 with the exit closed.
 struct FlowDef {
     bool enabled = false;
     ScoutWarningDef scoutWarning;

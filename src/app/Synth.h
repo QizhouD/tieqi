@@ -15,10 +15,10 @@ struct SynthSet {
     std::vector<std::int16_t> rout;
 };
 
-// 四个音效按原型合成。随机噪声用固定种子，不碰规则核心的 tq::Rng。
+// Four cues synthesized like the prototype. Noise uses its own fixed seed and does not touch tq::Rng.
 SynthSet synthesizeSfx(unsigned sampleRate = kSampleRate);
 
-// 两次 crack 至少间隔 90 毫秒。lastSec 用负数表示还没响过。
+// Two cracks are at least 90 ms apart. A negative lastSec means the cue has not played.
 bool allowCrack(float nowSec, float &lastSec);
 
 } // namespace tq
