@@ -183,7 +183,7 @@ export function patchPrototype(html, phase) {
     text = mustReplace(
         text,
         "\n})();",
-        "\nwindow.__S = () => S; window.__step = step;\nwindow.__f = { PADDIES, HILLS, ROAD, TYPES, chargeCalc, meleeCalc, sideOf, terrainAt, capOf, meleePower, pairMul, previewCalc, add, newGame, sizeFrag, startBattle };\n})();",
+        "\nwindow.__S = () => S; window.__step = step;\nwindow.__f = { PADDIES, HILLS, ROAD, TYPES, chargeCalc, meleeCalc, sideOf, terrainAt, capOf, meleePower, pairMul, previewCalc, add, newGame, sizeFrag, startBattle, draw, resize, buildMap };\n})();",
         "导出",
     );
     return text;

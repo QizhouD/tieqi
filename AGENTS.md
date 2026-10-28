@@ -10,7 +10,7 @@ ctest --preset dev
 
 ## 硬性规则
 - src/core 不得引用 SFML、ImGui 或系统头文件
-- 随机数只用 tq::Rng；遍历单位按 UnitId 升序
+- 模拟里的随机数只用 Battle 自己的 tq::Rng；表现层（粒子、音效）用自己的生成器，不许碰模拟的随机数；遍历单位按 UnitId 升序
 - 兵种数值只放 data/*.json；规则常数只放 src/core/rules/Constants.h
 - 改规则必须同步 docs/DEVELOPMENT.md 的"规则规格"
 - 每个任务对应"任务拆分"里的一张卡，分支名 task/<卡号>-<短名>
