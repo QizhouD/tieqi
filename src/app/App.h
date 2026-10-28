@@ -5,6 +5,7 @@
 #include "app/MapView.h"
 #include "app/ResourceManager.h"
 #include "app/TextStyle.h"
+#include "app/UnitView.h"
 #include "app/Window.h"
 #include "core/sim/Battle.h"
 #include "data/Load.h"
@@ -44,6 +45,9 @@ class App {
     AudioManager audio_;
     Window window_;
     MapView mapView_;
+    UnitView unitView_;
+    std::vector<UnitId> selected_;
+    std::optional<UnitId> hover_;
 
     struct Cue {
         float time = 0.f;

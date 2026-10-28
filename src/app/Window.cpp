@@ -23,6 +23,10 @@ sf::FloatRect uiRect() {
     return sf::FloatRect({0.f, 0.f}, {static_cast<float>(kWindowWidth), static_cast<float>(kWindowHeight)});
 }
 
+sf::Vector2f mapExtent(sf::Vector2u world) {
+    return {static_cast<float>(std::max(1u, world.x)), static_cast<float>(std::max(1u, world.y))};
+}
+
 } // namespace
 
 void Window::open(const sf::String &title) {
@@ -73,19 +77,34 @@ void Window::followCamera(sf::Vector2f target, float elapsed) {
     camera_.y = std::clamp(static_cast<float>(std::round(camera_.y)), halfH, maxY);
 }
 
-void Window::beginWorld() {
-    const ScreenRect field = battlefieldRect();
-    const float mapW = static_cast<float>(std::max(1u, worldSize_.x));
-    const float mapH = static_cast<float>(std::max(1u, worldSize_.y));
-    const MapCamera placed = mapCamera(field, mapW, mapH);
-    sf::View view({mapW * 0.5f, mapH * 0.5f}, {field.w / placed.scale, field.h / placed.scale});
+void Window::applyView(sf::Vector2f center, sf::Vector2f size, ScreenRect screen) {
+    sf::View view(center, size);
     const Viewport box = letterbox(static_cast<float>(pixelSize_.x), static_cast<float>(pixelSize_.y),
                                    static_cast<float>(kWindowWidth), static_cast<float>(kWindowHeight));
     const float logicalW = static_cast<float>(kWindowWidth);
     const float logicalH = static_cast<float>(kWindowHeight);
-    view.setViewport(sf::FloatRect({box.x + (field.x / logicalW) * box.w, box.y + (field.y / logicalH) * box.h},
-                                   {(field.w / logicalW) * box.w, (field.h / logicalH) * box.h}));
+    view.setViewport(sf::FloatRect({box.x + (screen.x / logicalW) * box.w, box.y + (screen.y / logicalH) * box.h},
+                                   {(screen.w / logicalW) * box.w, (screen.h / logicalH) * box.h}));
     window_.setView(view);
+}
+
+void Window::beginWorld() {
+    const ScreenRect field = battlefieldRect();
+    const sf::Vector2f map = mapExtent(worldSize_);
+    const MapCamera placed = mapCamera(field, map.x, map.y);
+    applyView({map.x * 0.5f, map.y * 0.5f}, {field.w / placed.scale, field.h / placed.scale}, field);
+}
+
+void Window::beginMap() {
+    const sf::Vector2f map = mapExtent(worldSize_);
+    const MapCamera placed = mapCamera(battlefieldRect(), map.x, map.y);
+    const ScreenRect screen{placed.originX, placed.originY, map.x * placed.scale, map.y * placed.scale};
+    applyView({map.x * 0.5f, map.y * 0.5f}, {map.x, map.y}, screen);
+}
+
+float Window::pixelsPerMeter() const {
+    const sf::Vector2f map = mapExtent(worldSize_);
+    return mapCamera(battlefieldRect(), map.x, map.y).scale;
 }
 
 sf::FloatRect Window::visibleWorld() const {
