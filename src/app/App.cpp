@@ -120,9 +120,11 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
     audio_.setMuted(!data_.config.sound || audio_.masterVolume() <= 0.f);
     audio_.loadDefaults(root_ / "assets" / "audio");
 
+    seed_ = seed;
+    aiEnabled_ = ai;
     BattleOptions battleOptions;
-    battleOptions.aiEnabled = ai;
-    battle_.emplace(data_.defs, data_.scenario, seed, battleOptions);
+    battleOptions.aiEnabled = aiEnabled_;
+    battle_.emplace(data_.defs, data_.scenario, seed_, battleOptions);
 
     window_.open(utf8(active().text("game.title")));
     const MapDef &map = data_.scenario.map;
@@ -166,6 +168,7 @@ void App::stepSim() {
         }
     }
     noteEvents(orders_, *battle_, events);
+    hud_.note(*battle_, active(), events);
 }
 
 void App::queueSfx() {
@@ -196,6 +199,29 @@ void App::drawFrame() {
     window_.beginMap();
     unitView_.draw(window_, *battle_, active(), fontFor(active(), glyph.face), fontFor(active(), body.face), soundTime_,
                    std::clamp(accumulator_, 0.f, 1.f), orders_);
+    window_.beginPixels();
+    const Window::PixelMap pixels = window_.pixelMap();
+    const TextStyle title = textStyle(active().language, TextRole::Title);
+    HudFrame frame;
+    frame.battle = &*battle_;
+    frame.orders = &orders_;
+    frame.strings = &active();
+    frame.body = &fontFor(active(), FontFace::Body);
+    frame.title = &fontFor(active(), title.face);
+    frame.titleBold = title.bold;
+    frame.exit = &data_.scenario.exit;
+    frame.startClock = data_.scenario.startClock;
+    frame.alpha = std::clamp(accumulator_, 0.f, 1.f);
+    frame.wallTime = soundTime_;
+    frame.running = running_;
+    frame.muted = audio_.muted();
+    frame.reducedMotion = reducedMotion_;
+    frame.speed = speed_;
+    frame.speeds = &data_.config.playerSpeeds;
+    frame.originX = pixels.originX;
+    frame.originY = pixels.originY;
+    frame.scale = pixels.scale;
+    hud_.draw(window_.target(), frame);
 }
 
 void App::issue(Command command) {
@@ -208,6 +234,65 @@ void App::issue(Command command) {
     battle_->submit(std::move(command));
 }
 
+void App::applyHud(HudAction action) {
+    if (!battle_) {
+        return;
+    }
+    const std::vector<float> &speeds = data_.config.playerSpeeds;
+    if (action == HudAction::ToggleRun) {
+        toggleRunning(running_, *battle_);
+        return;
+    }
+    if (action == HudAction::ToggleSound) {
+        audio_.setMuted(!audio_.muted());
+        return;
+    }
+    if (action == HudAction::Restart) {
+        restart();
+        return;
+    }
+    if (action == HudAction::Speed0 || action == HudAction::Speed1 || action == HudAction::Speed2) {
+        const std::size_t index = action == HudAction::Speed0 ? 0 : action == HudAction::Speed1 ? 1 : 2;
+        if (index < speeds.size()) {
+            speed_ = speeds[index];
+        }
+        return;
+    }
+    if (action == HudAction::ConfirmAttack) {
+        for (Command command : confirmPending(orders_, *battle_)) {
+            issue(std::move(command));
+        }
+        return;
+    }
+    OrderKey key = OrderKey::Cancel;
+    if (action == HudAction::Hold) {
+        key = OrderKey::Hold;
+    } else if (action == HudAction::Retreat) {
+        key = OrderKey::Retreat;
+    } else if (action == HudAction::Split) {
+        key = OrderKey::Split;
+    } else if (action == HudAction::Join) {
+        key = OrderKey::Join;
+    }
+    OrderEffect effect = applyKey(orders_, *battle_, key, speeds);
+    for (Command &command : effect.commands) {
+        issue(std::move(command));
+    }
+}
+
+void App::restart() {
+    BattleOptions options;
+    options.aiEnabled = aiEnabled_;
+    battle_.emplace(data_.defs, data_.scenario, seed_, options);
+    orders_ = {};
+    hud_.reset();
+    accumulator_ = 0.f;
+    running_ = false;
+    replayCursor_ = 0;
+    const TextStyle title = textStyle(active().language, TextRole::Title);
+    mapView_.build(data_.scenario, active(), fontFor(active(), title.face), title.bold);
+}
+
 void App::handleInput() {
     if (!battle_) {
         return;
@@ -216,6 +301,13 @@ void App::handleInput() {
     const float mapW = data_.scenario.map.width;
     const float mapH = data_.scenario.map.height;
     for (const PointerSample &sample : window_.takePointers()) {
+        const Hud::Input input = hud_.handle(sample);
+        if (input.action != HudAction::None) {
+            applyHud(input.action);
+        }
+        if (input.consumed) {
+            continue;
+        }
         for (Command command : applyPointer(orders_, *battle_, sample, mapW, mapH, alpha)) {
             issue(std::move(command));
         }

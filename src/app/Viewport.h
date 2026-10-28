@@ -12,10 +12,11 @@ inline constexpr unsigned kWindowWidth = 1600;
 inline constexpr unsigned kWindowHeight = 1000;
 inline constexpr unsigned kMinWindowWidth = 1280;
 inline constexpr unsigned kMinWindowHeight = 800;
-// A4 做顶栏和面板时按原型在 1600×1000 下量到的画布重设战场矩形：
-// 画布 (17, 55)、1216×932。.field 外框是 (16, 54)、1218×934，多出来的是 1px 边框。
-inline constexpr unsigned kTopBarHeight = 56;
-inline constexpr unsigned kSidePanelWidth = 380;
+// 原型在 1600×1000 下量到的战场画布。`.field` 外框是 (16, 54)、1218×934，多出来的是 1px 边框。
+inline constexpr float kBattlefieldX = 17.f;
+inline constexpr float kBattlefieldY = 55.f;
+inline constexpr float kBattlefieldW = 1216.f;
+inline constexpr float kBattlefieldH = 932.f;
 inline constexpr float kDesktopFit = 0.9f;
 inline constexpr float kMapMarginPx = 10.f;
 inline constexpr float kMapPixelsPerMeter = 1.5f;
@@ -82,7 +83,7 @@ inline WindowFit fitWindow(unsigned desktopW, unsigned desktopH, unsigned logica
     return fit;
 }
 
-// 逻辑画面里的矩形。战场是去掉顶栏和右侧面板后的区域，A2、A3 都用它。
+// 逻辑画面里的矩形。战场是原型画布，不是含 1px 边框的外框。
 struct ScreenRect {
     float x = 0.f;
     float y = 0.f;
@@ -92,8 +93,9 @@ struct ScreenRect {
 
 inline ScreenRect battlefieldRect(float logicalW = static_cast<float>(kWindowWidth),
                                   float logicalH = static_cast<float>(kWindowHeight)) {
-    return {0.f, static_cast<float>(kTopBarHeight), std::max(0.f, logicalW - static_cast<float>(kSidePanelWidth)),
-            std::max(0.f, logicalH - static_cast<float>(kTopBarHeight))};
+    const float sx = logicalW > 0.f ? logicalW / static_cast<float>(kWindowWidth) : 0.f;
+    const float sy = logicalH > 0.f ? logicalH / static_cast<float>(kWindowHeight) : 0.f;
+    return {kBattlefieldX * sx, kBattlefieldY * sy, kBattlefieldW * sx, kBattlefieldH * sy};
 }
 
 inline float mapScale(float pixelW, float pixelH, float mapW, float mapH, float margin = kMapMarginPx) {

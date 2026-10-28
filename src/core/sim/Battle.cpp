@@ -166,6 +166,8 @@ const Unit &Battle::unit(UnitId id) const {
     return units_[id];
 }
 
+float Battle::enlisted(Side side) const { return side == Side::Ming ? totalMing_ : totalJp_; }
+
 std::optional<UnitId> Battle::sceneUnit(const std::string &id) const {
     const auto found = sceneIds_.find(id);
     if (found == sceneIds_.end()) {

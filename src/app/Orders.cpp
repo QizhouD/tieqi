@@ -341,6 +341,15 @@ OrderEffect applyKey(OrderState &state, const Battle &battle, OrderKey key, cons
     return effect;
 }
 
+std::vector<Command> confirmPending(OrderState &state, const Battle &battle) {
+    std::vector<Command> issued;
+    if (!state.pending || !ordersOpen(battle)) {
+        return issued;
+    }
+    issueAttack(state, battle, *state.pending, issued);
+    return issued;
+}
+
 void noteEvents(OrderState &state, const Battle &battle, std::span<const Event> events) {
     for (const Event &event : events) {
         if (event.type == Event::Type::Split) {
@@ -376,8 +385,13 @@ std::vector<PointerSample> samplesForScript(const ScriptEvent &event) {
         const int button = event.action == "rclick" ? kPointerRight : kPointerLeft;
         const auto device = event.action == "touchclick" ? PointerSample::Device::Touch : PointerSample::Device::Mouse;
         const bool shift = event.action == "shiftclick";
-        return {sampleAt(PointerSample::Type::Down, device, button, shift, x, y),
-                sampleAt(PointerSample::Type::Up, device, button, shift, x, y)};
+        std::vector<PointerSample> samples;
+        if (device == PointerSample::Device::Mouse) {
+            samples.push_back(sampleAt(PointerSample::Type::Move, device, kPointerLeft, shift, x, y));
+        }
+        samples.push_back(sampleAt(PointerSample::Type::Down, device, button, shift, x, y));
+        samples.push_back(sampleAt(PointerSample::Type::Up, device, button, shift, x, y));
+        return samples;
     }
     if (event.action == "move") {
         float x = 0.f;

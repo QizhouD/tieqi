@@ -43,6 +43,13 @@ class Window {
     void snapCamera(sf::Vector2f target);
     void followCamera(sf::Vector2f target, float elapsed);
     void beginUi();
+    void beginPixels();
+    struct PixelMap {
+        float originX = 0.f;
+        float originY = 0.f;
+        float scale = 1.f;
+    };
+    PixelMap pixelMap() const;
     void beginWorld();
     // 棋子画在地图矩形里。视口裁到地图，超出地图的单位不画进深色边。
     void beginMap();

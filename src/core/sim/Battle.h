@@ -67,6 +67,8 @@ class Battle {
     bool isOver() const { return result_.over; }
     const BattleResult &result() const { return result_; }
     const BattleStats &stats() const { return stats_; }
+    // 开局兵力加上后来生成的援军。残部和分队不另计。只读，不参与结算。
+    float enlisted(Side side) const;
     std::uint64_t stateHash() const;
 
   private:

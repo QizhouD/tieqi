@@ -192,6 +192,8 @@
     "ui.resume": "繼續",
     "ui.paused": "暫停中",
     "ui.canvas": "碧蹄館戰場",
+    "ui.battle": "碧蹄館",
+    "ui.key.space": "空格",
     "ui.intro_eyebrow": "萬曆二十一年正月 · 明軍東征",
     "ui.intro_body": "平壤收復後，提督李如松率以遼東騎兵為主的前鋒南下漢城，在碧蹄館一帶與日軍遭遇。立花宗茂的先鋒已在前方列陣，小早川隆景的本隊隨後就到。李如松只帶了一半親兵先行，另一半由楊元押後。",
     "ui.tips_title": "騎兵要訣",
@@ -252,6 +254,7 @@
     "ui.stat.jp_lost": "日軍傷亡",
     "ui.stat.jp_broken": "日軍崩潰",
     "ui.stat.best_impact": "最大衝擊",
+    "ui.stat.teams": "{n} 隊",
 
     "grade.decisive": "大勝",
     "grade.minor": "小勝",
