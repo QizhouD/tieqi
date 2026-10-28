@@ -1,10 +1,13 @@
 #include "app/Window.h"
 
+#include "app/Orders.h"
+
 #include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/View.hpp>
 #include <SFML/Window/Event.hpp>
+#include <SFML/Window/Mouse.hpp>
 #include <SFML/Window/VideoMode.hpp>
 #include <SFML/Window/WindowEnums.hpp>
 
@@ -25,6 +28,29 @@ sf::FloatRect uiRect() {
 
 sf::Vector2f mapExtent(sf::Vector2u world) {
     return {static_cast<float>(std::max(1u, world.x)), static_cast<float>(std::max(1u, world.y))};
+}
+
+bool shiftDown() {
+    return sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ||
+           sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
+}
+
+PointerSample pointerAt(PointerSample::Type type, PointerSample::Device device, int button, sf::Vector2i pixel,
+                        sf::Vector2u pixelSize, bool shift) {
+    const Vec2 logical = logicalFromPixel(static_cast<float>(pixel.x), static_cast<float>(pixel.y),
+                                          static_cast<float>(pixelSize.x), static_cast<float>(pixelSize.y));
+    PointerSample sample;
+    sample.type = type;
+    sample.device = device;
+    sample.button = button;
+    sample.x = logical.x;
+    sample.y = logical.y;
+    sample.shift = shift;
+    return sample;
+}
+
+int pointerButton(sf::Mouse::Button button) {
+    return button == sf::Mouse::Button::Right ? kPointerRight : kPointerLeft;
 }
 
 } // namespace
@@ -88,6 +114,8 @@ void Window::applyView(sf::Vector2f center, sf::Vector2f size, ScreenRect screen
     window_.setView(view);
 }
 
+void Window::beginUi() { applyUiView(); }
+
 void Window::beginWorld() {
     const ScreenRect field = battlefieldRect();
     const sf::Vector2f map = mapExtent(worldSize_);
@@ -117,8 +145,21 @@ sf::FloatRect Window::visibleWorld() const {
     return sf::FloatRect({mapW * 0.5f - viewW * 0.5f, mapH * 0.5f - viewH * 0.5f}, {viewW, viewH});
 }
 
+void Window::addPointer(PointerSample sample) {
+    if (!scripted_) {
+        pointers_.push_back(sample);
+    }
+}
+
+std::vector<PointerSample> Window::takePointers() {
+    std::vector<PointerSample> taken;
+    taken.swap(pointers_);
+    return taken;
+}
+
 void Window::poll() {
     pressed_.clear();
+    pointers_.clear();
     while (const std::optional event = window_.pollEvent()) {
         if (event->is<sf::Event::Closed>()) {
             done_ = true;
@@ -134,6 +175,36 @@ void Window::poll() {
         } else if (const auto *resized = event->getIf<sf::Event::Resized>()) {
             pixelSize_ = resized->size;
             applyUiView();
+        } else if (const auto *pressed = event->getIf<sf::Event::MouseButtonPressed>()) {
+            if (pressed->button == sf::Mouse::Button::Left || pressed->button == sf::Mouse::Button::Right) {
+                addPointer(pointerAt(PointerSample::Type::Down, PointerSample::Device::Mouse,
+                                     pointerButton(pressed->button), pressed->position, pixelSize_, shiftDown()));
+            }
+        } else if (const auto *released = event->getIf<sf::Event::MouseButtonReleased>()) {
+            if (released->button == sf::Mouse::Button::Left || released->button == sf::Mouse::Button::Right) {
+                addPointer(pointerAt(PointerSample::Type::Up, PointerSample::Device::Mouse,
+                                     pointerButton(released->button), released->position, pixelSize_, shiftDown()));
+            }
+        } else if (const auto *moved = event->getIf<sf::Event::MouseMoved>()) {
+            addPointer(pointerAt(PointerSample::Type::Move, PointerSample::Device::Mouse, kPointerLeft, moved->position,
+                                 pixelSize_, shiftDown()));
+        } else if (const auto *began = event->getIf<sf::Event::TouchBegan>()) {
+            if (!touchFinger_) {
+                touchFinger_ = began->finger;
+                addPointer(pointerAt(PointerSample::Type::Down, PointerSample::Device::Touch, kPointerLeft,
+                                     began->position, pixelSize_, false));
+            }
+        } else if (const auto *touchMoved = event->getIf<sf::Event::TouchMoved>()) {
+            if (touchFinger_ && *touchFinger_ == touchMoved->finger) {
+                addPointer(pointerAt(PointerSample::Type::Move, PointerSample::Device::Touch, kPointerLeft,
+                                     touchMoved->position, pixelSize_, false));
+            }
+        } else if (const auto *ended = event->getIf<sf::Event::TouchEnded>()) {
+            if (touchFinger_ && *touchFinger_ == ended->finger) {
+                addPointer(pointerAt(PointerSample::Type::Up, PointerSample::Device::Touch, kPointerLeft,
+                                     ended->position, pixelSize_, false));
+                touchFinger_.reset();
+            }
         }
     }
     if (scripted_) {
@@ -169,6 +240,9 @@ sf::Keyboard::Key Window::keyFromName(const std::string &name) {
     }
     if (name.size() == 1 && name[0] >= 'a' && name[0] <= 'z') {
         return static_cast<sf::Keyboard::Key>(static_cast<int>(sf::Keyboard::Key::A) + (name[0] - 'a'));
+    }
+    if (name.size() == 1 && name[0] >= '0' && name[0] <= '9') {
+        return static_cast<sf::Keyboard::Key>(static_cast<int>(sf::Keyboard::Key::Num0) + (name[0] - '0'));
     }
     if (name.size() == 4 && name.rfind("Num", 0) == 0 && name[3] >= '0' && name[3] <= '9') {
         return static_cast<sf::Keyboard::Key>(static_cast<int>(sf::Keyboard::Key::Num0) + (name[3] - '0'));
@@ -207,6 +281,10 @@ void Window::advanceScript() {
             pendingShot_ = event.arg;
         } else if (event.action == "quit") {
             done_ = true;
+        } else if (isPointerAction(event.action)) {
+            for (const PointerSample &sample : samplesForScript(event)) {
+                pointers_.push_back(sample);
+            }
         } else if (event.action == "resize") {
             unsigned width = 0;
             unsigned height = 0;

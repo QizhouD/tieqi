@@ -3,6 +3,7 @@
 #include "app/AudioManager.h"
 #include "app/Launch.h"
 #include "app/MapView.h"
+#include "app/Orders.h"
 #include "app/ResourceManager.h"
 #include "app/TextStyle.h"
 #include "app/UnitView.h"
@@ -26,6 +27,8 @@ class App {
   private:
     void stepSim();
     void drawFrame();
+    void handleInput();
+    void issue(Command command);
     void queueSfx();
     void playDue();
     const StringTable &active() const;
@@ -46,8 +49,8 @@ class App {
     Window window_;
     MapView mapView_;
     UnitView unitView_;
-    std::vector<UnitId> selected_;
-    std::optional<UnitId> hover_;
+    OrderState orders_;
+    bool running_ = false;
 
     struct Cue {
         float time = 0.f;
