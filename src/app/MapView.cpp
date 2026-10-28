@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <stdexcept>
 #include <string_view>
 #include <vector>
@@ -168,10 +169,13 @@ void drawDashed(sf::RenderTarget &target, const std::vector<Vec2> &pts, float on
 enum class Baseline { Alphabetic, Middle };
 
 void drawLabel(sf::RenderTarget &target, const sf::Font &font, std::string_view text, float size, Vec2 pos,
-               sf::Color color, TextAlign align, Baseline baseline) {
+               sf::Color color, TextAlign align, Baseline baseline, bool bold) {
     const long rounded = std::lround(size * kMapPixelsPerMeter);
     const unsigned pixels = rounded > 1 ? static_cast<unsigned>(rounded) : 1;
     sf::Text shape(font, utf8(text), pixels);
+    if (bold) {
+        shape.setStyle(sf::Text::Bold);
+    }
     shape.setFillColor(color);
     shape.setScale({1.f / kMapPixelsPerMeter, 1.f / kMapPixelsPerMeter});
     const sf::FloatRect bounds = shape.getLocalBounds();
@@ -197,11 +201,13 @@ void drawDashedRect(sf::RenderTarget &target, const Aabb &box, float on, float o
 
 } // namespace
 
-void MapView::build(const ScenarioDef &scenario, const StringTable &strings, const sf::Font &brush) {
+void MapView::build(const ScenarioDef &scenario, const StringTable &strings, const sf::Font &titleFont,
+                    bool titleBold) {
     map_ = scenario.map;
     exit_ = scenario.exit.rect;
     exitLabel_ = strings.text("ui.exit");
-    brush_ = &brush;
+    titleFont_ = &titleFont;
+    titleBold_ = titleBold;
     blob_ = makeBlob();
     const auto size = sf::Vector2u{static_cast<unsigned>(std::ceil(map_.width * kMapPixelsPerMeter)),
                                    static_cast<unsigned>(std::ceil(map_.height * kMapPixelsPerMeter))};
@@ -215,10 +221,10 @@ void MapView::build(const ScenarioDef &scenario, const StringTable &strings, con
     scars_.setView(world);
     scars_.clear(sf::Color::Transparent);
     scars_.display();
-    paintBase(strings, brush);
+    paintBase(strings, titleFont, titleBold);
 }
 
-void MapView::paintBase(const StringTable &strings, const sf::Font &brush) {
+void MapView::paintBase(const StringTable &strings, const sf::Font &titleFont, bool titleBold) {
     const float w = map_.width;
     const float h = map_.height;
     MapRng rng(1593);
@@ -384,8 +390,8 @@ void MapView::paintBase(const StringTable &strings, const sf::Font &brush) {
     const sf::Color ink = rgba(42, 34, 27, 0.82f);
     const sf::Color faint = rgba(42, 34, 27, 0.55f);
     for (const MapLabel &label : map_.labels) {
-        drawLabel(base_, brush, strings.text(label.key), label.size, label.pos, label.faint ? faint : ink, label.align,
-                  Baseline::Alphabetic);
+        drawLabel(base_, titleFont, strings.text(label.key), label.size, label.pos, label.faint ? faint : ink,
+                  label.align, Baseline::Alphabetic, titleBold);
     }
 
     sf::RectangleShape seal({38.f, 38.f});
@@ -398,8 +404,8 @@ void MapView::paintBase(const StringTable &strings, const sf::Font &brush) {
     ring.setOutlineColor(rgba(236, 226, 200, 0.85f));
     ring.setOutlineThickness(1.5f);
     base_.draw(ring);
-    drawLabel(base_, brush, strings.text("ui.north"), 28.f, {41.f, 42.f}, sf::Color(0xef, 0xe5, 0xcb),
-              TextAlign::Center, Baseline::Middle);
+    drawLabel(base_, titleFont, strings.text("ui.north"), 28.f, {41.f, 42.f}, sf::Color(0xef, 0xe5, 0xcb),
+              TextAlign::Center, Baseline::Middle, titleBold);
 
     sf::VertexArray scale(sf::PrimitiveType::Lines);
     const sf::Color scaleInk = rgba(42, 34, 27, 0.8f);
@@ -408,9 +414,12 @@ void MapView::paintBase(const StringTable &strings, const sf::Font &brush) {
     appendLine(scale, {110.f, 1066.f}, {110.f, 1074.f}, scaleInk);
     appendLine(scale, {190.f, 1064.f}, {190.f, 1076.f}, scaleInk);
     base_.draw(scale);
-    drawLabel(base_, brush, strings.text("ui.scale"), 18.f, {198.f, 1076.f}, ink, TextAlign::Left,
-              Baseline::Alphabetic);
+    drawLabel(base_, titleFont, strings.text("ui.scale"), 18.f, {198.f, 1076.f}, ink, TextAlign::Left,
+              Baseline::Alphabetic, titleBold);
     base_.display();
+    if (!base_.generateMipmap()) {
+        std::cerr << "底图 mipmap 生成失败\n";
+    }
 }
 
 void MapView::addScar(Vec2 pos, float ratio) {
@@ -430,20 +439,20 @@ void MapView::drawExit(Window &window, float timeSec) const {
     fill.setPosition({exit_.x, exit_.y});
     fill.setFillColor(rgba(207, 170, 92, 0.14f + 0.1f * a));
     window.draw(fill);
-    const float sc =
-        mapScale(static_cast<float>(kWindowWidth), static_cast<float>(kWindowHeight), map_.width, map_.height);
+    const ScreenRect field = battlefieldRect();
+    const float sc = mapScale(field.w, field.h, map_.width, map_.height);
     Aabb inner{exit_.x + 1.f, exit_.y + 1.f, exit_.w - 2.f, exit_.h - 2.f};
     drawDashedRect(window.target(), inner, 8.f / sc, 5.f / sc, 1.6f / sc, rgba(156, 124, 63, 0.9f));
-    if (brush_) {
-        drawLabel(window.target(), *brush_, exitLabel_, 24.f,
+    if (titleFont_) {
+        drawLabel(window.target(), *titleFont_, exitLabel_, 24.f,
                   {exit_.x + exit_.w * 0.5f, exit_.y + exit_.h * 0.5f + 2.f}, rgba(42, 34, 27, 0.85f),
-                  TextAlign::Center, Baseline::Middle);
+                  TextAlign::Center, Baseline::Middle, titleBold_);
     }
 }
 
 void MapView::draw(Window &window, float timeSec, bool exitOpen) const {
-    const float sc =
-        mapScale(static_cast<float>(kWindowWidth), static_cast<float>(kWindowHeight), map_.width, map_.height);
+    const ScreenRect field = battlefieldRect();
+    const float sc = mapScale(field.w, field.h, map_.width, map_.height);
     sf::RectangleShape ground({map_.width + 18.f, map_.height + 18.f});
     ground.setPosition({-9.f, -9.f});
     ground.setFillColor(sf::Color(0x10, 0x0a, 0x08));

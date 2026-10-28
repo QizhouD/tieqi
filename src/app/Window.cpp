@@ -40,7 +40,6 @@ void Window::create() {
         pixelSize_ = {fit.defaultW, fit.defaultH};
         window_.create(sf::VideoMode(pixelSize_), title_, sf::Style::Default);
         window_.setMinimumSize(sf::Vector2u{fit.minW, fit.minH});
-        window_.setMaximumSize(sf::Vector2u{fit.maxW, fit.maxH});
     }
     pixelSize_ = window_.getSize();
     window_.setFramerateLimit(60);
@@ -75,18 +74,28 @@ void Window::followCamera(sf::Vector2f target, float elapsed) {
 }
 
 void Window::beginWorld() {
-    const float sc = mapScale(static_cast<float>(kWindowWidth), static_cast<float>(kWindowHeight),
-                              static_cast<float>(worldSize_.x), static_cast<float>(worldSize_.y));
-    sf::View view(camera_, sf::Vector2f{static_cast<float>(kWindowWidth) / sc, static_cast<float>(kWindowHeight) / sc});
+    const ScreenRect field = battlefieldRect();
+    const float mapW = static_cast<float>(std::max(1u, worldSize_.x));
+    const float mapH = static_cast<float>(std::max(1u, worldSize_.y));
+    const MapCamera placed = mapCamera(field, mapW, mapH);
+    sf::View view({mapW * 0.5f, mapH * 0.5f}, {field.w / placed.scale, field.h / placed.scale});
     const Viewport box = letterbox(static_cast<float>(pixelSize_.x), static_cast<float>(pixelSize_.y),
                                    static_cast<float>(kWindowWidth), static_cast<float>(kWindowHeight));
-    view.setViewport(sf::FloatRect({box.x, box.y}, {box.w, box.h}));
+    const float logicalW = static_cast<float>(kWindowWidth);
+    const float logicalH = static_cast<float>(kWindowHeight);
+    view.setViewport(sf::FloatRect({box.x + (field.x / logicalW) * box.w, box.y + (field.y / logicalH) * box.h},
+                                   {(field.w / logicalW) * box.w, (field.h / logicalH) * box.h}));
     window_.setView(view);
 }
 
 sf::FloatRect Window::visibleWorld() const {
-    return sf::FloatRect({camera_.x - kWindowWidth * 0.5f, camera_.y - kWindowHeight * 0.5f},
-                         {static_cast<float>(kWindowWidth), static_cast<float>(kWindowHeight)});
+    const ScreenRect field = battlefieldRect();
+    const float mapW = static_cast<float>(std::max(1u, worldSize_.x));
+    const float mapH = static_cast<float>(std::max(1u, worldSize_.y));
+    const MapCamera placed = mapCamera(field, mapW, mapH);
+    const float viewW = field.w / placed.scale;
+    const float viewH = field.h / placed.scale;
+    return sf::FloatRect({mapW * 0.5f - viewW * 0.5f, mapH * 0.5f - viewH * 0.5f}, {viewW, viewH});
 }
 
 void Window::poll() {

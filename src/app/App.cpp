@@ -99,7 +99,8 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
     const MapDef &map = data_.scenario.map;
     window_.setWorld({static_cast<unsigned>(map.width), static_cast<unsigned>(map.height)});
     window_.snapCamera({map.width * 0.5f, map.height * 0.5f});
-    mapView_.build(data_.scenario, active(), fontFor(active(), FontFace::Brush));
+    const TextStyle title = textStyle(active().language, TextRole::Title);
+    mapView_.build(data_.scenario, active(), fontFor(active(), title.face), title.bold);
     if (!options.script.empty()) {
         window_.loadScript(options.script);
     }

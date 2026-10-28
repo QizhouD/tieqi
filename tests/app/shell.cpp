@@ -40,37 +40,45 @@ TEST_CASE("text style keeps brush off Korean and English titles") {
 
 TEST_CASE("window fit stays inside 90 percent of the desktop") {
     const WindowFit small = fitWindow(1366, 768);
-    CHECK(small.maxW == 1229);
-    CHECK(small.maxH == 691);
     CHECK(small.minW == 1229);
     CHECK(small.minH == 691);
     CHECK(small.defaultW == 1229);
     CHECK(small.defaultH == 691);
-    CHECK(small.defaultW <= small.maxW);
-    CHECK(small.defaultH <= small.maxH);
 
     const WindowFit hd = fitWindow(1920, 1080);
-    CHECK(hd.maxW == 1728);
-    CHECK(hd.maxH == 972);
     CHECK(hd.minW == 1280);
     CHECK(hd.minH == 800);
-    CHECK(hd.defaultW <= hd.maxW);
-    CHECK(hd.defaultH <= hd.maxH);
-    CHECK(hd.defaultW >= hd.minW);
-    CHECK(hd.defaultH >= hd.minH);
+    CHECK(hd.defaultW == 1555);
+    CHECK(hd.defaultH == 972);
+    CHECK(hd.defaultW <= 1728);
+    CHECK(hd.defaultH <= 972);
 
     const WindowFit wide = fitWindow(2560, 1440);
     CHECK(wide.defaultW == 1600);
     CHECK(wide.defaultH == 1000);
     CHECK(wide.minW == 1280);
     CHECK(wide.minH == 800);
-    CHECK(wide.maxW == 2304);
-    CHECK(wide.maxH == 1296);
 }
 
-TEST_CASE("map layout matches the prototype fit formula") {
-    CHECK(mapScale(1600.f, 1000.f, 880.f, 1100.f) ==
-          doctest::Approx(std::min((1600.f - 20.f) / 880.f, (1000.f - 20.f) / 1100.f)));
+TEST_CASE("battlefield centers the map below the bar and left of the panel") {
+    const ScreenRect field = battlefieldRect();
+    CHECK(field.x == doctest::Approx(0.f));
+    CHECK(field.y == doctest::Approx(56.f));
+    CHECK(field.w == doctest::Approx(1220.f));
+    CHECK(field.h == doctest::Approx(944.f));
+
+    const MapCamera camera = mapCamera(field, 880.f, 1100.f);
+    const float scale = std::min((field.w - 20.f) / 880.f, (field.h - 20.f) / 1100.f);
+    CHECK(camera.scale == doctest::Approx(scale));
+    CHECK(camera.originX == doctest::Approx(field.x + (field.w - 880.f * scale) * 0.5f));
+    CHECK(camera.originY == doctest::Approx(field.y + (field.h - 1100.f * scale) * 0.5f));
+
+    const Vec2 origin = worldFromLogical(camera.originX, camera.originY, 880.f, 1100.f);
+    CHECK(origin.x == doctest::Approx(0.f));
+    CHECK(origin.y == doctest::Approx(0.f));
+    const Vec2 center = worldFromLogical(camera.originX + 440.f * scale, camera.originY + 550.f * scale, 880.f, 1100.f);
+    CHECK(center.x == doctest::Approx(440.f));
+    CHECK(center.y == doctest::Approx(550.f));
 }
 
 TEST_CASE("map rng matches the prototype mulberry32 stream") {

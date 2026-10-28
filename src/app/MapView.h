@@ -17,18 +17,19 @@ namespace tq {
 
 class MapView {
   public:
-    void build(const ScenarioDef &scenario, const StringTable &strings, const sf::Font &brush);
+    void build(const ScenarioDef &scenario, const StringTable &strings, const sf::Font &titleFont, bool titleBold);
     void addScar(Vec2 pos, float ratio);
     void draw(Window &window, float timeSec, bool exitOpen) const;
 
   private:
-    void paintBase(const StringTable &strings, const sf::Font &brush);
+    void paintBase(const StringTable &strings, const sf::Font &titleFont, bool titleBold);
     void drawExit(Window &window, float timeSec) const;
 
     MapDef map_{};
     Aabb exit_{};
     std::string exitLabel_;
-    const sf::Font *brush_ = nullptr;
+    const sf::Font *titleFont_ = nullptr;
+    bool titleBold_ = false;
     sf::RenderTexture base_;
     sf::RenderTexture scars_;
     sf::Texture blob_;

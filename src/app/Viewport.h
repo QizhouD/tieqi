@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/math/Vec2.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -10,6 +12,8 @@ inline constexpr unsigned kWindowWidth = 1600;
 inline constexpr unsigned kWindowHeight = 1000;
 inline constexpr unsigned kMinWindowWidth = 1280;
 inline constexpr unsigned kMinWindowHeight = 800;
+inline constexpr unsigned kTopBarHeight = 56;
+inline constexpr unsigned kSidePanelWidth = 380;
 inline constexpr float kDesktopFit = 0.9f;
 inline constexpr float kMapMarginPx = 10.f;
 inline constexpr float kMapPixelsPerMeter = 1.5f;
@@ -39,14 +43,12 @@ inline Viewport letterbox(float pixelW, float pixelH, float viewW, float viewH) 
     return {0.f, (1.f - height) * 0.5f, 1.f, height};
 }
 
-// 默认窗口、最大窗口都不超过桌面的 90%；最小取 1280×800 与桌面 90% 中较小的一边。
+// 默认窗口不超过桌面的 90%，没有最大尺寸。最小取 1280×800 与桌面 90% 中较小的一边。
 struct WindowFit {
     unsigned defaultW = kWindowWidth;
     unsigned defaultH = kWindowHeight;
     unsigned minW = kMinWindowWidth;
     unsigned minH = kMinWindowHeight;
-    unsigned maxW = kWindowWidth;
-    unsigned maxH = kWindowHeight;
 };
 
 inline unsigned floorPixels(float value) {
@@ -59,23 +61,37 @@ inline unsigned floorPixels(float value) {
 inline WindowFit fitWindow(unsigned desktopW, unsigned desktopH, unsigned logicalW = kWindowWidth,
                            unsigned logicalH = kWindowHeight, unsigned preferredMinW = kMinWindowWidth,
                            unsigned preferredMinH = kMinWindowHeight, float fraction = kDesktopFit) {
+    const unsigned limitW = floorPixels(static_cast<float>(desktopW) * fraction);
+    const unsigned limitH = floorPixels(static_cast<float>(desktopH) * fraction);
     WindowFit fit;
-    fit.maxW = floorPixels(static_cast<float>(desktopW) * fraction);
-    fit.maxH = floorPixels(static_cast<float>(desktopH) * fraction);
-    fit.minW = std::min(preferredMinW, fit.maxW);
-    fit.minH = std::min(preferredMinH, fit.maxH);
+    fit.minW = std::min(preferredMinW, limitW);
+    fit.minH = std::min(preferredMinH, limitH);
     float scale = 1.f;
     if (logicalW > 0 && logicalH > 0) {
-        scale = std::min(1.f, std::min(static_cast<float>(fit.maxW) / static_cast<float>(logicalW),
-                                       static_cast<float>(fit.maxH) / static_cast<float>(logicalH)));
+        scale = std::min(1.f, std::min(static_cast<float>(limitW) / static_cast<float>(logicalW),
+                                       static_cast<float>(limitH) / static_cast<float>(logicalH)));
     }
     unsigned width = floorPixels(static_cast<float>(logicalW) * scale);
     unsigned height = floorPixels(static_cast<float>(logicalH) * scale);
-    width = std::clamp(width, fit.minW, fit.maxW);
-    height = std::clamp(height, fit.minH, fit.maxH);
+    width = std::clamp(width, fit.minW, limitW);
+    height = std::clamp(height, fit.minH, limitH);
     fit.defaultW = width;
     fit.defaultH = height;
     return fit;
+}
+
+// 逻辑画面里的矩形。战场是去掉顶栏和右侧面板后的区域，A2、A3 都用它。
+struct ScreenRect {
+    float x = 0.f;
+    float y = 0.f;
+    float w = 0.f;
+    float h = 0.f;
+};
+
+inline ScreenRect battlefieldRect(float logicalW = static_cast<float>(kWindowWidth),
+                                  float logicalH = static_cast<float>(kWindowHeight)) {
+    return {0.f, static_cast<float>(kTopBarHeight), std::max(0.f, logicalW - static_cast<float>(kSidePanelWidth)),
+            std::max(0.f, logicalH - static_cast<float>(kTopBarHeight))};
 }
 
 inline float mapScale(float pixelW, float pixelH, float mapW, float mapH, float margin = kMapMarginPx) {
@@ -83,6 +99,23 @@ inline float mapScale(float pixelW, float pixelH, float mapW, float mapH, float 
         return 1.f;
     }
     return std::min((pixelW - 2.f * margin) / mapW, (pixelH - 2.f * margin) / mapH);
+}
+
+// 地图在战场里居中。origin 是世界坐标 (0, 0) 在逻辑画面上的像素位置。
+struct MapCamera {
+    float scale = 1.f;
+    float originX = 0.f;
+    float originY = 0.f;
+};
+
+inline MapCamera mapCamera(ScreenRect field, float mapW, float mapH) {
+    const float scale = mapScale(field.w, field.h, mapW, mapH);
+    return {scale, field.x + (field.w - mapW * scale) * 0.5f, field.y + (field.h - mapH * scale) * 0.5f};
+}
+
+inline Vec2 worldFromLogical(float x, float y, float mapW, float mapH) {
+    const MapCamera camera = mapCamera(battlefieldRect(), mapW, mapH);
+    return {(x - camera.originX) / camera.scale, (y - camera.originY) / camera.scale};
 }
 
 // 与原型 buildMap 相同的 Mulberry32，种子 1593。只给底图纹理用。
