@@ -51,6 +51,29 @@ void submitRecorded(Battle &battle, const ReplayCommand &command) {
     }
 }
 
+void playEventAudio(AudioManager &audio, const Event &event) {
+    switch (event.type) {
+    case Event::Type::Impact: {
+        const float intensity = std::min(1.f, 0.4f + 0.25f * event.value);
+        audio.play("thud", intensity * 100.f);
+        break;
+    }
+    case Event::Type::ThreeEyedVolley:
+    case Event::Type::TeppoVolley:
+        audio.play("crack");
+        break;
+    case Event::Type::Broken:
+        audio.play("rout");
+        break;
+    case Event::Type::PhaseChanged:
+    case Event::Type::Reinforcement:
+        audio.play("drum");
+        break;
+    default:
+        break;
+    }
+}
+
 std::optional<OrderKey> orderKeyFromKeyboard(sf::Keyboard::Key key) {
     switch (key) {
     case sf::Keyboard::Key::Space:
@@ -129,6 +152,7 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
 
     seed_ = seed;
     aiEnabled_ = ai;
+    freezeAt_ = options.freezeAt;
     BattleOptions battleOptions;
     battleOptions.aiEnabled = aiEnabled_;
     battle_.emplace(data_.defs, data_.scenario, seed_, battleOptions);
@@ -176,6 +200,10 @@ void App::stepSim() {
     }
     noteEvents(orders_, *battle_, events);
     hud_.note(*battle_, active(), events);
+    effects_.onEvents(*battle_, active(), events, reducedMotion_, assaultPoint());
+    for (const Event &event : events) {
+        playEventAudio(audio_, event);
+    }
 }
 
 void App::queueSfx() {
@@ -194,7 +222,30 @@ void App::playDue() {
     }
 }
 
+bool App::frozen() const {
+    if (perf_ || !freezeAt_ || !battle_) {
+        return false;
+    }
+    return battle_->tick() >= *freezeAt_;
+}
+
+std::optional<Vec2> App::assaultPoint() const {
+    if (!battle_ || !data_.scenario.flow.enabled) {
+        return std::nullopt;
+    }
+    const std::optional<UnitId> id = battle_->sceneUnit(data_.scenario.flow.phase3.grandAssault.general);
+    if (!id) {
+        return std::nullopt;
+    }
+    const Unit &unit = battle_->unit(*id);
+    if (unit.state != UnitState::Steady && unit.state != UnitState::Wavering) {
+        return std::nullopt;
+    }
+    return unit.pos;
+}
+
 void App::drawFrame() {
+    window_.setViewShake(effects_.shakePixels());
     window_.beginWorld();
     const bool exitOpen = battle_ && battle_->exitOpen();
     mapView_.draw(window_, soundTime_, exitOpen);
@@ -204,8 +255,14 @@ void App::drawFrame() {
     const TextStyle glyph = textStyle(active().language, TextRole::Glyph);
     const TextStyle body = textStyle(active().language, TextRole::Body);
     window_.beginMap();
-    unitView_.draw(window_, *battle_, active(), fontFor(active(), glyph.face), fontFor(active(), body.face), soundTime_,
-                   std::clamp(accumulator_, 0.f, 1.f), orders_);
+    const TextStyle floater = textStyle(active().language, TextRole::Floater);
+    const float alpha = std::clamp(accumulator_, 0.f, 1.f);
+    unitView_.draw(
+        window_, *battle_, active(), fontFor(active(), glyph.face), fontFor(active(), body.face), soundTime_, alpha,
+        orders_, [&] { effects_.drawDust(window_.target()); },
+        [&] {
+            effects_.drawAir(window_.target(), fontFor(active(), floater.face), floater.bold, window_.pixelsPerMeter());
+        });
     window_.beginPixels();
     const Window::PixelMap pixels = window_.pixelMap();
     const TextStyle title = textStyle(active().language, TextRole::Title);
@@ -234,6 +291,11 @@ void App::drawFrame() {
 void App::issue(Command command) {
     if (!battle_ || command.units.empty()) {
         return;
+    }
+    if (command.type == Command::Type::Move) {
+        effects_.marker(command.point, false);
+    } else if (command.type == Command::Type::Attack && command.target < battle_->units().size()) {
+        effects_.marker(battle_->unit(command.target).pos, true);
     }
     if (window_.scripted()) {
         std::cout << commandText(command) << '\n';
@@ -293,6 +355,7 @@ void App::restart() {
     battle_.emplace(data_.defs, data_.scenario, seed_, options);
     orders_ = {};
     hud_.reset();
+    effects_.clear();
     accumulator_ = 0.f;
     running_ = false;
     replayCursor_ = 0;
@@ -379,13 +442,23 @@ void App::run() {
         }
         soundTime_ += frame;
         playDue();
-        if (battle_ && running_ && !battle_->isOver()) {
-            accumulator_ += frame * data_.config.timeScale / kTickSeconds * speed_;
-            for (int n = 0; accumulator_ >= 1.f && n < data_.config.maxTicksPerFrame; ++n) {
-                stepSim();
-                accumulator_ -= 1.f;
+        const bool simHold = !battle_ || !running_ || battle_->isOver() || frozen();
+        const bool hitStop = !simHold && effects_.blocking();
+        if (!simHold) {
+            if (hitStop) {
+                effects_.advanceHitStop(frame);
+            } else {
+                accumulator_ += frame * data_.config.timeScale / kTickSeconds * speed_;
+                for (int n = 0; accumulator_ >= 1.f && n < data_.config.maxTicksPerFrame; ++n) {
+                    if (frozen()) {
+                        break;
+                    }
+                    stepSim();
+                    accumulator_ -= 1.f;
+                }
             }
         }
+        effects_.update(effectSeconds(frame, speed_, data_.config.timeScale, simHold || hitStop), frame);
         window_.beginDraw();
         drawFrame();
         window_.endDraw();

@@ -59,6 +59,16 @@ LaunchOptions parseLaunch(int argc, char **argv) {
             options.dataRoot = std::filesystem::absolute(requireValue(argc, argv, i));
         } else if (arg == "--perf") {
             options.perf = true;
+        } else if (arg == "--freeze-at") {
+            const std::string text = requireValue(argc, argv, i);
+            if (text.empty() || text.find_first_not_of("0123456789") != std::string::npos) {
+                throw std::runtime_error("freeze tick is not an integer: " + text);
+            }
+            try {
+                options.freezeAt = static_cast<std::uint32_t>(std::stoul(text));
+            } catch (const std::exception &) {
+                throw std::runtime_error("freeze tick is not an integer: " + text);
+            }
         } else {
             throw std::runtime_error("unknown argument: " + arg);
         }

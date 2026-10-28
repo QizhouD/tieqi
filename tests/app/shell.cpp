@@ -205,6 +205,16 @@ TEST_CASE("launch options accept the documented flags") {
     CHECK(*options.timeScale == doctest::Approx(5.f));
 }
 
+TEST_CASE("freeze tick is recognized") {
+    char arg0[] = "tieqi";
+    char flag[] = "--freeze-at";
+    char tick[] = "47";
+    char *argv[] = {arg0, flag, tick};
+    const LaunchOptions options = parseLaunch(3, argv);
+    REQUIRE(options.freezeAt.has_value());
+    CHECK(*options.freezeAt == 47);
+}
+
 TEST_CASE("perf flag is recognized") {
     char arg0[] = "tieqi";
     char perfFlag[] = "--perf";

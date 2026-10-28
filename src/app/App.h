@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app/AudioManager.h"
+#include "app/Effects.h"
 #include "app/Hud.h"
 #include "app/Launch.h"
 #include "app/MapView.h"
@@ -37,6 +38,8 @@ class App {
     void playDue();
     const StringTable &active() const;
     const sf::Font &fontFor(const StringTable &table, FontFace face);
+    bool frozen() const;
+    std::optional<Vec2> assaultPoint() const;
 
     std::filesystem::path root_;
     GameData data_;
@@ -68,6 +71,8 @@ class App {
     float soundTime_ = 0.f;
     float accumulator_ = 0.f;
     bool perf_ = false;
+    std::optional<std::uint32_t> freezeAt_;
+    Effects effects_;
     TextCacheGuard textCache_;
 };
 

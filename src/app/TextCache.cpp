@@ -213,16 +213,31 @@ sf::FloatRect textBounds(const sf::Font &font, unsigned size, bool bold, std::st
     return storedText(font, size, bold, value).getLocalBounds();
 }
 
-void drawText(sf::RenderTarget &target, const sf::Font &font, unsigned size, bool bold, std::string_view value,
-              sf::Color fill, sf::Vector2f position, sf::Vector2f origin, sf::Vector2f scale,
-              const sf::RenderStates &states) {
+static void paintText(sf::RenderTarget &target, const sf::Font &font, unsigned size, bool bold, std::string_view value,
+                      sf::Color fill, sf::Vector2f position, sf::Vector2f origin, sf::Vector2f scale, sf::Color outline,
+                      float thickness, const sf::RenderStates &states) {
     sf::Text &shape = storedText(font, size, bold, value);
     shape.setScale(scale);
     shape.setRotation(sf::degrees(0.f));
     shape.setOrigin(origin);
     shape.setPosition(position);
     shape.setFillColor(fill);
+    shape.setOutlineColor(outline);
+    shape.setOutlineThickness(thickness);
     target.draw(shape, states);
+}
+
+void drawText(sf::RenderTarget &target, const sf::Font &font, unsigned size, bool bold, std::string_view value,
+              sf::Color fill, sf::Vector2f position, sf::Vector2f origin, sf::Vector2f scale,
+              const sf::RenderStates &states) {
+    paintText(target, font, size, bold, value, fill, position, origin, scale, sf::Color::Transparent, 0.f, states);
+}
+
+void drawOutlinedText(sf::RenderTarget &target, const sf::Font &font, unsigned size, bool bold, std::string_view value,
+                      sf::Color fill, sf::Vector2f position, sf::Vector2f origin, sf::Vector2f scale, sf::Color outline,
+                      float thickness) {
+    paintText(target, font, size, bold, value, fill, position, origin, scale, outline, thickness,
+              sf::RenderStates::Default);
 }
 
 std::vector<std::string> wrapText(const sf::Font &font, std::string_view value, unsigned size, float maxWidth,

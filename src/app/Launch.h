@@ -17,6 +17,7 @@ struct LaunchOptions {
     bool scenarioSet = false;
     bool seedSet = false;
     bool perf = false;
+    std::optional<std::uint32_t> freezeAt;
 };
 
 struct AssetRootRequest {

@@ -239,7 +239,7 @@ cmake --preset dev && cmake --build --preset dev && ctest --preset dev
 ```
 
 - 构建后把 `data/` 和 `assets/` 复制到可执行文件旁边。程序按顺序查找资源根目录：命令行 `--data-root`，当前目录下有 `data/` 时用当前目录，最后用可执行文件所在目录（沿用框架的 `chdirToAssets` 思路）。
-- `tieqi` 命令行参数：`--scenario <id>`、`--seed <n>`、`--time-scale <x>`、`--replay <file>`、`--script <file>`（脚本输入加截图，沿用框架做法）、`--data-root <dir>`、`--perf`。`--perf` 关掉帧率上限，以 2 倍速自动开战，跑到结算后在标准输出打印帧时间的平均值、p95 和最大值（毫秒），然后退出。脚本行是 `<秒> down|up|press <键>`、`<秒> shot <文件>`、`<秒> quit`，另加 `<秒> resize <宽> <高>`。显式的 `--scenario`、`--seed` 盖过回放里的同名字段。脚本计时从第一帧开始，不从加载脚本时开始。
+- `tieqi` 命令行参数：`--scenario <id>`、`--seed <n>`、`--time-scale <x>`、`--replay <file>`、`--script <file>`（脚本输入加截图，沿用框架做法）、`--data-root <dir>`、`--perf`、`--freeze-at <tick>`。`--perf` 关掉帧率上限，以 2 倍速自动开战，跑到结算后在标准输出打印帧时间的平均值、p95 和最大值（毫秒），然后退出。`--freeze-at` 在模拟到达该 tick 后停止推进，画面继续渲染，方便脚本截图；和 `--perf` 同时给出时忽略冻结。脚本行是 `<秒> down|up|press <键>`、`<秒> shot <文件>`、`<秒> quit`，另加 `<秒> resize <宽> <高>`。显式的 `--scenario`、`--seed` 盖过回放里的同名字段。脚本计时从第一帧开始，不从加载脚本时开始。
 
 ### CI
 

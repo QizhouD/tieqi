@@ -138,18 +138,29 @@ Window::PixelMap Window::pixelMap() const {
     return map;
 }
 
+void Window::setViewShake(sf::Vector2f pixels) { shakePixels_ = pixels; }
+
+sf::Vector2f Window::shakenCenter(sf::Vector2f center, float scale) const {
+    if (scale > 0.f) {
+        center.x -= shakePixels_.x / scale;
+        center.y -= shakePixels_.y / scale;
+    }
+    return center;
+}
+
 void Window::beginWorld() {
     const ScreenRect field = battlefieldRect();
     const sf::Vector2f map = mapExtent(worldSize_);
     const MapCamera placed = mapCamera(field, map.x, map.y);
-    applyView({map.x * 0.5f, map.y * 0.5f}, {field.w / placed.scale, field.h / placed.scale}, field);
+    applyView(shakenCenter({map.x * 0.5f, map.y * 0.5f}, placed.scale),
+              {field.w / placed.scale, field.h / placed.scale}, field);
 }
 
 void Window::beginMap() {
     const sf::Vector2f map = mapExtent(worldSize_);
     const MapCamera placed = mapCamera(battlefieldRect(), map.x, map.y);
     const ScreenRect screen{placed.originX, placed.originY, map.x * placed.scale, map.y * placed.scale};
-    applyView({map.x * 0.5f, map.y * 0.5f}, {map.x, map.y}, screen);
+    applyView(shakenCenter({map.x * 0.5f, map.y * 0.5f}, placed.scale), {map.x, map.y}, screen);
 }
 
 float Window::pixelsPerMeter() const {

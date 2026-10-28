@@ -549,7 +549,8 @@ void drawDragBox(sf::RenderTarget &target, float x0, float y0, float x1, float y
 } // namespace
 
 void UnitView::draw(Window &window, const Battle &battle, const StringTable &strings, const sf::Font &glyphFont,
-                    const sf::Font &bodyFont, float timeSec, float alpha, const OrderState &orders) const {
+                    const sf::Font &bodyFont, float timeSec, float alpha, const OrderState &orders,
+                    const std::function<void()> &afterBlocks, const std::function<void()> &afterChits) const {
     alpha = std::clamp(alpha, 0.f, 1.f);
     const float sc = std::max(window.pixelsPerMeter(), 1e-3f);
     sf::VertexArray blocks(sf::PrimitiveType::Triangles);
@@ -560,6 +561,9 @@ void UnitView::draw(Window &window, const Battle &battle, const StringTable &str
         appendBlock(blocks, unit, alpha, sc);
     }
     window.target().draw(blocks);
+    if (afterBlocks) {
+        afterBlocks();
+    }
     drawOrders(window.target(), battle, orders, alpha, sc);
 
     auto drawSide = [&](Side side) {
@@ -573,6 +577,9 @@ void UnitView::draw(Window &window, const Battle &battle, const StringTable &str
     };
     drawSide(Side::Jp);
     drawSide(Side::Ming);
+    if (afterChits) {
+        afterChits();
+    }
     drawPreview(window.target(), battle, orders, bodyFont, alpha, sc);
     if (orders.box) {
         window.beginUi();
