@@ -73,6 +73,7 @@ void Window::create() {
     }
     pixelSize_ = window_.getSize();
     window_.setFramerateLimit(60);
+    window_.setVerticalSyncEnabled(false);
     window_.setKeyRepeatEnabled(false);
     applyUiView();
 }
@@ -280,10 +281,14 @@ void Window::loadScript(const std::filesystem::path &file) {
     scriptPos_ = 0;
     scripted_ = true;
     held_.clear();
-    scriptClock_.restart();
+    scriptClockStarted_ = false;
 }
 
 void Window::advanceScript() {
+    if (!scriptClockStarted_) {
+        scriptClock_.restart();
+        scriptClockStarted_ = true;
+    }
     const float now = scriptClock_.getElapsedTime().asSeconds();
     while (scriptPos_ < script_.size() && script_[scriptPos_].time <= now) {
         const ScriptEvent event = script_[scriptPos_];
@@ -356,5 +361,10 @@ void Window::draw(const sf::Drawable &drawable) { window_.draw(drawable); }
 sf::RenderTarget &Window::target() { return window_; }
 
 void Window::close() { done_ = true; }
+
+void Window::unlimitedFrameRate() {
+    window_.setFramerateLimit(0);
+    window_.setVerticalSyncEnabled(false);
+}
 
 } // namespace tq

@@ -1,11 +1,10 @@
 #include "app/Hud.h"
 
+#include "app/TextCache.h"
 #include "app/TextStyle.h"
 #include "core/rules/Constants.h"
 
 #include <SFML/Graphics/RectangleShape.hpp>
-#include <SFML/Graphics/Text.hpp>
-#include <SFML/System/String.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -14,8 +13,6 @@
 
 namespace tq {
 namespace {
-
-sf::String utf8(std::string_view text) { return sf::String::fromUtf8(text.begin(), text.end()); }
 
 sf::Color rgb(unsigned hex, unsigned alpha = 255) {
     return {static_cast<std::uint8_t>((hex >> 16) & 255), static_cast<std::uint8_t>((hex >> 8) & 255),
@@ -154,69 +151,26 @@ struct Pen {
     }
 
     float measure(const sf::Font &font, std::string_view text, unsigned size, bool bold) const {
-        sf::Text shape(font, utf8(text), size);
-        if (bold) {
-            shape.setStyle(sf::Text::Bold);
-        }
-        return shape.getLocalBounds().size.x;
+        return textBounds(font, size, bold, text).size.x;
     }
 
     void text(const sf::Font &font, std::string_view value, float size, float x, float y, sf::Color color, bool bold,
               float align = 0.f) const {
         const unsigned pixels = fontPx(size, scale);
-        sf::Text shape(font, utf8(value), pixels);
-        if (bold) {
-            shape.setStyle(sf::Text::Bold);
-        }
-        shape.setFillColor(color);
-        const sf::FloatRect bounds = shape.getLocalBounds();
-        float left = px(x, y).x;
+        const sf::FloatRect bounds = textBounds(font, pixels, bold, value);
+        const sf::Vector2f snapped = px(x, y);
+        float left = snapped.x;
         if (align > 0.f) {
             left -= std::round(bounds.size.x * align);
         }
-        shape.setOrigin({bounds.position.x, bounds.position.y});
-        shape.setPosition({left, px(x, y).y});
-        target->draw(shape);
+        drawText(*target, font, pixels, bold, value, color, {left, snapped.y}, {bounds.position.x, bounds.position.y},
+                 {1.f, 1.f});
     }
 
     std::vector<std::string> wrap(const sf::Font &font, std::string_view value, float size, float maxLogical,
                                   bool bold) const {
-        std::vector<std::string> lines;
         const unsigned pixels = fontPx(size, scale);
-        const float maxPx = std::max(8.f, maxLogical * scale);
-        std::string line;
-        for (std::size_t index = 0; index < value.size();) {
-            const auto lead = static_cast<unsigned char>(value[index]);
-            std::size_t length = 1;
-            if ((lead & 0xE0) == 0xC0) {
-                length = 2;
-            } else if ((lead & 0xF0) == 0xE0) {
-                length = 3;
-            } else if ((lead & 0xF8) == 0xF0) {
-                length = 4;
-            }
-            if (index + length > value.size()) {
-                length = 1;
-            }
-            const std::string glyph(value.substr(index, length));
-            index += length;
-            if (glyph == "\n") {
-                lines.push_back(line);
-                line.clear();
-                continue;
-            }
-            const std::string next = line + glyph;
-            if (!line.empty() && measure(font, next, pixels, bold) > maxPx) {
-                lines.push_back(line);
-                line = glyph;
-            } else {
-                line = next;
-            }
-        }
-        if (!line.empty() || lines.empty()) {
-            lines.push_back(line);
-        }
-        return lines;
+        return wrapText(font, value, pixels, std::max(8.f, maxLogical * scale), bold);
     }
 };
 
@@ -623,13 +577,13 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
         const float cardW = 560.f;
         const float cardX = 17.f + (1216.f - cardW) * 0.5f;
         const float cardY = 70.f;
-        const float cardH = ended ? 760.f : 900.f;
-        pen.fill(cardX, cardY, cardW, cardH, kSilk);
-        pen.stroke(cardX, cardY, cardW, cardH, rgb(0xb9a57c));
-        float textY = cardY + 18.f;
         const float textX = cardX + 24.f;
         const float textW = cardW - 48.f;
         if (intro) {
+            const float cardH = 900.f;
+            pen.fill(cardX, cardY, cardW, cardH, kSilk);
+            pen.stroke(cardX, cardY, cardW, cardH, rgb(0xb9a57c));
+            float textY = cardY + 18.f;
             pen.text(*pen.body, strings.text("ui.intro_eyebrow"), 12.f, textX, textY, rgb(0x7a6346), false);
             textY += 18.f;
             pen.text(titleFont, strings.text("scn.byeokjegwan"), 40.f, textX, textY, kCinnabar, titleBold);
@@ -680,11 +634,20 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
                                                            : std::vector<std::string>{};
             const EndCard card = formatEnd(strings, battle.result(), battle.stats(), battle.enlisted(Side::Ming),
                                            battle.battleSeconds(), followers, journal_.important());
+            const auto bodyLines = pen.wrap(*pen.body, card.body, 15.f, textW, false);
+            const auto historyLines = pen.wrap(*pen.body, strings.text("end.history"), 12.f, textW, false);
+            const std::size_t eventLines = std::max<std::size_t>(card.events.size(), 1);
+            float cardH = 18.f + 20.f + 78.f + 22.f * static_cast<float>(bodyLines.size()) + 6.f + 64.f + 20.f +
+                          18.f * static_cast<float>(eventLines) + 8.f + 16.f * static_cast<float>(historyLines.size()) +
+                          8.f + 36.f + 16.f;
+            pen.fill(cardX, cardY, cardW, cardH, kSilk);
+            pen.stroke(cardX, cardY, cardW, cardH, rgb(0xb9a57c));
+            float textY = cardY + 18.f;
             pen.text(*pen.body, card.eyebrow, 12.f, textX, textY, rgb(0x7a6346), false);
             textY += 20.f;
             pen.text(titleFont, card.grade, 64.f, textX, textY, card.victory ? kCinnabar : rgb(0x4a3d32), titleBold);
             textY += 78.f;
-            for (const std::string &line : pen.wrap(*pen.body, card.body, 15.f, textW, false)) {
+            for (const std::string &line : bodyLines) {
                 pen.text(*pen.body, line, 15.f, textX, textY, kInk, false);
                 textY += 22.f;
             }
@@ -708,7 +671,7 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
                 textY += 18.f;
             }
             textY += 8.f;
-            for (const std::string &line : pen.wrap(*pen.body, strings.text("end.history"), 12.f, textW, false)) {
+            for (const std::string &line : historyLines) {
                 pen.text(*pen.body, line, 12.f, textX, textY, rgb(0x7a6346), false);
                 textY += 16.f;
             }

@@ -1,13 +1,12 @@
 #include "app/UnitView.h"
 
 #include "app/Pieces.h"
+#include "app/TextCache.h"
 #include "core/rules/Preview.h"
 
 #include <SFML/Graphics/RenderStates.hpp>
-#include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/VertexArray.hpp>
 #include <SFML/System/Angle.hpp>
-#include <SFML/System/String.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -20,8 +19,6 @@ namespace tq {
 namespace {
 
 constexpr float kPi = 3.14159265f;
-
-sf::String utf8(std::string_view text) { return sf::String::fromUtf8(text.begin(), text.end()); }
 
 sf::Color rgba(int r, int g, int b, float a) {
     return {static_cast<std::uint8_t>(r), static_cast<std::uint8_t>(g), static_cast<std::uint8_t>(b),
@@ -277,14 +274,11 @@ void drawGlyph(sf::RenderTarget &target, const sf::Transform &xform, const sf::F
                float worldHeight, float pixelsPerMeter, sf::Color color, Vec2 local) {
     const long rounded = std::lround(worldHeight * pixelsPerMeter);
     const unsigned pixels = rounded > 1 ? static_cast<unsigned>(rounded) : 1u;
-    sf::Text shape(font, utf8(text), pixels);
-    shape.setFillColor(color);
+    const sf::FloatRect bounds = textBounds(font, pixels, false, text);
     const float scale = worldHeight / static_cast<float>(pixels);
-    shape.setScale({scale, scale});
-    const sf::FloatRect bounds = shape.getLocalBounds();
-    shape.setOrigin({bounds.position.x + bounds.size.x * 0.5f, bounds.position.y + bounds.size.y * 0.5f});
-    shape.setPosition(xy(local));
-    target.draw(shape, sf::RenderStates{xform});
+    drawText(target, font, pixels, false, text, color, xy(local),
+             {bounds.position.x + bounds.size.x * 0.5f, bounds.position.y + bounds.size.y * 0.5f}, {scale, scale},
+             sf::RenderStates{xform});
 }
 
 void drawChit(sf::RenderTarget &target, const Unit &unit, const UnitType &type, const StringTable &strings,
@@ -521,19 +515,16 @@ void drawPreview(sf::RenderTarget &target, const Battle &battle, const OrderStat
     char number[32];
     std::snprintf(number, sizeof(number), "%.1f", static_cast<double>(preview.ratio));
     const std::string label = std::string("\u00d7") + number;
-    sf::Text text(font, utf8(label), 15);
-    text.setFillColor(rgba(paintColor.color.r, paintColor.color.g, paintColor.color.b, 1.f));
-    text.setScale({1.f / sc, 1.f / sc});
-    const sf::FloatRect bounds = text.getLocalBounds();
+    const sf::FloatRect bounds = textBounds(font, 15, false, label);
     const float textWidth = bounds.size.x / sc;
     const float left = to.pos.x + 26.f / sc;
     const float top = to.pos.y - 22.f / sc;
     sf::VertexArray backing(sf::PrimitiveType::Triangles);
     appendRect(backing, left - 5.f / sc, top - 11.f / sc, textWidth + 10.f / sc, 22.f / sc, rgba(30, 20, 17, 0.85f));
     target.draw(backing);
-    text.setOrigin({bounds.position.x, bounds.position.y + bounds.size.y * 0.5f});
-    text.setPosition({left, top + 1.f / sc});
-    target.draw(text);
+    drawText(target, font, 15, false, label, rgba(paintColor.color.r, paintColor.color.g, paintColor.color.b, 1.f),
+             {left, top + 1.f / sc}, {bounds.position.x, bounds.position.y + bounds.size.y * 0.5f},
+             {1.f / sc, 1.f / sc});
 }
 
 void drawDragBox(sf::RenderTarget &target, float x0, float y0, float x1, float y1) {

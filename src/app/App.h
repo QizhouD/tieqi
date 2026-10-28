@@ -6,6 +6,7 @@
 #include "app/MapView.h"
 #include "app/Orders.h"
 #include "app/ResourceManager.h"
+#include "app/TextCache.h"
 #include "app/TextStyle.h"
 #include "app/UnitView.h"
 #include "app/Window.h"
@@ -66,6 +67,8 @@ class App {
     std::vector<Cue> cues_;
     float soundTime_ = 0.f;
     float accumulator_ = 0.f;
+    bool perf_ = false;
+    TextCacheGuard textCache_;
 };
 
 } // namespace tq

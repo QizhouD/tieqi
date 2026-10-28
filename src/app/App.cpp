@@ -9,7 +9,10 @@
 #include <SFML/System/String.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <iomanip>
 #include <iostream>
+#include <numeric>
 #include <optional>
 #include <string_view>
 
@@ -104,6 +107,7 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
 
     language_ = data_.config.language;
     speed_ = data_.config.defaultSpeed;
+    perf_ = options.perf;
     reducedMotion_ = data_.config.reducedMotion;
     audio_.setMasterVolume(70.f);
 
@@ -116,6 +120,9 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
         if (std::find(speeds.begin(), speeds.end(), saved.speed) != speeds.end()) {
             speed_ = saved.speed;
         }
+    }
+    if (perf_) {
+        speed_ = 2.f;
     }
     audio_.setMuted(!data_.config.sound || audio_.masterVolume() <= 0.f);
     audio_.loadDefaults(root_ / "assets" / "audio");
@@ -330,10 +337,41 @@ void App::handleInput() {
     }
 }
 
+namespace {
+
+void printPerf(std::vector<float> samples) {
+    if (samples.empty()) {
+        std::cout << "perf mean 0.0 ms p95 0.0 ms max 0.0 ms\n";
+        return;
+    }
+    const double sum = std::accumulate(samples.begin(), samples.end(), 0.0);
+    const double mean = sum / static_cast<double>(samples.size());
+    std::sort(samples.begin(), samples.end());
+    const std::size_t count = samples.size();
+    const auto rank = static_cast<std::size_t>(std::ceil(0.95 * static_cast<double>(count)));
+    const std::size_t index = std::min(count - 1, rank == 0 ? 0 : rank - 1);
+    std::cout << std::fixed << std::setprecision(1);
+    std::cout << "perf mean " << mean << " ms p95 " << samples[index] << " ms max " << samples.back() << " ms\n";
+}
+
+} // namespace
+
 void App::run() {
+    if (perf_) {
+        window_.unlimitedFrameRate();
+        speed_ = 2.f;
+        running_ = true;
+    }
     sf::Clock frameClock;
+    std::vector<float> samples;
+    bool frameOpen = false;
     while (window_.isOpen()) {
-        const float frame = std::min(frameClock.restart().asSeconds(), 0.25f);
+        const float raw = frameClock.restart().asSeconds();
+        if (perf_ && frameOpen) {
+            samples.push_back(raw * 1000.f);
+        }
+        frameOpen = true;
+        const float frame = std::min(raw, 0.25f);
         window_.poll();
         handleInput();
         if (window_.wasKeyPressed(sf::Keyboard::Key::F6)) {
@@ -351,6 +389,11 @@ void App::run() {
         window_.beginDraw();
         drawFrame();
         window_.endDraw();
+        if (perf_ && battle_ && battle_->isOver()) {
+            samples.push_back(frameClock.restart().asSeconds() * 1000.f);
+            printPerf(samples);
+            window_.close();
+        }
     }
 }
 

@@ -239,7 +239,7 @@ cmake --preset dev && cmake --build --preset dev && ctest --preset dev
 ```
 
 - 构建后把 `data/` 和 `assets/` 复制到可执行文件旁边。程序按顺序查找资源根目录：命令行 `--data-root`，当前目录下有 `data/` 时用当前目录，最后用可执行文件所在目录（沿用框架的 `chdirToAssets` 思路）。
-- `tieqi` 命令行参数：`--scenario <id>`、`--seed <n>`、`--time-scale <x>`、`--replay <file>`、`--script <file>`（脚本输入加截图，沿用框架做法）、`--data-root <dir>`。脚本行是 `<秒> down|up|press <键>`、`<秒> shot <文件>`、`<秒> quit`，另加 `<秒> resize <宽> <高>`。显式的 `--scenario`、`--seed` 盖过回放里的同名字段。
+- `tieqi` 命令行参数：`--scenario <id>`、`--seed <n>`、`--time-scale <x>`、`--replay <file>`、`--script <file>`（脚本输入加截图，沿用框架做法）、`--data-root <dir>`、`--perf`。`--perf` 关掉帧率上限，以 2 倍速自动开战，跑到结算后在标准输出打印帧时间的平均值、p95 和最大值（毫秒），然后退出。脚本行是 `<秒> down|up|press <键>`、`<秒> shot <文件>`、`<秒> quit`，另加 `<秒> resize <宽> <高>`。显式的 `--scenario`、`--seed` 盖过回放里的同名字段。脚本计时从第一帧开始，不从加载脚本时开始。
 
 ### CI
 
@@ -1361,7 +1361,7 @@ approach(u, f, keep)
 - 拾取：点在棋子方块内（外扩 4 像素）或单位方阵内（外扩 3 米）算命中，多个命中取中心最近者。
 - 快捷键：空格开战或暂停与继续；1、2、3 切换 0.5、1、2 倍速；H 坚守；R 撤往北口；F 分兵；G 合兵；A 全选可战我军；Esc 取消选择和待确认。暂停时可以下令；开战前和结束后不接受命令。
 - 下令即把选中列表和点击点原样交给 `submit()`，筛选和阵型偏移由核心完成。分兵产生的新单位、合并后的单位按 Split、Merged 事件更新选中列表。
-- 脚本坐标是逻辑像素：`click`、`rclick`、`shiftclick`、`touchclick`、`move` 带 `x y`，`drag`、`shiftdrag` 带 `x0 y0 x1 y1`。`click`、`rclick`、`shiftclick` 先在同一点补一次 `move` 再按下，悬停和真鼠标一致；`touchclick` 不补。空格开战之后的下一 tick 才接受命令。开战前阶段仍是 0。
+- 脚本坐标是逻辑像素：`click`、`rclick`、`shiftclick`、`touchclick`、`move` 带 `x y`，`drag`、`shiftdrag` 带 `x0 y0 x1 y1`。`click`、`rclick`、`shiftclick` 先在同一点补一次 `move` 再按下，悬停和真鼠标一致；`touchclick` 不补。脚本时钟在第一帧归零，加载阶段耗掉的时间不计入。空格开战之后的下一 tick 才接受命令。开战前阶段仍是 0。
 
 ### 界面
 

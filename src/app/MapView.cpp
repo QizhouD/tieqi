@@ -1,5 +1,6 @@
 #include "app/MapView.h"
 
+#include "app/TextCache.h"
 #include "app/Viewport.h"
 
 #include <SFML/Graphics/ConvexShape.hpp>
@@ -7,9 +8,7 @@
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderStates.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
-#include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/VertexArray.hpp>
-#include <SFML/System/String.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -22,8 +21,6 @@ namespace tq {
 namespace {
 
 constexpr float kPi = 3.14159265f;
-
-sf::String utf8(std::string_view text) { return sf::String::fromUtf8(text.begin(), text.end()); }
 
 sf::Color rgba(int r, int g, int b, float a) {
     return {static_cast<std::uint8_t>(r), static_cast<std::uint8_t>(g), static_cast<std::uint8_t>(b),
@@ -172,24 +169,17 @@ void drawLabel(sf::RenderTarget &target, const sf::Font &font, std::string_view 
                sf::Color color, TextAlign align, Baseline baseline, bool bold) {
     const long rounded = std::lround(size * kMapPixelsPerMeter);
     const unsigned pixels = rounded > 1 ? static_cast<unsigned>(rounded) : 1;
-    sf::Text shape(font, utf8(text), pixels);
-    if (bold) {
-        shape.setStyle(sf::Text::Bold);
-    }
-    shape.setFillColor(color);
-    shape.setScale({1.f / kMapPixelsPerMeter, 1.f / kMapPixelsPerMeter});
-    const sf::FloatRect bounds = shape.getLocalBounds();
+    const sf::FloatRect bounds = textBounds(font, pixels, bold, text);
     float originX = bounds.position.x;
     if (align == TextAlign::Center) {
         originX = bounds.position.x + bounds.size.x * 0.5f;
     }
-    float originY = static_cast<float>(shape.getCharacterSize());
+    float originY = static_cast<float>(pixels);
     if (baseline == Baseline::Middle) {
         originY = bounds.position.y + bounds.size.y * 0.5f;
     }
-    shape.setOrigin({originX, originY});
-    shape.setPosition({pos.x, pos.y});
-    target.draw(shape);
+    drawText(target, font, pixels, bold, text, color, {pos.x, pos.y}, {originX, originY},
+             {1.f / kMapPixelsPerMeter, 1.f / kMapPixelsPerMeter});
 }
 
 void drawDashedRect(sf::RenderTarget &target, const Aabb &box, float on, float off, float thickness, sf::Color color) {

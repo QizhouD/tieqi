@@ -204,3 +204,14 @@ TEST_CASE("launch options accept the documented flags") {
     REQUIRE(options.timeScale.has_value());
     CHECK(*options.timeScale == doctest::Approx(5.f));
 }
+
+TEST_CASE("perf flag is recognized") {
+    char arg0[] = "tieqi";
+    char perfFlag[] = "--perf";
+    char seedFlag[] = "--seed";
+    char seed[] = "1";
+    char *argv[] = {arg0, perfFlag, seedFlag, seed};
+    const LaunchOptions options = parseLaunch(4, argv);
+    CHECK(options.perf);
+    CHECK(options.seed == 1);
+}

@@ -28,6 +28,7 @@ class Window {
     void draw(const sf::Drawable &drawable);
     sf::RenderTarget &target();
     void close();
+    void unlimitedFrameRate();
 
     bool isOpen() const { return !done_; }
     bool scripted() const { return scripted_; }
@@ -79,6 +80,7 @@ class Window {
     std::vector<ScriptEvent> script_;
     std::size_t scriptPos_ = 0;
     bool scripted_ = false;
+    bool scriptClockStarted_ = false;
     sf::Clock scriptClock_;
     std::set<sf::Keyboard::Key> held_;
     std::filesystem::path pendingShot_;
