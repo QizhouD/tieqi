@@ -1,6 +1,8 @@
 #include "Policy.h"
 
+#include <optional>
 #include <string>
+#include <utility>
 
 namespace tq {
 namespace {
@@ -26,6 +28,16 @@ void record(Battle &battle, std::vector<ReplayCommand> &recorded, ReplayCommand 
     battle.submit(std::move(issued));
 }
 
+ReplayCommand order(Command::Type type, std::string unit, std::optional<Vec2> point,
+                    std::optional<std::string> target) {
+    ReplayCommand command;
+    command.type = type;
+    command.units = {std::move(unit)};
+    command.point = point;
+    command.target = std::move(target);
+    return command;
+}
+
 std::vector<UnitId> resolve(const Battle &battle, const std::vector<std::string> &ids) {
     std::vector<UnitId> units;
     for (const std::string &id : ids) {
@@ -45,10 +57,10 @@ void applyPolicy(Battle &battle, PolicyKind policy, PolicyState &state, std::vec
     const std::uint32_t tick = battle.tick();
     if (tick == 0) {
         record(battle, recorded,
-               ReplayCommand{0, Command::Type::Attack, {"liaodong_right"}, std::nullopt, "van_teppo_right"},
+               order(Command::Type::Attack, "liaodong_right", std::nullopt, "van_teppo_right"),
                resolve(battle, {"liaodong_right"}), battle.sceneUnit("van_teppo_right").value_or(kNoUnit));
         record(battle, recorded,
-               ReplayCommand{0, Command::Type::Attack, {"jiading_left"}, std::nullopt, "van_teppo_left"},
+               order(Command::Type::Attack, "jiading_left", std::nullopt, "van_teppo_left"),
                resolve(battle, {"jiading_left"}), battle.sceneUnit("van_teppo_left").value_or(kNoUnit));
     }
     if (!state.samuraiOrdered && tick >= 300) {
@@ -56,7 +68,7 @@ void applyPolicy(Battle &battle, PolicyKind policy, PolicyState &state, std::vec
         const std::optional<UnitId> samurai = battle.sceneUnit("van_samurai");
         if (riders && samurai && alive(battle.unit(*samurai)) && fighting(battle.unit(*riders))) {
             record(battle, recorded,
-                   ReplayCommand{0, Command::Type::Attack, {"jiading_right"}, std::nullopt, "van_samurai"}, {*riders},
+                   order(Command::Type::Attack, "jiading_right", std::nullopt, "van_samurai"), {*riders},
                    *samurai);
             state.samuraiOrdered = true;
         }
@@ -67,7 +79,7 @@ void applyPolicy(Battle &battle, PolicyKind policy, PolicyState &state, std::vec
                 continue;
             }
             const std::string scene = battle.sceneName(unit.id).value_or("#" + std::to_string(unit.id));
-            record(battle, recorded, ReplayCommand{0, Command::Type::Move, {scene}, Vec2{440.f, 20.f}, std::nullopt},
+            record(battle, recorded, order(Command::Type::Move, scene, Vec2{440.f, 20.f}, std::nullopt),
                    {unit.id}, kNoUnit);
         }
         state.withdrew = true;

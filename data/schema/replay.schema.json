@@ -18,11 +18,15 @@
         "required": ["tick", "type", "units"],
         "properties": {
           "tick": { "type": "integer", "minimum": 1 },
-          "type": { "enum": ["move", "attack", "hold", "retreat", "split", "join"] },
+          "type": { "enum": ["move", "attack", "hold", "retreat", "split", "join", "spawn", "rout"] },
           "units": { "type": "array", "items": { "type": "string", "minLength": 1 } },
           "point": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } },
-          "target": { "type": "string", "minLength": 1 }
-        }
+          "target": { "type": "string", "minLength": 1 },
+          "unit_type": { "type": "string", "minLength": 1 },
+          "facing": { "type": "number" }
+        },
+        "if": { "properties": { "type": { "const": "spawn" } } },
+        "then": { "required": ["unit_type", "point"] }
       }
     }
   }

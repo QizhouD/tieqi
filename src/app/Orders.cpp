@@ -476,13 +476,21 @@ std::string commandText(const Command &command) {
     case Command::Type::Join:
         name = "Join";
         break;
+    case Command::Type::Spawn:
+        name = "Spawn";
+        break;
+    case Command::Type::Rout:
+        name = "Rout";
+        break;
     }
     std::ostringstream out;
     out << name;
     for (std::size_t i = 0; i < command.units.size(); ++i) {
         out << (i == 0 ? ' ' : ',') << command.units[i];
     }
-    if (command.type == Command::Type::Move) {
+    if (command.type == Command::Type::Spawn) {
+        out << ' ' << command.unitType << ' ' << command.point.x << ' ' << command.point.y;
+    } else if (command.type == Command::Type::Move) {
         out << ' ' << command.point.x << ' ' << command.point.y;
     } else if (command.type == Command::Type::Attack) {
         out << ' ' << command.target;

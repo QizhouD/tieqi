@@ -14,6 +14,9 @@
 #include "core/sim/Battle.h"
 #include "data/Load.h"
 #include "data/Replay.h"
+#ifdef TQ_DEV_TOOLS
+#include "app/dev/DevTools.h"
+#endif
 
 #include <filesystem>
 #include <optional>
@@ -40,6 +43,9 @@ class App {
     const sf::Font &fontFor(const StringTable &table, FontFace face);
     bool frozen() const;
     std::optional<Vec2> assaultPoint() const;
+#ifdef TQ_DEV_TOOLS
+    void applyDev(dev::DevRequests requests);
+#endif
 
     std::filesystem::path root_;
     GameData data_;
@@ -74,6 +80,11 @@ class App {
     std::optional<std::uint32_t> freezeAt_;
     Effects effects_;
     TextCacheGuard textCache_;
+#ifdef TQ_DEV_TOOLS
+    dev::DevTools dev_;
+    // Every command that reached the battle since the last restart, for saving a replay.
+    std::vector<ReplayCommand> recorded_;
+#endif
 };
 
 } // namespace tq

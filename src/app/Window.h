@@ -8,12 +8,15 @@
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/System/Clock.hpp>
 #include <SFML/System/Vector2.hpp>
+#include <SFML/Window/Event.hpp>
 #include <SFML/Window/Keyboard.hpp>
 
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace tq {
@@ -30,6 +33,10 @@ class Window {
     sf::RenderTarget &target();
     void close();
     void unlimitedFrameRate();
+    // Sees every event first. Returning true keeps keyboard and pointer input from the game; close and resize
+    // still apply.
+    void setEventHook(std::function<bool(const sf::Event &)> hook) { hook_ = std::move(hook); }
+    sf::RenderWindow &native() { return window_; }
 
     bool isOpen() const { return !done_; }
     bool scripted() const { return scripted_; }
@@ -89,6 +96,7 @@ class Window {
     sf::Clock scriptClock_;
     std::set<sf::Keyboard::Key> held_;
     std::filesystem::path pendingShot_;
+    std::function<bool(const sf::Event &)> hook_;
 };
 
 } // namespace tq

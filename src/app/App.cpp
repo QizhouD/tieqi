@@ -6,6 +6,9 @@
 #include "data/Replay.h"
 
 #include <SFML/System/Clock.hpp>
+#ifdef TQ_DEV_TOOLS
+#include <SFML/Window/Keyboard.hpp>
+#endif
 #include <SFML/System/String.hpp>
 
 #include <algorithm>
@@ -20,36 +23,6 @@ namespace tq {
 namespace {
 
 sf::String utf8(std::string_view text) { return sf::String::fromUtf8(text.begin(), text.end()); }
-
-std::optional<UnitId> resolveUnit(const Battle &battle, const std::string &id) {
-    if (!id.empty() && id.front() == '#') {
-        try {
-            return static_cast<UnitId>(std::stoul(id.substr(1)));
-        } catch (const std::exception &) {
-            return std::nullopt;
-        }
-    }
-    return battle.sceneUnit(id);
-}
-
-void submitRecorded(Battle &battle, const ReplayCommand &command) {
-    Command issued;
-    issued.type = command.type;
-    if (command.point) {
-        issued.point = *command.point;
-    }
-    for (const std::string &id : command.units) {
-        if (const std::optional<UnitId> unit = resolveUnit(battle, id)) {
-            issued.units.push_back(*unit);
-        }
-    }
-    if (command.target) {
-        issued.target = resolveUnit(battle, *command.target).value_or(kNoUnit);
-    }
-    if (!issued.units.empty()) {
-        battle.submit(std::move(issued));
-    }
-}
 
 void playEventAudio(AudioManager &audio, const Event &event) {
     switch (event.type) {
@@ -166,6 +139,10 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
     if (!options.script.empty()) {
         window_.loadScript(options.script);
     }
+#ifdef TQ_DEV_TOOLS
+    dev_.attach(window_.native());
+    window_.setEventHook([this](const sf::Event &event) { return dev_.handle(window_.native(), event); });
+#endif
 }
 
 const StringTable &App::active() const {
@@ -188,7 +165,12 @@ void App::stepSim() {
         return;
     }
     while (replayCursor_ < replay_.size() && replay_[replayCursor_].tick == battle_->tick() + 1) {
-        submitRecorded(*battle_, replay_[replayCursor_]);
+        if (std::optional<Command> issued = resolveCommand(*battle_, data_.defs, replay_[replayCursor_])) {
+            battle_->submit(std::move(*issued));
+#ifdef TQ_DEV_TOOLS
+            recorded_.push_back(replay_[replayCursor_]);
+#endif
+        }
         replayCursor_ += 1;
     }
     battle_->step();
@@ -263,6 +245,10 @@ void App::drawFrame() {
         [&] {
             effects_.drawAir(window_.target(), fontFor(active(), floater.face), floater.bold, window_.pixelsPerMeter());
         });
+#ifdef TQ_DEV_TOOLS
+    window_.beginMap();
+    dev_.drawOverlay(window_.target(), *battle_, data_.defs, alpha);
+#endif
     window_.beginPixels();
     const Window::PixelMap pixels = window_.pixelMap();
     const TextStyle title = textStyle(active().language, TextRole::Title);
@@ -292,7 +278,7 @@ void App::issue(Command command) {
     if (!battle_ || command.units.empty()) {
         return;
     }
-    if (command.type == Command::Type::Move) {
+    if (command.type == Command::Type::Move || command.type == Command::Type::Spawn) {
         effects_.marker(command.point, false);
     } else if (command.type == Command::Type::Attack && command.target < battle_->units().size()) {
         effects_.marker(battle_->unit(command.target).pos, true);
@@ -300,6 +286,11 @@ void App::issue(Command command) {
     if (window_.scripted()) {
         std::cout << commandText(command) << '\n';
     }
+#ifdef TQ_DEV_TOOLS
+    ReplayCommand recorded = recordCommand(*battle_, data_.defs, command);
+    recorded.tick = battle_->tick() + 1;
+    recorded_.push_back(std::move(recorded));
+#endif
     battle_->submit(std::move(command));
 }
 
@@ -359,6 +350,9 @@ void App::restart() {
     accumulator_ = 0.f;
     running_ = false;
     replayCursor_ = 0;
+#ifdef TQ_DEV_TOOLS
+    recorded_.clear();
+#endif
     const TextStyle title = textStyle(active().language, TextRole::Title);
     mapView_.build(data_.scenario, active(), fontFor(active(), title.face), title.bold);
 }
@@ -400,6 +394,55 @@ void App::handleInput() {
     }
 }
 
+#ifdef TQ_DEV_TOOLS
+void App::applyDev(dev::DevRequests requests) {
+    if (!battle_) {
+        return;
+    }
+    if (requests.stepTick && !battle_->isOver()) {
+        stepSim();
+    }
+    for (Command &command : requests.commands) {
+        issue(std::move(command));
+    }
+    if (requests.save) {
+        Replay replay;
+        replay.build = buildId();
+        replay.scenario = data_.scenario.id;
+        replay.seed = seed_;
+        replay.ai = aiEnabled_;
+        replay.commands = recorded_;
+        try {
+            saveReplay(*requests.save, replay);
+            dev_.setStatus("saved " + std::to_string(replay.commands.size()) + " commands to " +
+                           requests.save->string());
+        } catch (const std::exception &error) {
+            dev_.setStatus(error.what());
+        }
+    }
+    if (requests.load) {
+        try {
+            Replay replay = loadReplay(*requests.load);
+            if (replay.scenario != data_.scenario.id) {
+                dev_.setStatus("replay is for scenario " + replay.scenario + ", not " + data_.scenario.id);
+                return;
+            }
+            seed_ = replay.seed;
+            aiEnabled_ = replay.ai;
+            replay_ = std::move(replay.commands);
+            std::stable_sort(replay_.begin(), replay_.end(), [](const ReplayCommand &left, const ReplayCommand &right) {
+                return left.tick < right.tick;
+            });
+            restart();
+            dev_.setStatus("loaded " + std::to_string(replay_.size()) + " commands, seed " + std::to_string(seed_) +
+                           "; press Space to run");
+        } catch (const std::exception &error) {
+            dev_.setStatus(error.what());
+        }
+    }
+}
+#endif
+
 namespace {
 
 void printPerf(std::vector<float> samples) {
@@ -436,6 +479,16 @@ void App::run() {
         frameOpen = true;
         const float frame = std::min(raw, 0.25f);
         window_.poll();
+#ifdef TQ_DEV_TOOLS
+        dev_.begin(window_.native(), raw);
+        if (window_.wasKeyPressed(sf::Keyboard::Key::F1)) {
+            dev_.toggle();
+        }
+        if (window_.wasKeyPressed(sf::Keyboard::Key::F2)) {
+            dev_.nextTab();
+        }
+        sf::Clock simClock;
+#endif
         handleInput();
         if (window_.wasKeyPressed(sf::Keyboard::Key::F6)) {
             queueSfx();
@@ -459,8 +512,27 @@ void App::run() {
             }
         }
         effects_.update(effectSeconds(frame, speed_, data_.config.timeScale, simHold || hitStop), frame);
+#ifdef TQ_DEV_TOOLS
+        const float simMs = simClock.getElapsedTime().asSeconds() * 1000.f;
+        sf::Clock drawClock;
+#endif
         window_.beginDraw();
         drawFrame();
+#ifdef TQ_DEV_TOOLS
+        dev_.noteTimes(simMs, drawClock.getElapsedTime().asSeconds() * 1000.f);
+        dev::DevView view;
+        view.battle = battle_ ? &*battle_ : nullptr;
+        view.defs = &data_.defs;
+        if (!orders_.selected.empty()) {
+            view.selected = orders_.selected.front();
+        }
+        view.running = running_;
+        view.recorded = recorded_.size();
+        dev::DevRequests requests = dev_.build(view);
+        window_.beginPixels();
+        dev_.render(window_.native());
+        applyDev(std::move(requests));
+#endif
         window_.endDraw();
         if (perf_ && battle_ && battle_->isOver()) {
             samples.push_back(frameClock.restart().asSeconds() * 1000.f);

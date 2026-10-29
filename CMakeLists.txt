@@ -66,6 +66,19 @@ add_custom_command(TARGET tieqi POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:tieqi>/data
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:tieqi>/assets)
 if(TQ_DEV_TOOLS)
+    # The constants tab lists every rule constant with its compiled value.
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/core/rules/Constants.h)
+    file(STRINGS ${CMAKE_SOURCE_DIR}/src/core/rules/Constants.h TQ_CONSTANT_LINES
+         REGEX "^inline constexpr float k[A-Za-z0-9_]+ = ")
+    set(TQ_CONSTANT_TABLE "")
+    foreach(line IN LISTS TQ_CONSTANT_LINES)
+        string(REGEX REPLACE "^inline constexpr float (k[A-Za-z0-9_]+) = .*$" "\\1" name "${line}")
+        string(APPEND TQ_CONSTANT_TABLE "    {\"${name}\", ${name}},\n")
+    endforeach()
+    file(CONFIGURE OUTPUT ${CMAKE_BINARY_DIR}/generated/app/dev/Constants.inc CONTENT "${TQ_CONSTANT_TABLE}")
+    target_sources(tieqi PRIVATE src/app/dev/DevTools.cpp src/app/dev/Intent.cpp)
+    target_include_directories(tieqi PRIVATE ${CMAKE_BINARY_DIR}/generated)
+    target_compile_definitions(tieqi PRIVATE TQ_DEV_TOOLS=1)
     target_link_libraries(tieqi PRIVATE ImGui-SFML::ImGui-SFML)
 endif()
 tq_apply_warnings(tieqi)
@@ -99,6 +112,8 @@ if(TQ_BUILD_TESTS)
         tests/app/report.cpp
         tests/app/effects.cpp
         tests/app/glyphs.cpp
+        tests/app/dev.cpp
+        src/app/dev/Intent.cpp
         src/app/Launch.cpp
         src/app/Orders.cpp
         src/app/Report.cpp
@@ -114,4 +129,8 @@ if(TQ_BUILD_TESTS)
     add_test(NAME tq_tests COMMAND tq_tests --test-case-exclude=*slow*)
     add_test(NAME tq_tests_slow COMMAND tq_tests --test-case=*slow*)
     set_tests_properties(tq_tests_slow PROPERTIES LABELS slow)
+    if(NOT TQ_DEV_TOOLS)
+        add_test(NAME tieqi_without_imgui
+                 COMMAND ${CMAKE_COMMAND} -DBINARY=$<TARGET_FILE:tieqi> -P ${CMAKE_SOURCE_DIR}/cmake/CheckNoImGui.cmake)
+    endif()
 endif()

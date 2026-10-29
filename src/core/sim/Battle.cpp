@@ -244,7 +244,32 @@ std::uint64_t Battle::stateHash() const {
     return hash;
 }
 
+void Battle::devSpawn(const Command &cmd) {
+    if (cmd.unitType >= defs_.types.size()) {
+        return;
+    }
+    const UnitType &type = defs_.types[cmd.unitType];
+    const Vec2 pos{std::clamp(cmd.point.x, kOrderEdge, scenario_.map.width - kOrderEdge),
+                   std::clamp(cmd.point.y, kOrderEdge, scenario_.map.height - kOrderEdge)};
+    Unit unit = makeUnit(cmd.unitType, pos, cmd.face, true, true);
+    unit.id = static_cast<UnitId>(units_.size());
+    unit.labelKey = type.nameKey;
+    units_.push_back(std::move(unit));
+}
+
 void Battle::apply(const Command &cmd) {
+    if (cmd.type == Command::Type::Spawn) {
+        devSpawn(cmd);
+        return;
+    }
+    if (cmd.type == Command::Type::Rout) {
+        for (UnitId id : cmd.units) {
+            if (id < units_.size()) {
+                breakUnit(units_[id]);
+            }
+        }
+        return;
+    }
     std::vector<Unit *> selected;
     for (UnitId id : cmd.units) {
         if (id >= units_.size()) {

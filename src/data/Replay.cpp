@@ -5,6 +5,8 @@
 #include <nlohmann/json.hpp>
 
 #include <fstream>
+#include <stdexcept>
+#include <string>
 #include <utility>
 
 namespace tq {
@@ -28,6 +30,10 @@ const char *commandName(Command::Type type) {
         return "split";
     case Command::Type::Join:
         return "join";
+    case Command::Type::Spawn:
+        return "spawn";
+    case Command::Type::Rout:
+        return "rout";
     }
     return "move";
 }
@@ -50,6 +56,12 @@ Command::Type commandType(const std::string &file, const std::string &name) {
     }
     if (name == "join") {
         return Command::Type::Join;
+    }
+    if (name == "spawn") {
+        return Command::Type::Spawn;
+    }
+    if (name == "rout") {
+        return Command::Type::Rout;
     }
     fail(file, "unknown command " + name);
 }
@@ -76,6 +88,12 @@ void saveReplay(const std::filesystem::path &path, const Replay &replay) {
         }
         if (command.target) {
             item["target"] = *command.target;
+        }
+        if (command.unitType) {
+            item["unit_type"] = *command.unitType;
+        }
+        if (command.facing) {
+            item["facing"] = *command.facing;
         }
         commands.push_back(std::move(item));
     }
@@ -153,9 +171,92 @@ Replay loadReplay(const std::filesystem::path &path) {
             }
             command.target = item["target"].get<std::string>();
         }
+        if (item.contains("unit_type")) {
+            if (!item["unit_type"].is_string()) {
+                fail(file, "unit_type must be a unit type id");
+            }
+            command.unitType = item["unit_type"].get<std::string>();
+        }
+        if (item.contains("facing")) {
+            if (!item["facing"].is_number()) {
+                fail(file, "facing must be a number");
+            }
+            command.facing = item["facing"].get<float>();
+        }
+        if (command.type == Command::Type::Spawn && (!command.unitType || !command.point)) {
+            fail(file, "spawn needs unit_type and point");
+        }
         replay.commands.push_back(std::move(command));
     }
     return replay;
+}
+
+namespace {
+
+std::optional<UnitId> resolveUnit(const Battle &battle, const std::string &id) {
+    if (!id.empty() && id.front() == '#') {
+        try {
+            return static_cast<UnitId>(std::stoul(id.substr(1)));
+        } catch (const std::exception &) {
+            return std::nullopt;
+        }
+    }
+    return battle.sceneUnit(id);
+}
+
+std::string unitName(const Battle &battle, UnitId id) {
+    return battle.sceneName(id).value_or("#" + std::to_string(id));
+}
+
+} // namespace
+
+std::optional<Command> resolveCommand(const Battle &battle, const GameDefs &defs, const ReplayCommand &command) {
+    Command issued;
+    issued.type = command.type;
+    if (command.point) {
+        issued.point = *command.point;
+    }
+    for (const std::string &id : command.units) {
+        if (const std::optional<UnitId> unit = resolveUnit(battle, id)) {
+            issued.units.push_back(*unit);
+        }
+    }
+    if (command.target) {
+        issued.target = resolveUnit(battle, *command.target).value_or(kNoUnit);
+    }
+    if (command.type == Command::Type::Spawn) {
+        for (std::size_t index = 0; index < defs.types.size(); ++index) {
+            if (command.unitType && defs.types[index].id == *command.unitType) {
+                issued.unitType = static_cast<std::uint16_t>(index);
+                issued.face = command.facing.value_or(0.f);
+                return issued;
+            }
+        }
+        return std::nullopt;
+    }
+    if (issued.units.empty()) {
+        return std::nullopt;
+    }
+    return issued;
+}
+
+ReplayCommand recordCommand(const Battle &battle, const GameDefs &defs, const Command &command) {
+    ReplayCommand recorded;
+    recorded.type = command.type;
+    for (UnitId id : command.units) {
+        recorded.units.push_back(unitName(battle, id));
+    }
+    if (command.type == Command::Type::Move || command.type == Command::Type::Spawn) {
+        recorded.point = command.point;
+    }
+    if (command.type == Command::Type::Attack) {
+        recorded.target = unitName(battle, command.target);
+    }
+    if (command.type == Command::Type::Spawn && command.unitType < defs.types.size()) {
+        recorded.unitType = defs.types[command.unitType].id;
+        recorded.facing = command.face;
+    }
+    return recorded;
 }
 
 } // namespace tq

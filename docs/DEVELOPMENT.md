@@ -398,10 +398,12 @@ struct Unit {
 // src/core/sim/Command.h —— 只有玩家命令进队列，AI 在核心内部直接改日军 Order
 struct Command {
     std::uint32_t tick;               // 由 submit() 填为下一个要执行的 tick
-    enum class Type : std::uint8_t { Move, Attack, Hold, Retreat, Split, Join } type;
-    std::vector<UnitId> units;        // 选中的我方单位
-    Vec2 point{};                     // Move
+    enum class Type : std::uint8_t { Move, Attack, Hold, Retreat, Split, Join, Spawn, Rout } type;
+    std::vector<UnitId> units;        // 选中的我方单位；Rout 时为要击溃的单位（不分阵营）
+    Vec2 point{};                     // Move、Spawn
     UnitId target = kNoUnit;          // Attack
+    std::uint16_t unitType = 0;       // Spawn：GameDefs::types 的下标
+    float face = 0;                   // Spawn：新单位的朝向
 };
 
 // src/core/sim/Event.h —— 表现层据此播放特效、音效并生成本地化战报
@@ -445,6 +447,7 @@ public:
     const BattleResult& result() const;       // 结果、评级、撤出兵力、统计
     const BattleStats& stats() const;
     std::uint64_t stateHash() const;          // 全部单位状态的 FNV-1a，确定性测试用
+    bool vanguardAggressive() const;          // AI 的 vanAggro，只读，供调试面板
 };
 
 // src/core/rules/Preview.h —— 与实际结算共用同一套计算函数
@@ -817,6 +820,17 @@ Join            对 joinGroups 的每一组：按 men 降序（并列按 id 升�
                 全组 rejoin = true；锚点 Hold（朝向 = 锚点朝向）；其余 Move(锚点位置, 锚点朝向)
 ```
 
+开发命令只由调试面板（`TQ_DEV_TOOLS=ON`）发出，不经过上面"属于明军且可战"的筛选，同样在下一个 tick 开头执行并记进回放：
+
+```text
+Spawn(unitType, point, face)  unitType 不存在则忽略；point 夹到 [12, W − 12] × [12, H − 12]
+                              makeUnit(unitType, point, face)，计入总兵力，按兵种抽装填随机数（消耗一次 tq::Rng）
+                              新单位 id = 当前单位数，labelKey = 兵种 name，命令 Hold(face)，不发事件
+Rout(units)                   对每个存在且可战的单位调用 breakUnit（任一阵营），其余忽略
+```
+
+没有开发命令的对局，结果与加入开发命令之前逐 tick 相同。
+
 ### 场景流程
 
 下面是碧蹄馆的流程，数字都来自场景 JSON（格式见下一章）。每个 tick 开头、时间增加之后检查：
@@ -1140,7 +1154,7 @@ ai\_role 取值：gunner（铁炮）、pike\_line（长枪）、shock（武士�
 
 ### replay.json
 
-回放记在 `tq_data`，供无头工具和测试往返。命令用场景 id；没有场景 id 的单位（残部、分队）写成 `#` 加 UnitId。构建号是配置时的 git 短哈希，不同编译器之间不要求能互放。
+回放记在 `tq_data`，供无头工具和测试往返。命令用场景 id；没有场景 id 的单位（残部、分队、调试面板生成的单位）写成 `#` 加 UnitId。构建号是配置时的 git 短哈希，不同编译器之间不要求能互放。`type` 另有调试面板用的 `spawn`（必须带 `unit_type` 兵种 id 和 `point`，可带 `facing` 弧度，`units` 为空数组）和 `rout`（`units` 为要击溃的单位）。
 
 ```json
 {
@@ -1286,6 +1300,8 @@ approach(u, f, keep)
 ### 调试
 
 开发版的 ImGui 面板显示每个日军单位的角色、当前命令、目标及其得分、是否 aggressive，并可在地图上画出目标连线。无头工具可以用 `--no-ai` 关闭 AI，供对决测试使用。
+
+面板（A6）只在 `TQ_DEV_TOOLS=ON` 时编译：F1 开关，F2 切换页签（脚本按键到不了 ImGui，靠它截图）。页签为 Sim（tick、阶段、状态哈希、单步 tick、模拟与渲染耗时曲线、保存与载入回放）、Units（单位列表与检查器、击溃所选单位）、Spawn（按兵种、位置、朝向生成单位）、AI（上述意图表与连线开关）、Constants（配置时从 `Constants.h` 生成的只读常数表）。面板只读快照，改动一律通过 `submit()` 的开发命令完成。面板文字为英文、显示场景 id，不走字符串表。release 预设不编译面板，`ci` 预设里的 `tieqi_without_imgui` 测试检查产物里没有 ImGui 字符串。
 
 ## 表现层规格
 
