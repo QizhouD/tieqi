@@ -194,6 +194,10 @@ void Window::poll() {
     pressed_.clear();
     pointers_.clear();
     while (const std::optional event = window_.pollEvent()) {
+        const bool taken = hook_ && hook_(*event);
+        if (taken && !event->is<sf::Event::Closed>() && !event->is<sf::Event::Resized>()) {
+            continue;
+        }
         if (event->is<sf::Event::Closed>()) {
             done_ = true;
         } else if (const auto *key = event->getIf<sf::Event::KeyPressed>()) {

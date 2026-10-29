@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -56,36 +57,6 @@ const char *gradeName(Grade grade) {
         return "none";
     }
     return "none";
-}
-
-std::optional<UnitId> resolveUnit(const Battle &battle, const std::string &id) {
-    if (!id.empty() && id.front() == '#') {
-        try {
-            return static_cast<UnitId>(std::stoul(id.substr(1)));
-        } catch (const std::exception &) {
-            return std::nullopt;
-        }
-    }
-    return battle.sceneUnit(id);
-}
-
-void submitRecorded(Battle &battle, const ReplayCommand &command) {
-    Command issued;
-    issued.type = command.type;
-    if (command.point) {
-        issued.point = *command.point;
-    }
-    for (const std::string &id : command.units) {
-        if (const std::optional<UnitId> unit = resolveUnit(battle, id)) {
-            issued.units.push_back(*unit);
-        }
-    }
-    if (command.target) {
-        issued.target = resolveUnit(battle, *command.target).value_or(kNoUnit);
-    }
-    if (!issued.units.empty()) {
-        battle.submit(std::move(issued));
-    }
 }
 
 void note(RunResult &result, const Event &event) {
@@ -306,7 +277,9 @@ RunResult runBattle(const GameData &data, const RunRequest &request) {
     while (battle.tick() < request.maxTicks && !battle.isOver()) {
         if (request.replay) {
             while (cursor < request.commands.size() && request.commands[cursor].tick == battle.tick() + 1) {
-                submitRecorded(battle, request.commands[cursor]);
+                if (std::optional<Command> issued = resolveCommand(battle, data.defs, request.commands[cursor])) {
+                    battle.submit(std::move(*issued));
+                }
                 cursor += 1;
             }
         } else {

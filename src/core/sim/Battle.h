@@ -70,11 +70,14 @@ class Battle {
     // Opening strength plus reinforcements created later. Fragments and split companies are not counted again.
     // Read-only.
     float enlisted(Side side) const;
+    // Whether the Japanese vanguard has been released. Read-only, for the dev tools.
+    bool vanguardAggressive() const { return vanAggro_; }
     std::uint64_t stateHash() const;
 
   private:
     friend class testing::BattleAccess;
     void apply(const Command &cmd);
+    void devSpawn(const Command &cmd);
     void aiThink();
     void advancePhase();
     void spawnGroup(const std::string &groupId);
