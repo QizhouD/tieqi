@@ -25,6 +25,7 @@ namespace tq {
 class Window {
   public:
     void open(const sf::String &title);
+    void setTitle(const sf::String &title);
     void loadScript(const std::filesystem::path &file);
     void poll();
     void beginDraw();

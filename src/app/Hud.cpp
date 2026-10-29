@@ -288,16 +288,28 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
     const float titleWidth =
         pen.measure(titleFont, strings.text("ui.battle"), fontPx(32.f, pen.scale), titleBold) / pen.scale;
     pen.text(*pen.body, strings.text("ui.subtitle"), 12.f, 28.f + titleWidth, 22.f, kMuted, false);
+    // The phase and clock columns sit at the prototype's x unless a longer translation pushes them right. The phase
+    // column is as wide as its longest name, so the clock does not move when the phase changes.
+    const float subtitleEnd =
+        28.f + titleWidth +
+        pen.measure(*pen.body, strings.text("ui.subtitle"), fontPx(12.f, pen.scale), false) / pen.scale;
+    const float phaseX = std::max(430.f, subtitleEnd + 20.f);
+    float phaseW = pen.measure(*pen.body, strings.text("ui.phase"), fontPx(11.f, pen.scale), false) / pen.scale;
+    for (int index = 0; index <= 3; ++index) {
+        const std::string name = strings.text("phase." + std::to_string(index));
+        phaseW = std::max(phaseW, pen.measure(titleFont, name, fontPx(20.f, pen.scale), titleBold) / pen.scale);
+    }
+    const float clockX = std::max(560.f, phaseX + phaseW + 24.f);
 
-    pen.text(*pen.body, strings.text("ui.phase"), 11.f, 430.f, 8.f, kMuted, false);
+    pen.text(*pen.body, strings.text("ui.phase"), 11.f, phaseX, 8.f, kMuted, false);
     const int phase = battle.phase();
     const std::string phaseKey = "phase." + std::to_string(std::clamp(phase, 0, 3));
-    pen.text(titleFont, strings.text(phaseKey), 20.f, 430.f, 24.f, kPaper, titleBold);
+    pen.text(titleFont, strings.text(phaseKey), 20.f, phaseX, 24.f, kPaper, titleBold);
 
     const float seconds = battle.isOver() ? battle.battleSeconds() : displaySeconds(battle.tick(), frame.alpha);
     const std::string shichen = formatShichen(strings, frame.startClock, seconds);
-    pen.text(*pen.body, shichen, 11.f, 560.f, 8.f, kMuted, false);
-    pen.text(*pen.body, formatClock(seconds), 17.f, 560.f, 26.f, kPaper, false);
+    pen.text(*pen.body, shichen, 11.f, clockX, 8.f, kMuted, false);
+    pen.text(*pen.body, formatClock(seconds), 17.f, clockX, 26.f, kPaper, false);
 
     const bool ended = battle.isOver();
     const char *runKey = "ui.pause";
@@ -315,11 +327,16 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
         return x;
     };
     const float restartW = 64.f;
-    const float soundW = 40.f;
+    const float soundW = std::max(
+        40.f, pen.measure(*pen.body, strings.text("ui.sound"), fontPx(13.f, pen.scale), false) / pen.scale + 16.f);
     const float speedW = 52.f;
     const float runW =
         std::max(88.f, pen.measure(*pen.body, runLabel, fontPx(13.f, pen.scale), false) / pen.scale + 22.f);
+    const float settingsW = std::max(
+        64.f, pen.measure(*pen.body, strings.text("ui.settings"), fontPx(13.f, pen.scale), false) / pen.scale + 22.f);
     button(place(restartW), 12.f, restartW, 30.f, strings.text("ui.restart"), HudAction::Restart, true, false, false);
+    button(place(settingsW), 12.f, settingsW, 30.f, strings.text("ui.settings"), HudAction::ToggleSettings, true,
+           settingsOpen_, false);
     button(place(soundW), 12.f, soundW, 30.f, strings.text("ui.sound"), HudAction::ToggleSound, true, !frame.muted,
            false);
     const std::vector<float> &speeds = *frame.speeds;
@@ -408,10 +425,16 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
         pen.text(*pen.body, roster.state, 12.f, innerX + innerW - stateW * 0.5f, y + 2.f, stateColor(roster.stateKind),
                  false, 0.5f);
         y += 42.f;
+        const float labelW =
+            std::max(pen.measure(*pen.body, strings.text("ui.men"), fontPx(12.f, pen.scale), false),
+                     pen.measure(*pen.body, strings.text("ui.morale"), fontPx(12.f, pen.scale), false)) /
+            pen.scale;
+        const float meterX = std::max(40.f, labelW + 8.f);
+        const float meterW = innerW - 78.f - meterX;
         const auto meter = [&](std::string_view label, float fraction, const std::string &value, sf::Color bar) {
             pen.text(*pen.body, label, 12.f, innerX, y, kMuted, false);
-            pen.fill(innerX + 40.f, y + 6.f, innerW - 118.f, 6.f, rgb(0x160e0b));
-            pen.fill(innerX + 40.f, y + 6.f, (innerW - 118.f) * fraction, 6.f, bar);
+            pen.fill(innerX + meterX, y + 6.f, meterW, 6.f, rgb(0x160e0b));
+            pen.fill(innerX + meterX, y + 6.f, meterW * fraction, 6.f, bar);
             pen.text(*pen.body, value, 12.f, innerX + innerW, y, kPaper, false, 1.f);
             y += 20.f;
         };
@@ -497,27 +520,32 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
     }
 
     const ArmyCard armies = armyCard(strings, battle);
-    const auto mingLines = pen.wrap(*pen.body, armies.ming, 12.f, innerW - 36.f, false);
-    const auto jpLines = pen.wrap(*pen.body, armies.jp, 12.f, innerW - 36.f, false);
+    const float sideLabelW =
+        std::max(pen.measure(titleFont, strings.text("side.ming"), fontPx(18.f, pen.scale), titleBold),
+                 pen.measure(titleFont, strings.text("side.jp"), fontPx(18.f, pen.scale), titleBold)) /
+        pen.scale;
+    const float sideW = std::max(36.f, sideLabelW + 10.f);
+    const auto mingLines = pen.wrap(*pen.body, armies.ming, 12.f, innerW - sideW, false);
+    const auto jpLines = pen.wrap(*pen.body, armies.jp, 12.f, innerW - sideW, false);
     const float armyH = 12.f + 22.f + 22.f + 16.f * static_cast<float>(std::max<std::size_t>(1, mingLines.size())) +
                         22.f + 16.f * static_cast<float>(std::max<std::size_t>(1, jpLines.size())) + 8.f;
     const float armyTop = y;
     cardOpen(armyH);
     heading(strings.text("ui.armies"));
     pen.text(titleFont, strings.text("side.ming"), 18.f, innerX, y, kMing, titleBold);
-    pen.fill(innerX + 36.f, y + 8.f, innerW - 36.f, 6.f, rgb(0x160e0b));
-    pen.fill(innerX + 36.f, y + 8.f, (innerW - 36.f) * armies.mingFraction, 6.f, kMing);
+    pen.fill(innerX + sideW, y + 8.f, innerW - sideW, 6.f, rgb(0x160e0b));
+    pen.fill(innerX + sideW, y + 8.f, (innerW - sideW) * armies.mingFraction, 6.f, kMing);
     y += 22.f;
     for (const std::string &line : mingLines) {
-        pen.text(*pen.body, line, 12.f, innerX + 36.f, y, kMuted, false);
+        pen.text(*pen.body, line, 12.f, innerX + sideW, y, kMuted, false);
         y += 16.f;
     }
     pen.text(titleFont, strings.text("side.jp"), 18.f, innerX, y, kJp, titleBold);
-    pen.fill(innerX + 36.f, y + 8.f, innerW - 36.f, 6.f, rgb(0x160e0b));
-    pen.fill(innerX + 36.f, y + 8.f, (innerW - 36.f) * armies.jpFraction, 6.f, kJp);
+    pen.fill(innerX + sideW, y + 8.f, innerW - sideW, 6.f, rgb(0x160e0b));
+    pen.fill(innerX + sideW, y + 8.f, (innerW - sideW) * armies.jpFraction, 6.f, kJp);
     y += 22.f;
     for (const std::string &line : jpLines) {
-        pen.text(*pen.body, line, 12.f, innerX + 36.f, y, kMuted, false);
+        pen.text(*pen.body, line, 12.f, innerX + sideW, y, kMuted, false);
         y += 16.f;
     }
     cardClose(armyTop, armyH);
@@ -542,7 +570,7 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
         } else if (entry.tone == LogTone::Jp) {
             ink = kJp;
         }
-        const auto wrapped = pen.wrap(*pen.body, entry.text, 12.5f, innerW - 46.f, false);
+        const auto wrapped = pen.wrap(*pen.body, entry.text, 12.5f, innerW - 46.f, entry.important);
         for (std::size_t index = 0; index < wrapped.size(); ++index) {
             if (y + 16.f > logTop + logH - 8.f) {
                 break;
@@ -656,7 +684,10 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
             for (std::size_t index = 0; index < card.stats.size(); ++index) {
                 const float x = textX + statW * static_cast<float>(index);
                 pen.fill(x, textY, statW - 8.f, 1.f, rgb(0xc5b18a));
-                pen.text(*pen.body, card.stats[index].label, 11.5f, x, textY + 6.f, rgb(0x7a6346), false);
+                const std::string &label = card.stats[index].label;
+                const float labelW = pen.measure(*pen.body, label, fontPx(11.5f, pen.scale), false) / pen.scale;
+                const float labelSize = labelW > statW - 10.f ? std::max(9.f, 11.5f * (statW - 10.f) / labelW) : 11.5f;
+                pen.text(*pen.body, label, labelSize, x, textY + 6.f, rgb(0x7a6346), false);
                 pen.text(*pen.body, card.stats[index].value, 16.f, x, textY + 24.f, kInk, false);
             }
             textY += 64.f;
@@ -706,6 +737,58 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
         const float subY = 55.f + 932.f * 0.11f + 58.f;
         pen.fill(center - subW * 0.5f, subY, subW, 24.f, rgb(0x140d0a, static_cast<unsigned>(fade * 0.66f)));
         pen.text(*pen.body, sub, 14.f, center, subY + 3.f, rgb(0xeee3cc, fade), false, 0.5f);
+    }
+
+    if (settingsOpen_) {
+        // A click outside the card closes it; a click on the card that misses every control does nothing.
+        pen.fill(0.f, 0.f, 1600.f, 1000.f, rgb(0x100a08, 170));
+        click(HudAction::ToggleSettings, 0.f, 0.f, 1600.f, 1000.f);
+        const float cardW = 400.f;
+        const float cardH = 250.f;
+        const float cardX = (1600.f - cardW) * 0.5f;
+        const float cardY = 260.f;
+        click(HudAction::None, cardX, cardY, cardW, cardH);
+        pen.fill(cardX, cardY, cardW, cardH, kLacquer2);
+        pen.stroke(cardX, cardY, cardW, cardH, kGold);
+        const float textX = cardX + 24.f;
+        const float textW = cardW - 48.f;
+        float rowY = cardY + 18.f;
+        pen.text(titleFont, strings.text("ui.settings"), 22.f, textX, rowY, kGold, titleBold);
+        rowY += 40.f;
+        pen.text(*pen.body, strings.text("ui.language"), 12.f, textX, rowY, kMuted, false);
+        rowY += 20.f;
+        if (frame.languages != nullptr && !frame.languages->empty()) {
+            const std::size_t count = std::min<std::size_t>(frame.languages->size(), 3);
+            const float gap = 8.f;
+            const float choiceW = (textW - gap * static_cast<float>(count - 1)) / static_cast<float>(count);
+            for (std::size_t index = 0; index < count; ++index) {
+                const LanguageChoice &choice = (*frame.languages)[index];
+                const float x = textX + (choiceW + gap) * static_cast<float>(index);
+                const bool current = choice.code == frame.language;
+                pen.fill(x, rowY, choiceW, 34.f, current ? kGold : kLacquer3);
+                pen.stroke(x, rowY, choiceW, 34.f, current ? kGold : kRule);
+                if (choice.font != nullptr) {
+                    pen.text(*choice.font, choice.label, 14.f, x + choiceW * 0.5f, rowY + 8.f,
+                             current ? kLacquer : kPaper, choice.bold, 0.5f);
+                }
+                const HudAction action = index == 0   ? HudAction::Language0
+                                         : index == 1 ? HudAction::Language1
+                                                      : HudAction::Language2;
+                click(action, x, rowY, choiceW, 34.f);
+            }
+        }
+        rowY += 52.f;
+        pen.text(*pen.body, strings.text("ui.reduced_motion"), 13.f, textX, rowY + 6.f, kPaper, false);
+        const std::string motion = strings.text(frame.reducedMotion ? "ui.on" : "ui.off");
+        const float motionW =
+            std::max(64.f, pen.measure(*pen.body, motion, fontPx(13.f, pen.scale), false) / pen.scale + 22.f);
+        button(textX + textW - motionW, rowY, motionW, 30.f, motion, HudAction::ToggleReducedMotion, true,
+               frame.reducedMotion, false);
+        rowY += 52.f;
+        const float closeW = std::max(
+            96.f, pen.measure(*pen.body, strings.text("ui.close"), fontPx(13.f, pen.scale), false) / pen.scale + 22.f);
+        button(cardX + (cardW - closeW) * 0.5f, rowY, closeW, 30.f, strings.text("ui.close"),
+               HudAction::ToggleSettings, true, false, true);
     }
 }
 

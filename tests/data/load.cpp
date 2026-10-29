@@ -209,8 +209,9 @@ TEST_CASE("duel_flat omits flow and keeps a flat map") {
 }
 
 TEST_CASE("missing string keys fall back to zh-Hant and then the key") {
+    // The shipped tables are complete, so a partial fixture stands in for an unfinished translation.
     const StringTable zh = loadStrings(sourceRoot() / "data/strings/zh-Hant.json");
-    StringTable en = loadStrings(sourceRoot() / "data/strings/en.json", &zh);
+    StringTable en = loadStrings(sourceRoot() / "tests/data/strings/partial.json", &zh);
     CHECK(en.text("ui.start") == zh.text("ui.start"));
     REQUIRE_FALSE(en.warnings.empty());
     CHECK(en.warnings[0].find("ui.start") != std::string::npos);

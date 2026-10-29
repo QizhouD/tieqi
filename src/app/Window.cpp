@@ -60,6 +60,11 @@ void Window::open(const sf::String &title) {
     create();
 }
 
+void Window::setTitle(const sf::String &title) {
+    title_ = title;
+    window_.setTitle(title_);
+}
+
 void Window::create() {
     if (fullscreen_) {
         const sf::VideoMode desktop = sf::VideoMode::getDesktopMode();

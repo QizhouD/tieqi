@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "language": "en",
+  "fonts": { "body": "NotoSerifTC-Regular.otf", "brush": "LXGWWenKaiTC-Bold.ttf" },
+  "strings": {
+    "game.title": "Afterglow: Imjin 1593"
+  }
+}
