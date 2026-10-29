@@ -2,8 +2,6 @@
 #include "app/TextCache.h"
 #include "data/Load.h"
 
-#include <SFML/Graphics/Font.hpp>
-
 #include <doctest/doctest.h>
 
 #include <filesystem>
@@ -99,9 +97,9 @@ TEST_CASE("the double-hour reads in each language") {
 }
 
 TEST_CASE("wrapping keeps English and Korean words whole and Chinese text intact") {
-    const std::filesystem::path fonts = sourceRoot() / "assets" / "fonts";
-    const sf::Font latin(fonts / "NotoSerifTC-Regular.otf");
-    const sf::Font hangul(fonts / "NotoSerifKR-Regular.otf");
+    // Glyph metrics need a GL context, which CI does not have, so the rule runs on fixed widths: one unit for ASCII,
+    // two for everything else.
+    const Advance advance = [](char32_t, bool, char32_t code) { return code < 0x80 ? 1.f : 2.f; };
     const StringTable zh = zhTable();
     const StringTable en = loadStrings(sourceRoot() / "data" / "strings" / "en.json", &zh);
     const StringTable ko = loadStrings(sourceRoot() / "data" / "strings" / "ko.json", &zh);
@@ -124,11 +122,11 @@ TEST_CASE("wrapping keeps English and Korean words whole and Chinese text intact
         }
         return out;
     };
-    for (const auto &[table, font] : {std::pair{&en, &latin}, std::pair{&ko, &hangul}}) {
+    for (const StringTable *table : {&en, &ko}) {
         for (const char *key : {"ui.intro_body", "ui.tip.4", "end.history", "obj.phase2"}) {
             CAPTURE(key);
             const std::string text = table->text(key);
-            const std::vector<std::string> lines = wrapText(*font, text, 14, 300.f, false);
+            const std::vector<std::string> lines = wrapWith(text, 40.f, advance);
             CHECK(lines.size() > 1);
             std::vector<std::string> rejoined;
             for (const std::string &line : lines) {
@@ -143,11 +141,10 @@ TEST_CASE("wrapping keeps English and Korean words whole and Chinese text intact
         }
     }
 
-    const sf::Font han(fonts / "NotoSerifTC-Regular.otf");
     for (const char *key : {"ui.intro_body", "end.history", "ui.tip.6"}) {
         CAPTURE(key);
         const std::string text = zh.text(key);
-        const std::vector<std::string> lines = wrapText(han, text, 14, 300.f, false);
+        const std::vector<std::string> lines = wrapWith(text, 40.f, advance);
         CHECK(lines.size() > 1);
         std::string joined;
         for (const std::string &line : lines) {

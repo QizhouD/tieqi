@@ -224,8 +224,9 @@ std::string joinGlyphs(const std::vector<Glyph> &glyphs, std::size_t from, std::
     return out;
 }
 
-std::vector<std::string> wrapOnce(const sf::Font &font, std::string_view value, unsigned size, float maxWidth,
-                                  bool bold) {
+} // namespace
+
+std::vector<std::string> wrapWith(std::string_view value, float maxWidth, const Advance &advance) {
     std::vector<std::string> lines;
     std::vector<Glyph> line;
     float cursor = 0.f;
@@ -234,7 +235,7 @@ std::vector<std::string> wrapOnce(const sf::Font &font, std::string_view value, 
     const auto measureLine = [&]() {
         float width = 0.f;
         for (std::size_t index = 0; index < line.size(); ++index) {
-            width += advanceOf(font, size, bold, index == 0 ? 0 : line[index - 1].code, index > 0, line[index].code);
+            width += advance(index == 0 ? 0 : line[index - 1].code, index > 0, line[index].code);
         }
         return width;
     };
@@ -273,7 +274,7 @@ std::vector<std::string> wrapOnce(const sf::Font &font, std::string_view value, 
                 breakAt = line.size();
             }
         }
-        const float added = advanceOf(font, size, bold, line.empty() ? 0 : line.back().code, !line.empty(), next.code);
+        const float added = advance(line.empty() ? 0 : line.back().code, !line.empty(), next.code);
         if (!line.empty() && cursor + added > maxWidth) {
             if (breakAt > 0) {
                 flush(breakAt);
@@ -283,7 +284,7 @@ std::vector<std::string> wrapOnce(const sf::Font &font, std::string_view value, 
             if (line.empty() && next.code == U' ') {
                 continue;
             }
-            cursor += advanceOf(font, size, bold, line.empty() ? 0 : line.back().code, !line.empty(), next.code);
+            cursor += advance(line.empty() ? 0 : line.back().code, !line.empty(), next.code);
             line.push_back(next);
             continue;
         }
@@ -294,6 +295,15 @@ std::vector<std::string> wrapOnce(const sf::Font &font, std::string_view value, 
         lines.push_back(joinGlyphs(line, 0, line.size()));
     }
     return lines;
+}
+
+namespace {
+
+std::vector<std::string> wrapOnce(const sf::Font &font, std::string_view value, unsigned size, float maxWidth,
+                                  bool bold) {
+    return wrapWith(value, maxWidth, [&](char32_t previous, bool hasPrevious, char32_t code) {
+        return advanceOf(font, size, bold, previous, hasPrevious, code);
+    });
 }
 
 } // namespace
