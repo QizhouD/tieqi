@@ -25,6 +25,10 @@ void drawText(sf::RenderTarget &target, const sf::Font &font, unsigned size, boo
               sf::Color fill, sf::Vector2f position, sf::Vector2f origin, sf::Vector2f scale,
               const sf::RenderStates &states = sf::RenderStates::Default);
 
+void drawOutlinedText(sf::RenderTarget &target, const sf::Font &font, unsigned size, bool bold, std::string_view value,
+                      sf::Color fill, sf::Vector2f position, sf::Vector2f origin, sf::Vector2f scale, sf::Color outline,
+                      float thickness);
+
 std::vector<std::string> wrapText(const sf::Font &font, std::string_view value, unsigned size, float maxWidth,
                                   bool bold);
 

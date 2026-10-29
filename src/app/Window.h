@@ -7,6 +7,7 @@
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/System/Clock.hpp>
+#include <SFML/System/Vector2.hpp>
 #include <SFML/Window/Keyboard.hpp>
 
 #include <filesystem>
@@ -51,6 +52,7 @@ class Window {
         float scale = 1.f;
     };
     PixelMap pixelMap() const;
+    void setViewShake(sf::Vector2f pixels);
     void beginWorld();
     // Pieces are drawn in the map rectangle. The viewport is clipped to the map, so units outside it do not paint the
     // dark margin.
@@ -62,6 +64,7 @@ class Window {
     void create();
     void applyUiView();
     void applyView(sf::Vector2f center, sf::Vector2f size, ScreenRect screen);
+    sf::Vector2f shakenCenter(sf::Vector2f center, float scale) const;
     void advanceScript();
     void takeScreenshot(const std::filesystem::path &file);
     void addPointer(PointerSample sample);
@@ -72,6 +75,7 @@ class Window {
     sf::Vector2u pixelSize_{kWindowWidth, kWindowHeight};
     sf::Vector2u worldSize_{kWindowWidth, kWindowHeight};
     sf::Vector2f camera_{kWindowWidth * 0.5f, kWindowHeight * 0.5f};
+    sf::Vector2f shakePixels_{};
     bool done_ = false;
     bool fullscreen_ = false;
 

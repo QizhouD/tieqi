@@ -59,7 +59,8 @@ add_executable(tieqi
     src/app/Orders.cpp
     src/app/Report.cpp
     src/app/Hud.cpp
-    src/app/TextCache.cpp)
+    src/app/TextCache.cpp
+    src/app/Effects.cpp)
 target_link_libraries(tieqi PRIVATE tq_core tq_data SFML::Graphics SFML::Audio)
 add_custom_command(TARGET tieqi POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:tieqi>/data
@@ -96,6 +97,8 @@ if(TQ_BUILD_TESTS)
         tests/app/pieces.cpp
         tests/app/orders.cpp
         tests/app/report.cpp
+        tests/app/effects.cpp
+        tests/app/glyphs.cpp
         src/app/Launch.cpp
         src/app/Orders.cpp
         src/app/Report.cpp
@@ -104,7 +107,7 @@ if(TQ_BUILD_TESTS)
         src/app/Synth.cpp
         tools/headless/Policy.cpp
         tools/headless/Run.cpp)
-    target_link_libraries(tq_tests PRIVATE tq_core tq_data doctest::doctest)
+    target_link_libraries(tq_tests PRIVATE tq_core tq_data doctest::doctest SFML::Graphics)
     file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}" TQ_SOURCE_DIR_FWD)
     target_compile_definitions(tq_tests PRIVATE "TQ_SOURCE_DIR=\"${TQ_SOURCE_DIR_FWD}\"")
     tq_apply_warnings(tq_tests)
