@@ -219,7 +219,7 @@ endif()
 | 预设 | 构建类型 | `TQ_DEV_TOOLS` | `TQ_BUILD_TESTS` | 用途 |
 | --- | --- | --- | --- | --- |
 | `dev` | Debug | ON | ON | 日常开发 |
-| `release` | Release | OFF | OFF | 试玩包 |
+| `release` | Release | OFF | OFF | 试玩包；MSVC 下静态链接运行库（`CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded`、`SFML_USE_STATIC_STD_LIBS=ON`），GCC 下这两项不起作用 |
 | `ci` | RelWithDebInfo | OFF | ON | CI 构建与测试 |
 
 ```powershell
@@ -238,6 +238,7 @@ sudo apt install libxrandr-dev libxcursor-dev libxi-dev libudev-dev libfreetype-
 cmake --preset dev && cmake --build --preset dev && ctest --preset dev
 ```
 
+- 试玩包（R1，只在 Windows）：`cmake --preset release`、`cmake --build --preset release --target package_demo`，产物是 `build/release/dist/Afterglow-Imjin-1593-demo-<版本>-win64.zip` 和同名目录，留在本地，不发布 GitHub Release。版本号是顶层 `project()` 的 VERSION（当前 0.1.0），同时写进回放。打包脚本 `cmake/PackageDemo.cmake` 先确认可执行文件里没有 ImGui，并用 `dumpbin /dependents` 确认只依赖系统 DLL（出现 MSVCP、VCRUNTIME、ucrtbase、api-ms-win-crt 即失败），再放入 `tieqi.exe`、`data/`、`assets/`（含字体与 OFL 许可证）、`AI_ASSETS.md`、繁中加英文的 `README.txt`（源文件 `docs/demo/README.txt`，`@VERSION@` 换成版本号，CRLF 换行）和 `THIRD_PARTY_NOTICES.txt`。第三方声明覆盖 SFML、FreeType、HarfBuzz、SheenBidi、libogg、libvorbis、libFLAC、miniaudio、nlohmann/json，许可证全文和版本号都取自本次构建实际拉取的源码。
 - 构建后把 `data/` 和 `assets/` 复制到可执行文件旁边。程序按顺序查找资源根目录：命令行 `--data-root`，当前目录下有 `data/` 时用当前目录，最后用可执行文件所在目录（沿用框架的 `chdirToAssets` 思路）。
 - `tieqi` 命令行参数：`--scenario <id>`、`--seed <n>`、`--time-scale <x>`、`--replay <file>`、`--script <file>`（脚本输入加截图，沿用框架做法）、`--data-root <dir>`、`--perf`、`--freeze-at <tick>`。`--perf` 关掉帧率上限，以 2 倍速自动开战，跑到结算后在标准输出打印帧时间的平均值、p95 和最大值（毫秒），然后退出。`--freeze-at` 在模拟到达该 tick 后停止推进，画面继续渲染，方便脚本截图；和 `--perf` 同时给出时忽略冻结。脚本行是 `<秒> down|up|press <键>`、`<秒> shot <文件>`、`<秒> quit`，另加 `<秒> resize <宽> <高>`。显式的 `--scenario`、`--seed` 盖过回放里的同名字段。脚本计时从第一帧开始，不从加载脚本时开始。
 
@@ -1154,11 +1155,12 @@ ai\_role 取值：gunner（铁炮）、pike\_line（长枪）、shock（武士�
 
 ### replay.json
 
-回放记在 `tq_data`，供无头工具和测试往返。命令用场景 id；没有场景 id 的单位（残部、分队、调试面板生成的单位）写成 `#` 加 UnitId。构建号是配置时的 git 短哈希，不同编译器之间不要求能互放。`type` 另有调试面板用的 `spawn`（必须带 `unit_type` 兵种 id 和 `point`，可带 `facing` 弧度，`units` 为空数组）和 `rout`（`units` 为要击溃的单位）。
+回放记在 `tq_data`，供无头工具和测试往返。命令用场景 id；没有场景 id 的单位（残部、分队、调试面板生成的单位）写成 `#` 加 UnitId。构建号是配置时的 git 短哈希，不同编译器之间不要求能互放。`version` 是游戏版本号（顶层 CMake `project()` 的 VERSION，R1 起写入），R1 之前的回放没有这个字段，读入时为空。`type` 另有调试面板用的 `spawn`（必须带 `unit_type` 兵种 id 和 `point`，可带 `facing` 弧度，`units` 为空数组）和 `rout`（`units` 为要击溃的单位）。
 
 ```json
 {
   "schema": 1,
+  "version": "0.1.0",
   "build": "0123456789ab",
   "scenario": "byeokjegwan",
   "seed": 1,

@@ -23,8 +23,13 @@ struct ReplayCommand {
     std::optional<float> facing;
 };
 
+// The game version from the top-level project(), for example "0.1.0".
+std::string gameVersion();
+
 struct Replay {
     int schema = 1;
+    // Replays written before R1 have no version; they load with an empty one.
+    std::string version = gameVersion();
     std::string build;
     std::string scenario;
     std::uint64_t seed = 1;

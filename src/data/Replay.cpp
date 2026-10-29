@@ -76,6 +76,14 @@ std::string buildId() {
 #endif
 }
 
+std::string gameVersion() {
+#ifdef TQ_VERSION
+    return TQ_VERSION;
+#else
+    return "unknown";
+#endif
+}
+
 void saveReplay(const std::filesystem::path &path, const Replay &replay) {
     Json commands = Json::array();
     for (const ReplayCommand &command : replay.commands) {
@@ -99,6 +107,7 @@ void saveReplay(const std::filesystem::path &path, const Replay &replay) {
     }
     Json root = Json::object();
     root["schema"] = replay.schema;
+    root["version"] = replay.version;
     root["build"] = replay.build;
     root["scenario"] = replay.scenario;
     root["seed"] = replay.seed;
@@ -128,8 +137,8 @@ Replay loadReplay(const std::filesystem::path &path) {
     }
     for (auto it = root.begin(); it != root.end(); ++it) {
         const std::string key = it.key();
-        if (key != "schema" && key != "build" && key != "scenario" && key != "seed" && key != "ai" &&
-            key != "commands") {
+        if (key != "schema" && key != "version" && key != "build" && key != "scenario" && key != "seed" &&
+            key != "ai" && key != "commands") {
             fail(file, "unknown field " + key);
         }
     }
@@ -140,6 +149,13 @@ Replay loadReplay(const std::filesystem::path &path) {
         fail(file, "missing build, scenario, seed, ai, or commands");
     }
     Replay replay;
+    replay.version.clear();
+    if (root.contains("version")) {
+        if (!root["version"].is_string()) {
+            fail(file, "version must be a string");
+        }
+        replay.version = root["version"].get<std::string>();
+    }
     replay.build = root["build"].get<std::string>();
     replay.scenario = root["scenario"].get<std::string>();
     replay.seed = root["seed"].get<std::uint64_t>();

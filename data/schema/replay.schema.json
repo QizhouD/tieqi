@@ -6,6 +6,7 @@
   "required": ["schema", "build", "scenario", "seed", "ai", "commands"],
   "properties": {
     "schema": { "const": 1 },
+    "version": { "type": "string", "minLength": 1 },
     "build": { "type": "string", "minLength": 1 },
     "scenario": { "type": "string", "minLength": 1 },
     "seed": { "type": "integer", "minimum": 0 },
