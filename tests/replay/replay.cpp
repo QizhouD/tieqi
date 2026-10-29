@@ -6,6 +6,7 @@
 #include <doctest/doctest.h>
 
 #include <filesystem>
+#include <fstream>
 
 using namespace tq;
 
@@ -100,4 +101,28 @@ TEST_CASE("a scripted replay round-trips to the same result") {
     for (std::size_t i = 0; i < live.log.size(); ++i) {
         CHECK(sameEvent(replayed.log[i], live.log[i]));
     }
+}
+
+TEST_CASE("replays carry the game version and older ones still load") {
+    CHECK(gameVersion() == TQ_PROJECT_VERSION);
+    Replay replay;
+    CHECK(replay.version == gameVersion());
+    replay.build = buildId();
+    replay.scenario = "byeokjegwan";
+    const std::filesystem::path path = std::filesystem::temp_directory_path() / "tieqi-replay-version.json";
+    saveReplay(path, replay);
+    CHECK(loadReplay(path).version == gameVersion());
+
+    {
+        std::ofstream out(path);
+        out << R"({"schema": 1, "build": "x", "scenario": "byeokjegwan", "seed": 1, "ai": true, "commands": []})";
+    }
+    CHECK(loadReplay(path).version.empty());
+    {
+        std::ofstream out(path);
+        out << R"({"schema": 1, "version": 3, "build": "x", "scenario": "byeokjegwan", "seed": 1, "ai": true,
+                   "commands": []})";
+    }
+    CHECK_THROWS_AS(loadReplay(path), DataError);
+    std::filesystem::remove(path);
 }

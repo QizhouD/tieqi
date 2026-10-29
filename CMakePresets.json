@@ -32,7 +32,9 @@
                 "CMAKE_BUILD_TYPE": "Release",
                 "TQ_DEV_TOOLS": "OFF",
                 "TQ_BUILD_TESTS": "OFF",
-                "TQ_WARNINGS_AS_ERRORS": "OFF"
+                "TQ_WARNINGS_AS_ERRORS": "OFF",
+                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded",
+                "SFML_USE_STATIC_STD_LIBS": "ON"
             }
         },
         {

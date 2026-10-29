@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(tieqi LANGUAGES CXX)
+project(tieqi VERSION 0.1.0 LANGUAGES CXX)
 
 option(TQ_DEV_TOOLS "Build the ImGui dev tools" OFF)
 option(TQ_BUILD_TESTS "Build tests" ON)
@@ -39,7 +39,7 @@ add_library(tq_data STATIC
     src/data/Load.cpp
     src/data/Strings.cpp
     src/data/Replay.cpp)
-target_compile_definitions(tq_data PRIVATE "TQ_BUILD_ID=\"${TQ_BUILD_ID}\"")
+target_compile_definitions(tq_data PRIVATE "TQ_BUILD_ID=\"${TQ_BUILD_ID}\"" "TQ_VERSION=\"${PROJECT_VERSION}\"")
 target_link_libraries(tq_data PUBLIC tq_core nlohmann_json::nlohmann_json)
 tq_apply_warnings(tq_data)
 
@@ -82,6 +82,16 @@ if(TQ_DEV_TOOLS)
     target_link_libraries(tieqi PRIVATE ImGui-SFML::ImGui-SFML)
 endif()
 tq_apply_warnings(tieqi)
+
+# The Windows demo zip (R1). Packaging stays local; nothing is published.
+if(WIN32)
+    add_custom_target(package_demo
+        COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_SOURCE_DIR} -DBINARY_DIR=${CMAKE_BINARY_DIR}
+                -DEXECUTABLE=$<TARGET_FILE:tieqi> -DVERSION=${PROJECT_VERSION} -DDEV_TOOLS=${TQ_DEV_TOOLS}
+                -P ${CMAKE_SOURCE_DIR}/cmake/PackageDemo.cmake
+        DEPENDS tieqi
+        VERBATIM)
+endif()
 
 add_executable(tq_headless
     tools/headless/main.cpp
@@ -126,7 +136,8 @@ if(TQ_BUILD_TESTS)
         tools/headless/Run.cpp)
     target_link_libraries(tq_tests PRIVATE tq_core tq_data doctest::doctest SFML::Graphics)
     file(TO_CMAKE_PATH "${CMAKE_SOURCE_DIR}" TQ_SOURCE_DIR_FWD)
-    target_compile_definitions(tq_tests PRIVATE "TQ_SOURCE_DIR=\"${TQ_SOURCE_DIR_FWD}\"")
+    target_compile_definitions(tq_tests PRIVATE "TQ_SOURCE_DIR=\"${TQ_SOURCE_DIR_FWD}\""
+                                                "TQ_PROJECT_VERSION=\"${PROJECT_VERSION}\"")
     tq_apply_warnings(tq_tests)
     add_test(NAME tq_tests COMMAND tq_tests --test-case-exclude=*slow*)
     add_test(NAME tq_tests_slow COMMAND tq_tests --test-case=*slow*)
