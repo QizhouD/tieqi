@@ -77,7 +77,7 @@ std::optional<OrderKey> orderKeyFromKeyboard(sf::Keyboard::Key key) {
 } // namespace
 
 App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::path executableDir)
-    : root_(std::move(root)) {
+    : root_(std::move(root)), settingsFile_(executableDir / "settings.txt") {
     std::uint64_t seed = options.seed;
     bool ai = true;
     if (!options.replay.empty()) {
@@ -108,7 +108,7 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
     audio_.setMasterVolume(70.f);
 
     SaveData saved;
-    if (saved.load(executableDir / "settings.txt")) {
+    if (saved.load(settingsFile_)) {
         language_ = saved.language;
         reducedMotion_ = saved.reducedMotion;
         audio_.setMasterVolume(saved.volume);
@@ -143,6 +143,32 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
     dev_.attach(window_.native());
     window_.setEventHook([this](const sf::Event &event) { return dev_.handle(window_.native(), event); });
 #endif
+}
+
+void App::setLanguage(const std::string &language) {
+    if (language == language_) {
+        return;
+    }
+    language_ = language;
+    window_.setTitle(utf8(active().text("game.title")));
+    // Place names on the base map are baked into its texture, so the map is drawn again in the new language. Log
+    // entries already written keep the language they were written in.
+    const TextStyle title = textStyle(active().language, TextRole::Title);
+    mapView_.build(data_.scenario, active(), fontFor(active(), title.face), title.bold);
+    saveSettings();
+}
+
+// Scripted runs never touch the player's settings file.
+void App::saveSettings() const {
+    if (window_.scripted()) {
+        return;
+    }
+    SaveData saved;
+    saved.language = language_;
+    saved.volume = audio_.masterVolume();
+    saved.speed = speed_;
+    saved.reducedMotion = reducedMotion_;
+    saved.save(settingsFile_);
 }
 
 const StringTable &App::active() const {
@@ -271,6 +297,12 @@ void App::drawFrame() {
     frame.originX = pixels.originX;
     frame.originY = pixels.originY;
     frame.scale = pixels.scale;
+    std::vector<LanguageChoice> languages;
+    for (const StringTable *table : {&data_.zhHant, &en_, &ko_}) {
+        languages.push_back({table->language, table->text("lang.self"), &fontFor(*table, FontFace::Body), false});
+    }
+    frame.languages = &languages;
+    frame.language = language_;
     hud_.draw(window_.target(), frame);
 }
 
@@ -309,6 +341,21 @@ void App::applyHud(HudAction action) {
     }
     if (action == HudAction::Restart) {
         restart();
+        return;
+    }
+    if (action == HudAction::ToggleSettings) {
+        hud_.toggleSettings();
+        return;
+    }
+    if (action == HudAction::Language0 || action == HudAction::Language1 || action == HudAction::Language2) {
+        const StringTable *tables[] = {&data_.zhHant, &en_, &ko_};
+        const std::size_t index = action == HudAction::Language0 ? 0 : action == HudAction::Language1 ? 1 : 2;
+        setLanguage(tables[index]->language);
+        return;
+    }
+    if (action == HudAction::ToggleReducedMotion) {
+        reducedMotion_ = !reducedMotion_;
+        saveSettings();
         return;
     }
     if (action == HudAction::Speed0 || action == HudAction::Speed1 || action == HudAction::Speed2) {

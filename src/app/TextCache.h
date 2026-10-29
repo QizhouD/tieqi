@@ -5,6 +5,7 @@
 #include <SFML/Graphics/RenderStates.hpp>
 #include <SFML/System/Vector2.hpp>
 
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -31,6 +32,11 @@ void drawOutlinedText(sf::RenderTarget &target, const sf::Font &font, unsigned s
 
 std::vector<std::string> wrapText(const sf::Font &font, std::string_view value, unsigned size, float maxWidth,
                                   bool bold);
+
+// Width of `code` after `previous`; hasPrevious is false at the start of a line.
+using Advance = std::function<float(char32_t previous, bool hasPrevious, char32_t code)>;
+// The line-breaking rule behind wrapText with the glyph metrics passed in, so it can run without a font.
+std::vector<std::string> wrapWith(std::string_view value, float maxWidth, const Advance &advance);
 
 void clearTextCache();
 

@@ -269,6 +269,13 @@
     "ui.stat.jp_broken": "日軍崩潰",
     "ui.stat.best_impact": "最大衝擊",
     "ui.stat.teams": "{n} 隊",
+    "ui.settings": "設定",
+    "ui.language": "語言",
+    "ui.reduced_motion": "減少動態",
+    "ui.on": "開",
+    "ui.off": "關",
+    "ui.close": "關閉",
+    "lang.self": "繁體中文",
 
     "grade.decisive": "大勝",
     "grade.minor": "小勝",

@@ -113,6 +113,8 @@ if(TQ_BUILD_TESTS)
         tests/app/effects.cpp
         tests/app/glyphs.cpp
         tests/app/dev.cpp
+        tests/app/l10n.cpp
+        src/app/TextCache.cpp
         src/app/dev/Intent.cpp
         src/app/Launch.cpp
         src/app/Orders.cpp

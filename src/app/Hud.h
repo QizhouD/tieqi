@@ -8,6 +8,7 @@
 
 #include <optional>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -26,7 +27,20 @@ enum class HudAction : std::uint8_t {
     Split,
     Join,
     Cancel,
-    ConfirmAttack
+    ConfirmAttack,
+    ToggleSettings,
+    Language0,
+    Language1,
+    Language2,
+    ToggleReducedMotion
+};
+
+// One entry of the settings card. Each label is drawn in its own language's font.
+struct LanguageChoice {
+    std::string code;
+    std::string label;
+    const sf::Font *font = nullptr;
+    bool bold = false;
 };
 
 struct HudFrame {
@@ -48,6 +62,8 @@ struct HudFrame {
     float originX = 0.f;
     float originY = 0.f;
     float scale = 1.f;
+    const std::vector<LanguageChoice> *languages = nullptr;
+    std::string_view language;
 };
 
 class Hud {
@@ -63,6 +79,8 @@ class Hud {
     void draw(sf::RenderTarget &target, const HudFrame &frame);
 
     const Journal &journal() const { return journal_; }
+    void toggleSettings() { settingsOpen_ = !settingsOpen_; }
+    bool settingsOpen() const { return settingsOpen_; }
 
   private:
     struct Hit {
@@ -76,6 +94,7 @@ class Hud {
     Journal journal_;
     std::vector<Hit> hits_;
     std::optional<HudAction> armed_;
+    bool settingsOpen_ = false;
     int shownBanner_ = 0;
     float bannerStart_ = 0.f;
 };

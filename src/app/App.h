@@ -35,6 +35,8 @@ class App {
     void drawFrame();
     void handleInput();
     void applyHud(HudAction action);
+    void setLanguage(const std::string &language);
+    void saveSettings() const;
     void restart();
     void issue(Command command);
     void queueSfx();
@@ -48,6 +50,7 @@ class App {
 #endif
 
     std::filesystem::path root_;
+    std::filesystem::path settingsFile_;
     GameData data_;
     StringTable en_;
     StringTable ko_;

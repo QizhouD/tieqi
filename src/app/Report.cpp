@@ -58,6 +58,21 @@ std::vector<std::string> codepoints(std::string_view text) {
     return out;
 }
 
+// Names separated by '|' are taken whole; otherwise every codepoint is one name.
+std::vector<std::string> shichenNames(std::string_view text) {
+    if (text.find('|') == std::string_view::npos) {
+        return codepoints(text);
+    }
+    std::vector<std::string> out;
+    std::size_t start = 0;
+    while (start <= text.size()) {
+        const std::size_t bar = std::min(text.find('|', start), text.size());
+        out.emplace_back(text.substr(start, bar - start));
+        start = bar + 1;
+    }
+    return out;
+}
+
 const Unit *findUnit(const Battle &battle, UnitId id) {
     if (id >= battle.units().size()) {
         return nullptr;
@@ -381,7 +396,7 @@ std::string formatShichen(const StringTable &strings, std::string_view startCloc
     const float turned = std::fmod(hour + 1.f, 24.f);
     const float wrapped = turned < 0.f ? turned + 24.f : turned;
     const int index = static_cast<int>(std::floor(wrapped / 2.f));
-    const auto names = codepoints(strings.text("ui.shichen_names"));
+    const auto names = shichenNames(strings.text("ui.shichen_names"));
     const std::string name = names.empty() ? std::string{} : names[static_cast<std::size_t>(index) % names.size()];
     const bool early = std::fmod(wrapped, 2.f) < 1.f;
     return name + strings.text(early ? "ui.shichen_early" : "ui.shichen_late");

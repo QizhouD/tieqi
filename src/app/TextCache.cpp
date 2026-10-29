@@ -8,6 +8,7 @@
 #include <SFML/System/String.hpp>
 
 #include <cmath>
+#include <cstddef>
 #include <unordered_map>
 #include <utility>
 
@@ -171,40 +172,138 @@ float advanceOf(const sf::Font &font, unsigned size, bool bold, char32_t previou
     return width;
 }
 
-std::vector<std::string> wrapOnce(const sf::Font &font, std::string_view value, unsigned size, float maxWidth,
-                                  bool bold) {
-    std::vector<std::string> lines;
-    std::string line;
-    float cursor = 0.f;
-    char32_t previous = 0;
-    bool hasPrevious = false;
-    std::size_t index = 0;
+// Han, kana, and CJK punctuation may break on either side. Hangul and Latin break only at spaces, so Korean and
+// English wrap by word.
+bool breaksAround(char32_t code) {
+    return (code >= 0x2E80 && code <= 0x303F) || (code >= 0x3040 && code <= 0x30FF) || (code >= 0x3400 && code <= 0x4DBF) ||
+           (code >= 0x4E00 && code <= 0x9FFF) || (code >= 0xF900 && code <= 0xFAFF) || (code >= 0xFF00 && code <= 0xFFEF);
+}
+
+// Closing punctuation never starts a line.
+bool closing(char32_t code) {
+    switch (code) {
+    case U'\u3001':
+    case U'\u3002':
+    case U'\uFF0C':
+    case U'\uFF0E':
+    case U'\uFF1A':
+    case U'\uFF1B':
+    case U'\uFF01':
+    case U'\uFF1F':
+    case U'\uFF09':
+    case U'\u300D':
+    case U'\u300F':
+    case U'\u3009':
+    case U'\u300B':
+    case U'\u3011':
+    case U'\u201D':
+    case U'\u2019':
+    case U',':
+    case U'.':
+    case U';':
+    case U':':
+    case U'!':
+    case U'?':
+    case U')':
+        return true;
+    default:
+        return false;
+    }
+}
+
+struct Glyph {
     char32_t code = 0;
     std::string bytes;
-    while (nextCodepoint(value, index, code, bytes)) {
-        if (bytes == "\n") {
-            lines.push_back(line);
+};
+
+std::string joinGlyphs(const std::vector<Glyph> &glyphs, std::size_t from, std::size_t to) {
+    std::string out;
+    for (std::size_t index = from; index < to; ++index) {
+        out += glyphs[index].bytes;
+    }
+    return out;
+}
+
+} // namespace
+
+std::vector<std::string> wrapWith(std::string_view value, float maxWidth, const Advance &advance) {
+    std::vector<std::string> lines;
+    std::vector<Glyph> line;
+    float cursor = 0.f;
+    // A break may fall before line[breakAt]; 0 means no break yet.
+    std::size_t breakAt = 0;
+    const auto measureLine = [&]() {
+        float width = 0.f;
+        for (std::size_t index = 0; index < line.size(); ++index) {
+            width += advance(index == 0 ? 0 : line[index - 1].code, index > 0, line[index].code);
+        }
+        return width;
+    };
+    const auto flush = [&](std::size_t cut) {
+        std::size_t head = cut;
+        while (head > 0 && line[head - 1].code == U' ') {
+            head -= 1;
+        }
+        lines.push_back(joinGlyphs(line, 0, head));
+        std::size_t tail = cut;
+        while (tail < line.size() && line[tail].code == U' ') {
+            tail += 1;
+        }
+        line.erase(line.begin(), line.begin() + static_cast<std::ptrdiff_t>(tail));
+        breakAt = 0;
+        cursor = measureLine();
+    };
+    std::size_t index = 0;
+    Glyph next;
+    while (nextCodepoint(value, index, next.code, next.bytes)) {
+        if (next.bytes == "\n") {
+            lines.push_back(joinGlyphs(line, 0, line.size()));
             line.clear();
             cursor = 0.f;
-            hasPrevious = false;
+            breakAt = 0;
             continue;
         }
-        const float added = advanceOf(font, size, bold, previous, hasPrevious, code);
-        if (!line.empty() && cursor + added > maxWidth) {
-            lines.push_back(line);
-            line = bytes;
-            cursor = advanceOf(font, size, bold, 0, false, code);
-        } else {
-            line += bytes;
-            cursor += added;
+        if (line.empty() && next.code == U' ' && !lines.empty()) {
+            continue;
         }
-        previous = code;
-        hasPrevious = true;
+        if (!line.empty()) {
+            const char32_t previous = line.back().code;
+            const bool afterSpace = previous == U' ' && next.code != U' ';
+            const bool cjk = (breaksAround(previous) || breaksAround(next.code)) && !closing(next.code);
+            if (afterSpace || cjk) {
+                breakAt = line.size();
+            }
+        }
+        const float added = advance(line.empty() ? 0 : line.back().code, !line.empty(), next.code);
+        if (!line.empty() && cursor + added > maxWidth) {
+            if (breakAt > 0) {
+                flush(breakAt);
+            } else {
+                flush(line.size());
+            }
+            if (line.empty() && next.code == U' ') {
+                continue;
+            }
+            cursor += advance(line.empty() ? 0 : line.back().code, !line.empty(), next.code);
+            line.push_back(next);
+            continue;
+        }
+        cursor += added;
+        line.push_back(next);
     }
     if (!line.empty() || lines.empty()) {
-        lines.push_back(line);
+        lines.push_back(joinGlyphs(line, 0, line.size()));
     }
     return lines;
+}
+
+namespace {
+
+std::vector<std::string> wrapOnce(const sf::Font &font, std::string_view value, unsigned size, float maxWidth,
+                                  bool bold) {
+    return wrapWith(value, maxWidth, [&](char32_t previous, bool hasPrevious, char32_t code) {
+        return advanceOf(font, size, bold, previous, hasPrevious, code);
+    });
 }
 
 } // namespace
