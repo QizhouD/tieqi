@@ -86,7 +86,8 @@ TEST_CASE("every string has a glyph in its role font") {
             const StringTable &owner = ownerOf(*table, key);
             const TextStyle style = textStyle(owner.language, roleFor(key));
             const std::string &file = style.face == FontFace::Brush ? owner.fontBrush : owner.fontBody;
-            const sf::Font &font = fontFor(fonts, root / "assets" / "fonts" / file);
+            const std::filesystem::path fontPath = root / "assets" / "fonts" / file;
+            const sf::Font &font = fontFor(fonts, fontPath);
             const sf::String text = sf::String::fromUtf8(value.begin(), value.end());
             for (std::size_t index = 0; index < text.getSize(); ++index) {
                 const char32_t code = text[index];

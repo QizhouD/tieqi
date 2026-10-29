@@ -20,3 +20,5 @@ ctest --preset dev
 ## 目录
 src/core 规则核心 · src/data 数据加载 · src/app 表现层 · tools/headless 无头对战
 data 兵种与场景 · tests 测试 · reference 原型与参考资料
+
+连续开发的流程和停止条件见 docs/AGENT_LOOP.md
