@@ -267,13 +267,14 @@ void App::drawFrame() {
     window_.beginMap();
     const TextStyle floater = textStyle(active().language, TextRole::Floater);
     const float alpha = std::clamp(accumulator_, 0.f, 1.f);
-    const bool soldiers = camera_.zoom().level >= kSoldierZoom;
+    const bool soldiers = nearView(camera_.zoom());
     unitView_.draw(
         window_, *battle_, active(), fontFor(active(), glyph.face), fontFor(active(), body.face), soundTime_, alpha,
         orders_,
         [&] {
             if (soldiers) {
-                soldierView_.draw(window_.target(), *battle_, soldierAtlas_, alpha, animTime_);
+                soldierView_.draw(window_.target(), *battle_, soldierAtlas_, alpha, animTime_, active(),
+                                  fontFor(active(), glyph.face));
             }
             effects_.drawDust(window_.target());
         },

@@ -220,10 +220,10 @@ void appendArc(sf::VertexArray &tris, Vec2 center, float radius, float fraction,
     appendStrip(tris, pts, thickness, color);
 }
 
-void appendBlock(sf::VertexArray &tris, const Unit &unit, float alpha, float sc, bool soldiers) {
+void appendBlock(sf::VertexArray &tris, const Unit &unit, float alpha, float sc) {
     const Pose pose = interpolatedPose(unit, alpha);
     const bool routing = !isFighting(unit.state);
-    const float cover = (routing ? 0.45f : 1.f) * (soldiers ? 0.5f : 1.f);
+    const float cover = routing ? 0.45f : 1.f;
     const float halfDepth = unit.depth * 0.5f;
     const float halfFront = unit.frontage * 0.5f;
     const sf::Color fill =
@@ -231,7 +231,7 @@ void appendBlock(sf::VertexArray &tris, const Unit &unit, float alpha, float sc,
     appendLocalRect(tris, pose.pos, pose.facing, -halfDepth, -halfFront, unit.depth, unit.frontage, fill);
 
     const int columns = blockColumns(unit.frontage);
-    const int count = soldiers ? 0 : blockDots(unit.frontage, unit.depth, unit.men, unit.maxMen);
+    const int count = blockDots(unit.frontage, unit.depth, unit.men, unit.maxMen);
     const sf::Color dot =
         unit.side == Side::Ming ? fade(rgba(128, 34, 24, 0.78f), cover) : fade(rgba(28, 36, 58, 0.82f), cover);
     for (int i = 0; i < count; ++i) {
@@ -257,7 +257,7 @@ void appendBlock(sf::VertexArray &tris, const Unit &unit, float alpha, float sc,
                      rotate(pose.pos, pose.facing, {halfDepth, halfFront})},
                     3.f, edge);
     }
-    if (unit.charging && !soldiers) {
+    if (unit.charging) {
         const sf::Color ink = rgba(42, 34, 27, 0.38f);
         for (int lane = -2; lane <= 2; ++lane) {
             const float across = static_cast<float>(lane) * halfFront / 2.5f;
@@ -282,9 +282,9 @@ void drawGlyph(sf::RenderTarget &target, const sf::Transform &xform, const sf::F
 }
 
 void drawChit(sf::RenderTarget &target, const Unit &unit, const UnitType &type, const StringTable &strings,
-              const sf::Font &font, float timeSec, float alpha, float sc, bool selected, bool hover) {
+              const sf::Font &font, float timeSec, float alpha, float sc, bool selected, bool hover, float chitScale) {
     const Pose pose = interpolatedPose(unit, alpha);
-    const float pixels = chitPixels(sc, unit.maxMen, type.men);
+    const float pixels = chitPixels(sc, unit.maxMen, type.men) * chitScale;
     const float s = pixels / sc;
     const float h = s * 0.5f;
     const float brokenSec =
@@ -556,10 +556,10 @@ void UnitView::draw(Window &window, const Battle &battle, const StringTable &str
     const float sc = std::max(window.pixelsPerMeter(), 1e-3f);
     sf::VertexArray blocks(sf::PrimitiveType::Triangles);
     for (const Unit &unit : battle.units()) {
-        if (unit.state == UnitState::Gone) {
+        if (unit.state == UnitState::Gone || soldiers) {
             continue;
         }
-        appendBlock(blocks, unit, alpha, sc, soldiers);
+        appendBlock(blocks, unit, alpha, sc);
     }
     window.target().draw(blocks);
     if (afterBlocks) {
@@ -573,7 +573,7 @@ void UnitView::draw(Window &window, const Battle &battle, const StringTable &str
                 continue;
             }
             drawChit(window.target(), unit, battle.typeOf(unit), strings, glyphFont, timeSec, alpha, sc,
-                     chosen(orders.selected, unit.id), outlined(orders, unit.id));
+                     chosen(orders.selected, unit.id), outlined(orders, unit.id), soldiers ? kNearChitScale : 1.f);
         }
     };
     drawSide(Side::Jp);

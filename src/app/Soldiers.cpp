@@ -128,6 +128,33 @@ Vec2 soldierSlot(const SoldierGrid &grid, int index) {
             -frontage * 0.5f + grid.fileSpacing * (static_cast<float>(file) + 0.5f)};
 }
 
+BannerKind bannerKind(const Battle &battle, const Unit &unit) {
+    if (!isFighting(unit.state)) {
+        return BannerKind::None;
+    }
+    if (unit.side == Side::Ming) {
+        return BannerKind::Ming;
+    }
+    bool vanguard = unit.vanguard;
+    if (!vanguard && unit.origin != kNoUnit && unit.origin < battle.units().size()) {
+        vanguard = battle.unit(unit.origin).vanguard;
+    }
+    return vanguard ? BannerKind::JpVanguard : BannerKind::JpMain;
+}
+
+Banner unitBanner(const Battle &battle, const Unit &unit, float alpha, float animTime) {
+    Banner banner;
+    banner.kind = bannerKind(battle, unit);
+    if (banner.kind == BannerKind::None) {
+        return banner;
+    }
+    const Pose pose = interpolatedPose(unit, alpha);
+    banner.base = rotated(pose.pos, pose.facing, {-unit.depth * 0.3f, 0.f});
+    const float pace = unit.charging ? 7.f : unit.speed > 0.05f ? 4.5f : 2.5f;
+    banner.sway = std::sin(animTime * pace + static_cast<float>(unit.id) * 1.7f) * (unit.charging ? 1.2f : 0.7f);
+    return banner;
+}
+
 void layoutSoldiers(const Unit &unit, const UnitType &type, float alpha, float animTime, std::vector<Soldier> &out) {
     if (unit.state == UnitState::Gone) {
         return;
