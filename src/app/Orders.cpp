@@ -80,9 +80,9 @@ void updateHover(OrderState &state, const Battle &battle, float worldX, float wo
 }
 
 void boxSelect(OrderState &state, const Battle &battle, float x0, float y0, float x1, float y1, bool shift, float mapW,
-               float mapH, float alpha) {
-    const Vec2 start = worldFromLogical(x0, y0, mapW, mapH);
-    const Vec2 end = worldFromLogical(x1, y1, mapW, mapH);
+               float mapH, float alpha, const Zoom &zoom) {
+    const Vec2 start = worldFromLogical(x0, y0, mapW, mapH, zoom);
+    const Vec2 end = worldFromLogical(x1, y1, mapW, mapH, zoom);
     const float minX = std::min(start.x, end.x);
     const float maxX = std::max(start.x, end.x);
     const float minY = std::min(start.y, end.y);
@@ -217,11 +217,14 @@ UnitId pickUnit(const Battle &battle, float worldX, float worldY, float pixelsPe
 }
 
 std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const PointerSample &sample, float mapW,
-                                  float mapH, float alpha) {
+                                  float mapH, float alpha, const Zoom &zoom) {
     std::vector<Command> issued;
+    if (sample.type == PointerSample::Type::Wheel) {
+        return issued;
+    }
     const bool inside = insideBattlefield(sample.x, sample.y);
-    const float scale = mapCamera(battlefieldRect(), mapW, mapH).scale;
-    const Vec2 world = worldFromLogical(sample.x, sample.y, mapW, mapH);
+    const float scale = mapCamera(battlefieldRect(), mapW, mapH, zoom).scale;
+    const Vec2 world = worldFromLogical(sample.x, sample.y, mapW, mapH, zoom);
 
     if (sample.type == PointerSample::Type::Move) {
         if (sample.device == PointerSample::Device::Mouse) {
@@ -237,7 +240,7 @@ std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const
             const float dx = sample.x - state.pressX;
             const float dy = sample.y - state.pressY;
             if (!state.box && std::hypot(dx, dy) > kDragThresholdPx) {
-                const Vec2 down = worldFromLogical(state.pressX, state.pressY, mapW, mapH);
+                const Vec2 down = worldFromLogical(state.pressX, state.pressY, mapW, mapH, zoom);
                 if (pickUnit(battle, down.x, down.y, scale, alpha) == kNoUnit) {
                     state.box = true;
                     state.boxX0 = state.pressX;
@@ -282,7 +285,7 @@ std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const
         return issued;
     }
     if (wasBox) {
-        boxSelect(state, battle, boxX0, boxY0, boxX1, boxY1, shift, mapW, mapH, alpha);
+        boxSelect(state, battle, boxX0, boxY0, boxX1, boxY1, shift, mapW, mapH, alpha, zoom);
         return issued;
     }
     if (!inside) {
@@ -370,7 +373,8 @@ void noteEvents(OrderState &state, const Battle &battle, std::span<const Event> 
 
 bool isPointerAction(std::string_view action) {
     return action == "click" || action == "rclick" || action == "shiftclick" || action == "touchclick" ||
-           action == "move" || action == "drag" || action == "shiftdrag";
+           action == "move" || action == "drag" || action == "shiftdrag" || action == "wheel" || action == "mdrag" ||
+           action == "rdrag";
 }
 
 std::vector<PointerSample> samplesForScript(const ScriptEvent &event) {
@@ -401,13 +405,41 @@ std::vector<PointerSample> samplesForScript(const ScriptEvent &event) {
         }
         return {sampleAt(PointerSample::Type::Move, PointerSample::Device::Mouse, kPointerLeft, false, x, y)};
     }
-    if (event.action == "drag" || event.action == "shiftdrag") {
+    if (event.action == "wheel") {
+        float x = 0.f;
+        float y = 0.f;
+        float notches = 0.f;
+        if (!(args >> x >> y >> notches)) {
+            return {};
+        }
+        PointerSample sample = sampleAt(PointerSample::Type::Wheel, PointerSample::Device::Mouse, kPointerLeft, false,
+                                        x, y);
+        sample.wheel = notches;
+        return {sampleAt(PointerSample::Type::Move, PointerSample::Device::Mouse, kPointerLeft, false, x, y), sample};
+    }
+    if (event.action == "drag" || event.action == "shiftdrag" || event.action == "mdrag" || event.action == "rdrag") {
         float x0 = 0.f;
         float y0 = 0.f;
         float x1 = 0.f;
         float y1 = 0.f;
         if (!(args >> x0 >> y0 >> x1 >> y1)) {
             return {};
+        }
+        if (event.action == "mdrag" || event.action == "rdrag") {
+            // Pans move in steps so the camera sees the drag pass its threshold.
+            const int button = event.action == "mdrag" ? kPointerMiddle : kPointerRight;
+            std::vector<PointerSample> samples;
+            samples.push_back(sampleAt(PointerSample::Type::Move, PointerSample::Device::Mouse, kPointerLeft, false,
+                                       x0, y0));
+            samples.push_back(sampleAt(PointerSample::Type::Down, PointerSample::Device::Mouse, button, false, x0, y0));
+            constexpr int kSteps = 8;
+            for (int step = 1; step <= kSteps; ++step) {
+                const float t = static_cast<float>(step) / static_cast<float>(kSteps);
+                samples.push_back(sampleAt(PointerSample::Type::Move, PointerSample::Device::Mouse, kPointerLeft,
+                                           false, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t));
+            }
+            samples.push_back(sampleAt(PointerSample::Type::Up, PointerSample::Device::Mouse, button, false, x1, y1));
+            return samples;
         }
         const bool shift = event.action == "shiftdrag";
         return {sampleAt(PointerSample::Type::Down, PointerSample::Device::Mouse, kPointerLeft, shift, x0, y0),

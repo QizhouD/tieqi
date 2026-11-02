@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <optional>
 
 namespace tq {
 
@@ -20,7 +21,7 @@ inline constexpr float kBattlefieldW = 1216.f;
 inline constexpr float kBattlefieldH = 932.f;
 inline constexpr float kDesktopFit = 0.9f;
 inline constexpr float kMapMarginPx = 10.f;
-inline constexpr float kMapPixelsPerMeter = 1.5f;
+inline constexpr float kMapPixelsPerMeter = 3.f;
 
 // Normalized viewport. A window with a different aspect gets black bars, and the picture is not stretched.
 struct Viewport {
@@ -107,6 +108,15 @@ inline float mapScale(float pixelW, float pixelH, float mapW, float mapH, float 
     return std::min((pixelW - 2.f * margin) / mapW, (pixelH - 2.f * margin) / mapH);
 }
 
+inline constexpr float kMinZoom = 1.f;
+inline constexpr float kMaxZoom = 4.f;
+
+// Zoom 1 shows the whole map. focus is the world point at the centre of the battlefield; empty means the map centre.
+struct Zoom {
+    float level = kMinZoom;
+    std::optional<Vec2> focus;
+};
+
 // The map is centered in the battlefield. origin is world (0, 0) in logical pixels.
 struct MapCamera {
     float scale = 1.f;
@@ -114,19 +124,67 @@ struct MapCamera {
     float originY = 0.f;
 };
 
-inline MapCamera mapCamera(ScreenRect field, float mapW, float mapH) {
-    const float scale = mapScale(field.w, field.h, mapW, mapH);
-    return {scale, field.x + (field.w - mapW * scale) * 0.5f, field.y + (field.h - mapH * scale) * 0.5f};
+// The focus is clamped so a zoomed view never leaves the map; an axis that fits on screen stays centred.
+inline Vec2 clampFocus(ScreenRect field, float mapW, float mapH, float scale, Vec2 focus) {
+    const auto axis = [](float value, float extent, float screen, float pixels) {
+        if (extent * pixels <= screen) {
+            return extent * 0.5f;
+        }
+        const float half = screen * 0.5f / pixels;
+        return std::clamp(value, half, extent - half);
+    };
+    return {axis(focus.x, mapW, field.w, scale), axis(focus.y, mapH, field.h, scale)};
 }
 
-inline Vec2 worldFromLogical(float x, float y, float mapW, float mapH) {
-    const MapCamera camera = mapCamera(battlefieldRect(), mapW, mapH);
+inline MapCamera mapCamera(ScreenRect field, float mapW, float mapH, const Zoom &zoom = {}) {
+    const float fit = mapScale(field.w, field.h, mapW, mapH);
+    const float level = std::clamp(zoom.level, kMinZoom, kMaxZoom);
+    if (level <= kMinZoom) {
+        return {fit, field.x + (field.w - mapW * fit) * 0.5f, field.y + (field.h - mapH * fit) * 0.5f};
+    }
+    const float scale = fit * level;
+    const Vec2 focus = clampFocus(field, mapW, mapH, scale, zoom.focus.value_or(Vec2{mapW * 0.5f, mapH * 0.5f}));
+    return {scale, field.x + field.w * 0.5f - focus.x * scale, field.y + field.h * 0.5f - focus.y * scale};
+}
+
+inline Vec2 worldFromLogical(float x, float y, float mapW, float mapH, const Zoom &zoom = {}) {
+    const MapCamera camera = mapCamera(battlefieldRect(), mapW, mapH, zoom);
     return {(x - camera.originX) / camera.scale, (y - camera.originY) / camera.scale};
 }
 
-inline Vec2 logicalFromWorld(float x, float y, float mapW, float mapH) {
-    const MapCamera camera = mapCamera(battlefieldRect(), mapW, mapH);
+inline Vec2 logicalFromWorld(float x, float y, float mapW, float mapH, const Zoom &zoom = {}) {
+    const MapCamera camera = mapCamera(battlefieldRect(), mapW, mapH, zoom);
     return {camera.originX + x * camera.scale, camera.originY + y * camera.scale};
+}
+
+// Zooms by factor around a logical pixel, keeping the world point under it in place.
+inline Zoom zoomAround(const Zoom &zoom, float factor, float x, float y, float mapW, float mapH) {
+    const ScreenRect field = battlefieldRect();
+    const Vec2 anchor = worldFromLogical(x, y, mapW, mapH, zoom);
+    Zoom next;
+    next.level = std::clamp(zoom.level * factor, kMinZoom, kMaxZoom);
+    if (next.level <= kMinZoom) {
+        return next;
+    }
+    const float scale = mapScale(field.w, field.h, mapW, mapH) * next.level;
+    const Vec2 focus{anchor.x - (x - (field.x + field.w * 0.5f)) / scale,
+                     anchor.y - (y - (field.y + field.h * 0.5f)) / scale};
+    next.focus = clampFocus(field, mapW, mapH, scale, focus);
+    return next;
+}
+
+// Moves the view by a drag of (dx, dy) logical pixels; the map follows the pointer.
+inline Zoom panBy(const Zoom &zoom, float dx, float dy, float mapW, float mapH) {
+    if (zoom.level <= kMinZoom) {
+        return zoom;
+    }
+    const ScreenRect field = battlefieldRect();
+    const MapCamera camera = mapCamera(field, mapW, mapH, zoom);
+    const Vec2 focus{(field.x + field.w * 0.5f - camera.originX - dx) / camera.scale,
+                     (field.y + field.h * 0.5f - camera.originY - dy) / camera.scale};
+    Zoom next = zoom;
+    next.focus = clampFocus(field, mapW, mapH, camera.scale, focus);
+    return next;
 }
 
 // Window pixels to the 1600x1000 logical pixels. Letterbox bars are removed first.

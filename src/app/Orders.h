@@ -3,6 +3,7 @@
 #include "app/Pieces.h"
 #include "app/Pointer.h"
 #include "app/Script.h"
+#include "app/Viewport.h"
 #include "core/rules/Preview.h"
 #include "core/sim/Battle.h"
 
@@ -84,8 +85,9 @@ inline void toggleRunning(bool &running, const Battle &battle) {
 // Several hits keep the one closest to the pointer. A tie keeps the earlier unit.
 UnitId pickUnit(const Battle &battle, float worldX, float worldY, float pixelsPerMeter, float alpha);
 
+// zoom is the map camera; picking and orders convert the pointer through it.
 std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const PointerSample &sample, float mapW,
-                                  float mapH, float alpha);
+                                  float mapH, float alpha, const Zoom &zoom = {});
 
 OrderEffect applyKey(OrderState &state, const Battle &battle, OrderKey key, const std::vector<float> &speeds);
 

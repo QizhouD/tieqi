@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app/AudioManager.h"
+#include "app/CameraControl.h"
 #include "app/Effects.h"
 #include "app/Hud.h"
 #include "app/Launch.h"
@@ -66,6 +67,7 @@ class App {
     MapView mapView_;
     UnitView unitView_;
     OrderState orders_;
+    CameraControl camera_;
     Hud hud_;
     bool running_ = false;
     std::uint64_t seed_ = 1;

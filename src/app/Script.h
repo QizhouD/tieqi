@@ -9,7 +9,8 @@ namespace tq {
 // Script lines: `<seconds> down|up|press <key>`, `<seconds> shot <file>`, `<seconds> quit`.
 // A line starting with `#` is a comment. `<seconds> resize <width> <height>` captures another window size.
 // Pointer coordinates are logical pixels. click, rclick, shiftclick, touchclick, and move take x y.
-// drag and shiftdrag take x0 y0 x1 y1. click, rclick, and shiftclick first move to that point,
+// drag and shiftdrag take x0 y0 x1 y1. mdrag and rdrag pan the map with the middle or right button and take
+// x0 y0 x1 y1. wheel takes x y notches; positive notches zoom in. click, rclick, and shiftclick first move to that point,
 // so a scripted shot hovers the way a real mouse does. touchclick does not hover and does not move first.
 struct ScriptEvent {
     float time = 0.f;

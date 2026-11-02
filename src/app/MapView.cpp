@@ -441,8 +441,7 @@ void MapView::drawExit(Window &window, float timeSec) const {
 }
 
 void MapView::draw(Window &window, float timeSec, bool exitOpen) const {
-    const ScreenRect field = battlefieldRect();
-    const float sc = mapScale(field.w, field.h, map_.width, map_.height);
+    const float sc = std::max(window.pixelsPerMeter(), 1e-3f);
     sf::RectangleShape ground({map_.width + 18.f, map_.height + 18.f});
     ground.setPosition({-9.f, -9.f});
     ground.setFillColor(sf::Color(0x10, 0x0a, 0x08));
