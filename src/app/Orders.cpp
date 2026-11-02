@@ -135,9 +135,16 @@ void handleClick(OrderState &state, const Battle &battle, Vec2 world, int button
             state.selected = {hit};
         }
         state.pending.reset();
+        state.inspected.reset();
         return;
     }
     if (!orderable(state, battle)) {
+        // With nothing to order, a click inspects an enemy or clears the inspection.
+        if (unit != nullptr && unit->side == Side::Jp) {
+            state.inspected = hit;
+        } else {
+            state.inspected.reset();
+        }
         return;
     }
     if (unit != nullptr && unit->side == Side::Jp) {
@@ -179,6 +186,9 @@ void dropGone(OrderState &state, const Battle &battle) {
     }
     if (state.pending && !aliveUnit(battle, *state.pending)) {
         state.pending.reset();
+    }
+    if (state.inspected && !aliveUnit(battle, *state.inspected)) {
+        state.inspected.reset();
     }
 }
 
@@ -316,6 +326,7 @@ OrderEffect applyKey(OrderState &state, const Battle &battle, OrderKey key, cons
     if (key == OrderKey::Cancel) {
         state.selected.clear();
         state.pending.reset();
+        state.inspected.reset();
         state.box = false;
         state.pressing = false;
         return effect;

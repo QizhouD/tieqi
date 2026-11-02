@@ -5,7 +5,9 @@
 
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
+#include <SFML/Graphics/Texture.hpp>
 
+#include <map>
 #include <optional>
 #include <span>
 #include <string>
@@ -64,6 +66,10 @@ struct HudFrame {
     float scale = 1.f;
     const std::vector<LanguageChoice> *languages = nullptr;
     std::string_view language;
+    // V4 unit card portraits: a finished portrait per unit type id when one exists, otherwise the unit type's
+    // figure from the soldier atlas.
+    const std::map<std::string, const sf::Texture *> *portraits = nullptr;
+    const sf::Texture *soldierAtlas = nullptr;
 };
 
 class Hud {

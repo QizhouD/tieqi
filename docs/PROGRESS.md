@@ -27,8 +27,82 @@
 | V1 | Done | #26 | Zoom and pan: the wheel zooms 1× to 4× around the cursor (×1.25 per notch), middle-drag pans, right-drag pans once zoomed in, Home resets; picking and orders convert through the zoomed camera; scripts gain `wheel`, `mdrag`, `rdrag` | M4 added to the task breakdown. Right-drag pans only above 1× and only after moving more than 6 pixels, so a right click still orders. Zoom 1 uses exactly the previous layout. The zoomed view is clamped to the map; near the map edge the point under the cursor therefore drifts toward the centre. The base map and ground marks are now 3 pixels per metre (was 1.5) with mipmaps, so 4× stays sharp; at 1× the screenshot is the same as before except animated floating text. Rules core unchanged. Full dev build with zero warnings, ctest passing, slow baseline passing. release, seed 1, scripted, 2× to the result: mean 0.4 ms, p95 0.5 ms, max 102.1–109.2 ms; zoomed to 3× for the whole run: mean 0.4 ms, p95 0.5 ms, max 101.3 ms |
 | V2 | Done | #27 | Soldier layer from 2× zoom: one soldier per 10 cavalry or 20 infantry (at most 60 per unit) in ranks inside the formation, losses from the rear; idle, march, charge with dust, engaged front-rank interleave, waver, turn-about on breaking, scattering rout; one atlas, one VertexArray, sorted by y; placeholder atlas drawn in code, replaceable by `assets/textures/soldiers/soldiers.png`; `--dump-atlas` | Rules core unchanged; a test steps 400 ticks with and without laying out soldiers every tick and the state hashes match. Soldiers keep no state; jitter and phase are hashed from unit id and index. Figures are drawn larger than life (a 32-pixel cell spans 9 m) because at true scale a rider is only a few pixels even at 3×. Ming has only cavalry, so the placeholder has no Ming foot figures beyond the general; the Japanese generals are drawn mounted although they are infantry in the rules (presentation only). The middle soldier of a general unit's front rank is the general figure. From 2× the formation dots and charge speed lines are hidden and the block fill is halved; the full counter stays until V3. At 1× the screen is unchanged (about 400 of 1.6 M pixels differ by more than 24, in animated text and wobble; two runs of the same build differ by about 100). Full dev build with zero warnings, ctest passing, slow baseline passing. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.5 ms, max 102.0 ms; 2× for the whole run (the most soldiers on screen) mean 0.4 ms, p95 0.5 ms, max 112.9 ms; 4× mean 0.3–0.4 ms, p95 0.5 ms, max 56.2–98.9 ms |
 | V3 | Done | #28 | Near and far views: below 2× blocks and full counters as before; from 2× soldiers, banners, and a counter at 0.55 size; Ming flags with a character (李 retainers, 明 Liaodong cavalry, 帥 commander, 楊 Yang Yuan), Japanese sashimono with placeholder Tachibana and Kobayakawa crests; picking follows the small counter | Banner characters are new glyph keys `glyph.flag.*` (glyph role, brush font, same in all three languages) and need author review: 李 for the Li family retainers, 明 for the Liaodong cavalry, 帥 for the commander's guard, 楊 for Yang Yuan's units. The crests are placeholders, not researched designs. Broken and routing units drop their banner. In the near view the formation blocks are hidden entirely; the selection frame stays. Rules core unchanged. Full dev build with zero warnings, ctest passing, slow baseline passing, glyph test passing. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.6 ms, max 105.5 ms; 2× (near view, most soldiers and banners on screen) mean 0.4 ms, p95 0.5 ms, max 104.3 ms; 4× mean 0.4 ms, p95 0.5 ms, max 106.6 ms |
+| V4 | Done | #29 | Unit card: portrait box (placeholder figure from the soldier atlas, or `assets/textures/portraits/<type id>.png`) and a description per unit type from `desc.type.<type id>`; with nothing selected, clicking an enemy inspects it read-only | Descriptions written in zh-Hant and en as asked, plus a Korean draft so the Korean card does not fall back to Chinese; all listed for review in the next section. Japanese units cannot be selected, so inspection was added to show their descriptions: a left click on an enemy with nothing selected (which did nothing before) shows its card without order buttons. The card grows with the description; the battle log card gives up the space. Rules core unchanged. Full dev build with zero warnings, ctest passing, slow baseline passing, glyph and slur tests passing. release, seed 1, scripted, 2× to the result, with a unit selected: mean 0.4 ms, p95 0.5 ms, max 99.0 ms; near view for the whole run: mean 0.4 ms, p95 0.5 ms, max 102.9 ms |
 
 The source language check (`tools/check_source_language.py`) scans src, tests, tools, cmake, CMakeLists.txt, .github/workflows, and .gitignore. tools/parity/anchors.json holds Chinese snippets used to match the prototype and is excluded; node_modules and tools/parity/work are skipped too.
+
+## Stopped here: M4 review and the art direction
+
+M4 (V1–V4) is merged. As agreed, work stops here so the author can judge the effect and choose the art direction
+before the art pipeline, the map, and the effects continue. Everything below is placeholder art drawn in code; the
+rules core is untouched, and the 100-battle baseline and the tick-by-tick comparison are unchanged.
+
+Recording, about 30 seconds of seed 1 with the scripted opening at 2× speed (animated WebP, 960 × 600, 10 frames per
+second; screenshots taken by the game's own script, so the frame rate is lower than live play): far view, wheel to
+3× over the vanguard as the charges land, pan, back out to 1×, select Li Rusong for the unit card, and zoom onto his
+banner.
+
+![M4 recording](images/m4/m4-demo.webp)
+
+Far view, 1× (unchanged from M3):
+
+![far view](images/m4/m4-far-1x.jpg)
+
+Near view, 3×, tick 255 (soldiers, sashimono, small counters):
+
+![near view](images/m4/m4-near-3x.jpg)
+
+Near view, 3×, the opening (Ming banners 帥, 李, 明):
+
+![banners](images/m4/m4-near-banners-3x.jpg)
+
+Near view, 3.8×, a breakthrough and the scattering that follows:
+
+![impact](images/m4/m4-near-impact-4x.jpg)
+
+Unit cards (Traditional Chinese, English inspecting an enemy, Korean):
+
+![card zh](images/m4/v4-card-zh.jpg) ![card en](images/m4/v4-card-en-inspect.jpg) ![card ko](images/m4/v4-card-ko.jpg)
+
+What works, in my view: units now read as bodies of men at 2× and above, losses visibly thin the rear ranks, routing
+men scatter, and the two views switch cleanly; performance stays at p95 0.5 ms.
+
+What the placeholders cannot show yet, and where I suggest the art goes:
+
+- Figures. The code-drawn silhouettes are readable only as colour and posture. Suggested route: commission or
+  generate a single sprite atlas in the fixed layout (`tieqi --dump-atlas` writes the template), in the same gongbi
+  or woodblock register as the base map: flat colour, ink outline, three-quarter view. 32-pixel cells are enough at
+  4×; if figures should carry more detail, the cell size is one constant and can become 48 or 64.
+- Banners and crests. The Tachibana and Kobayakawa crests are stand-ins and need research before they are drawn
+  properly; the Ming characters (帥, 李, 明, 楊) are listed for review below.
+- Portraits. One portrait per unit type at `assets/textures/portraits/<type id>.png` replaces the placeholder with no
+  code change; a 3:4 aspect fits the card.
+- Map. At 3× and 4× the silk base map is sharp but empty; terrain texture, field furrows, and trees are the next
+  visual gain, and the effects (dust, smoke, debris) are sized for the far view and look small up close.
+
+Decisions needed from the author: the art style and source for figures, banners, and portraits (commissioned,
+AI-generated and registered in AI_ASSETS.md, or both); whether figures stay larger than life (a cell spans 9 m now);
+and whether the near view threshold of 2× feels right.
+
+## Unit descriptions and banner characters awaiting author review (V4, V3)
+
+All entries below are **awaiting author review**. The brief asked for Traditional Chinese and English descriptions; a Korean draft was added too, because the en and ko tables must own every zh-Hant key and a Korean card should not fall back to Chinese. Wording aims to be neutral and dignified for both sides; historical claims are limited to the common account (Li Rusong retook Pyongyang in the first month of 1593 and met the Japanese army at Byeokjegwan; Tachibana Muneshige led the vanguard; Kobayakawa Takakage directed the main body). Banner characters are the same in all three languages, like counter glyphs.
+
+| Key | zh-Hant | en | ko |
+| --- | --- | --- | --- |
+| `desc.type.jiading` | 遼東將門以私財蓄養的親隨騎兵，李成梁、李如松父子倚為骨幹。多披布面甲，攜三眼銃、弓與腰刀，衝鋒接敵前先放一輪銃。衝擊力與士氣冠於全軍；正面撞上整齊的槍陣仍會受挫，每次衝鋒後須重整。 | Household cavalry kept at the Liaodong commanders' own expense; Li Chengliang and his son Li Rusong relied on them as the core of their forces. Most wore brigandine and carried three-eyed guns, bows, and sabres, firing a volley just before contact. The hardest-hitting and steadiest troops in the army, yet a charge into a steady pike front still fails, and they must re-form after every charge. | 요동 무장 가문이 사재로 양성한 가정 기병으로, 이성량·이여송 부자가 핵심 전력으로 삼았다. 대개 포면갑을 입고 삼안총·활·요도를 지녔으며, 적과 부딪치기 직전에 한 차례 총을 쏜다. 전군에서 충격력과 사기가 가장 높지만, 정연한 창진에 정면으로 부딪치면 여전히 꺾이고, 돌격할 때마다 재정비가 필요하다. |
+| `desc.type.kobayakawa` | 小早川隆景及其旗本，統率日軍本隊。隆景是久經戰陣的宿將，碧蹄館一戰調度各部合圍明軍。鼓舞範圍廣，撤退階段可下令總攻；遠離戰線時鼓舞無從發揮。 | Kobayakawa Takakage and his hatamoto, commanding the Japanese main body. A veteran general, Takakage directed the converging attack on the Ming at Byeokjegwan. His inspiration reaches far, and in the withdrawal phase he can order a general assault; it does nothing when he is far from the line. | 고바야카와 다카카게와 그 하타모토로, 일본군 본대를 지휘한다. 노련한 장수인 다카카게는 벽제관에서 각 부대를 지휘해 명군을 포위했다. 고무 범위가 넓고 철수 단계에서 총공격을 명할 수 있으나, 전선에서 멀어지면 고무 효과를 발휘하지 못한다. |
+| `desc.type.liaodong` | 明朝遼東鎮的邊軍騎兵，久經北方邊地征戰，隨李如松東援朝鮮。裝備三眼銃、弓與腰刀，行動迅捷，適合包抄與追擊。衝擊力不及家丁，遇長槍與武士宜避其正面，轉攻側背。 | Frontier cavalry of the Ming garrison in Liaodong, seasoned by long service on the northern frontier, who came to the aid of Joseon with Li Rusong. Armed with three-eyed guns, bows, and sabres; fast, and best used to envelop and pursue. They hit less hard than the household cavalry, so against spears or samurai they should avoid the front and strike the flanks and rear. | 명 요동진의 변방 기병으로, 오랜 북방 변경 전투로 단련되었으며 이여송을 따라 조선을 도우러 왔다. 삼안총·활·요도를 갖추고 기동이 빨라 포위와 추격에 알맞다. 충격력은 가정 기병에 미치지 못하므로, 창병과 사무라이를 만나면 정면을 피하고 측면과 배후를 노려야 한다. |
+| `desc.type.lirusong` | 東征提督李如松及其親兵。李如松出身遼東將門，萬曆二十一年正月收復平壤後南下，於碧蹄館與日軍遭遇。主帥所在，周圍部隊士氣得以維繫；主帥陣亡即告失敗，切勿陷入重圍。 | Li Rusong, commander of the Ming expedition, with his guard. Born into a Liaodong military family, he retook Pyongyang early in 1593, pushed south, and met the Japanese army at Byeokjegwan. His presence steadies the units around him; if he falls the battle is lost, so keep him out of encirclement. | 동정 제독 이여송과 그 친병. 요동 무장 가문 출신인 이여송은 1593년 정월 평양을 수복한 뒤 남하하다가 벽제관에서 일본군과 맞닥뜨렸다. 주장이 있는 곳에서는 주변 부대의 사기가 유지되며, 주장이 전사하면 전투에서 패하므로 포위되지 않도록 해야 한다. |
+| `desc.type.samurai` | 身披具足的武士及其從者，是日本軍隊的近戰主力，常在鐵砲齊射後發起突擊。衝擊與近戰俱強，每擊潰一部氣勢愈盛。行動不及騎兵，接敵前若遭射擊或衝擊而損耗，威力大減。 | Armoured samurai and their retainers, the shock troops of the Japanese army, who usually charged in after the arquebusiers had fired. Strong in both impact and melee, and every enemy unit they rout raises their momentum. Slower than cavalry, and far less dangerous if worn down by fire or charges before they close. | 갑주를 갖춘 사무라이와 그 종자들로, 일본군의 근접 돌격 주력이며 대개 조총 사격 뒤에 돌격했다. 충격력과 근접전이 모두 강하고, 적 부대를 무너뜨릴 때마다 기세가 오른다. 기병보다 느리며, 접전 전에 사격이나 돌격으로 소모되면 위력이 크게 떨어진다. |
+| `desc.type.tachibana` | 立花宗茂及其親兵，統率日軍先鋒。宗茂以勇武著稱，碧蹄館一戰率先鋒正面迎擊明軍。親兵近戰強悍，周圍武士積累氣勢更快；遭騎兵圍攻時須有援護。 | Tachibana Muneshige and his guard, leading the Japanese vanguard. Renowned for his courage, Muneshige met the Ming advance head-on at Byeokjegwan. His guard is formidable in melee, and the samurai around him build momentum faster; he needs support if cavalry surround him. | 다치바나 무네시게와 그 친병으로, 일본군 선봉을 이끈다. 용맹으로 이름난 무네시게는 벽제관에서 선봉을 이끌고 명군을 정면으로 맞았다. 친병은 근접전에 강하고 주변 사무라이가 기세를 더 빨리 쌓으며, 기병에게 포위되면 지원이 필요하다. |
+| `desc.type.teppo` | 裝備火繩槍（鐵砲）的足輕，是戰國後期日本軍隊的主要火力。須停步列陣方能齊射，裝填費時；齊射對衝鋒途中的騎兵尤具威脅。近戰薄弱，裝填或行進時遭側擊容易潰散。 | Ashigaru armed with matchlock arquebuses (teppō), the main firepower of Japanese armies in the late Sengoku period. They must halt and form before a volley, and reloading takes time; a volley is most dangerous to cavalry in mid-charge. Weak in melee, and easily broken if struck in the flank while reloading or on the march. | 화승총(조총)을 든 아시가루로, 센고쿠 시대 후기 일본군의 주요 화력이었다. 멈춰 서서 대열을 갖춰야 일제 사격을 할 수 있고 장전에 시간이 걸린다. 사격은 돌격 중인 기병에게 특히 위협적이지만, 근접전에 약하고 장전 중이나 행군 중에 측면을 맞으면 쉽게 무너진다. |
+| `desc.type.yari` | 手持長槍、列成密集槍陣的足輕，是日本軍隊陣線的骨幹。正面能有效抵禦騎兵衝擊，常護衛在鐵砲隊旁。轉向緩慢，側翼與背後是其弱點。 | Ashigaru with long spears in close ranks, the backbone of the Japanese battle line. From the front they hold off cavalry charges well, and they often guard the arquebusiers. They turn slowly, and their flanks and rear are vulnerable. | 긴 창을 들고 밀집한 창진을 이룬 아시가루로, 일본군 전열의 뼈대였다. 정면에서는 기병 돌격을 잘 막아 내며, 흔히 조총대 곁을 호위한다. 방향 전환이 느려 측면과 배후가 약점이다. |
+| `glyph.flag.jiading` | 李 | 李 | 李 |
+| `glyph.flag.liaodong` | 明 | 明 | 明 |
+| `glyph.flag.lirusong` | 帥 | 帥 | 帥 |
+| `glyph.flag.yang_left` | 楊 | 楊 | 楊 |
+| `glyph.flag.yang_right` | 楊 | 楊 | 楊 |
 
 ## Translations awaiting author review (L1)
 

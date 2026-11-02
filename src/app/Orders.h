@@ -25,6 +25,8 @@ struct OrderState {
     std::vector<UnitId> selected;
     std::optional<UnitId> hover;
     std::optional<UnitId> pending;
+    // An enemy clicked with nothing selected; the unit card shows it read-only (V4).
+    std::optional<UnitId> inspected;
     bool pressing = false;
     float pressX = 0.f;
     float pressY = 0.f;
