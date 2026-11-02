@@ -1355,7 +1355,7 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 
 ### Soldier layer (V2)
 
-- The view has two ranges (V3). Below 2× zoom it is the far view: formation blocks and full counters, unchanged from M3. From 2× up it is the near view: soldiers, banners, and a counter at 0.55 of its size at the unit centre; formation blocks and charge speed lines are hidden, and the selection frame, order lines, and odds preview stay. Picking uses the small counter box in the near view; the formation rectangle counts in both.
+- The view has two ranges (V3), cross-faded between 1.8× and 2.2×: blocks fade out while soldiers and banners fade in, and the counter shrinks smoothly from full size to 0.55. Below 1.8× zoom it is the far view: formation blocks and full counters, unchanged from M3. From 2× up it is the near view: soldiers, banners, and a counter at 0.55 of its size at the unit centre; formation blocks and charge speed lines are hidden, and the selection frame, order lines, and odds preview stay. Picking uses the small counter box in the near view; the formation rectangle counts in both.
 - Soldiers are presentation only. Every frame `layoutSoldiers` derives them from the unit snapshot: interpolated position and facing, frontage, depth, troops, and state. They keep no state and never touch `tq::Rng`; jitter and animation phase come from a hash of the unit id and the soldier index.
 - One soldier stands for 10 cavalry or 20 infantry, at least one while any men are left, at most 60 per unit. The full-strength count (from maxMen) is laid out in ranks and files filling the formation rectangle, front rank first, so losses take men off the rear ranks.
 - Kinds: cavalry, spear, arquebus, samurai, and a general figure in the middle of a general unit's front rank.
@@ -1398,7 +1398,7 @@ Game text is quoted from the zh-Hant string table, with an English gloss.
 | GrandAssault | Floating text 總攻 "general assault" at the commander (indigo, 32) | None | Key event; a different sentence when it fails to launch |
 | BattleEnded | Result overlay | None | None |
 
-Effect parameters (in effect time): dust radius 4–10 m, growing 16–38 per second, life 0.9–1.5 s; smoke radius 2–6 m, drifting along the facing at 10–14 m/s, life 1.4–3 s; muzzle flash 0.12 s; debris 3–7 pixels, flying out at 60–170, life 0.8–1.3 s; rings growing from 20 to 170 m in radius, life 1.1 s; floating text life 1.5 s, starting at 1.35× scale, rising 18 per second, with an off-white outline; particle velocity multiplied by 0.4 each second.
+Effect parameters (in effect time): dust radius 4–10 m, growing 16–38 per second, life 0.9–1.5 s; smoke radius 2–6 m, drifting along the facing at 10–14 m/s, life 1.4–3 s; muzzle flash 0.12 s; debris 3–7 pixels, flying out at 60–170, life 0.8–1.3 s; rings growing from 20 to 170 m in radius, life 1.1 s; floating text life 1.5 s, starting at 1.35× scale, with an off-white outline, a fixed screen size (shrinking to 0.75 in the near view so it covers fewer soldiers) and a fixed screen rise of 15 logical pixels per second (the prototype's 18 m/s at 1×); texts that would overlap are stacked upward in the order they appeared; particle velocity multiplied by 0.4 each second.
 
 ### Input
 
@@ -1428,6 +1428,7 @@ Follows the framework AudioManager's approach of "files first, synthesize when m
 
 ### Localization and fonts
 
+- Shipped languages: Traditional Chinese and English (`src/app/Languages.h`). Korean is on hold: `data/strings/ko.json` and Noto Serif KR stay in the repository and keep their tests, but the settings card offers only zh-Hant and en, a saved `ko` falls back to zh-Hant, the demo package leaves both files out, and the glyph test checks only the shipped languages.
 - All visible text comes from the string tables; code contains no Chinese literals. Numbers get thousands separators per language. Interface text quoted in this document comes from the zh-Hant string table, which is authoritative for what the game shows.
 - Font files are still set by the `fonts` field of `data/strings/<language>.json`, which keeps its two names `body` and `brush` and is not split into more files by role. The font selection rules are:
   - Counter glyphs use brush (LXGW WenKai TC) in all three languages.
@@ -1642,8 +1643,12 @@ Each card is one PR's worth of work. The author opens an issue per card on GitHu
 | V2 | Soldier layer | V1 | M4 |
 | V3 | Near and far views, banners | V2 | M4 |
 | V4 | Unit card | V3 | M4 |
+| V5 | Formation deformation | V4 | M4 |
+| V6 | Art pipeline | V5 | M5 |
+| V7 | Near-view map | V5 | M5 |
+| V8 | Near-view effects | V5 | M5 |
 
-Milestones: M1 the rules core is complete and passes parity; M2 a full battle can be played; M3 the demo package; M4 visual upgrade: each unit reads as a body of soldiers. M4 never touches the rules core (`src/core`): the 100-battle baseline and the tick-by-tick comparison must stay exactly as they are. After B0, C1, D1, and A0 can proceed in parallel; after C2 the rules track and the presentation track run in parallel.
+Milestones: M1 the rules core is complete and passes parity; M2 a full battle can be played; M3 the demo package; M4 visual upgrade: each unit reads as a body of soldiers, and the body changes shape in battle; M5 art: finished soldier atlas, crests, near-view map and effects. M4 never touches the rules core (`src/core`): the 100-battle baseline and the tick-by-tick comparison must stay exactly as they are. After B0, C1, D1, and A0 can proceed in parallel; after C2 the rules track and the presentation track run in parallel.
 
 ### B0 Repository skeleton and CI
 
@@ -1769,6 +1774,75 @@ M4 makes each unit read as a body of men and horses on the map. Everything in it
 - Do: selecting a unit shows a portrait slot for its unit type (placeholder art for now) and a description in the command card. The descriptions live in the string tables under `desc.type.<unit type id>`, in Traditional Chinese and English, covering historical background, equipment, strengths, and weaknesses, in neutral and dignified language for both sides, and listed in PROGRESS as awaiting author review.
 - Acceptance: every unit type has a description in zh-Hant and en, the glyph test passes, and the text does not overflow the card. After V4 is merged, stop: put screenshots of the near and far views and a recording of about 30 seconds into PROGRESS for the author to judge the effect and choose the art direction before the art pipeline, map, and effects continue.
 
+### V5 Formation deformation
+
+Goal: formations stop being permanent rectangles. When units charge, break in, fight, break, shatter, rout, and
+rally, the soldiers change shape the way troops on a real battlefield do. The rules core is not changed.
+
+- Do, soldiers with state:
+  - Each soldier keeps its own position and velocity and moves each step toward a target point: its V2 slot plus
+    the deformation offsets below. Charging and routing soldiers chase their targets fast; rallying ones slowly.
+  - Soldiers advance on fixed battlefield-time steps (each simulation tick split into a fixed number of sub-steps),
+    and drawing interpolates between sub-steps; never by frame time.
+  - The same replay gives exactly the same soldier positions at the same tick whatever the frame rate, the speed,
+    or whether `--freeze-at` skipped ahead; soldiers advance with the simulation when `--freeze-at` fast-forwards.
+  - Everything holds still while paused. The presentation layer uses its own random numbers, never `tq::Rng`.
+- Do, deformation driven by signals the rules core already produces (charging, contacts and contact side, impact
+  events, push-back, breakaway, breaking, shattering, routing, rallying, merging), with no invented timing:
+  - Charge: fast horses pull ahead, the middle bulges, ranks and files open up, more the farther the charge runs.
+  - Impact: the attacker's front rank drives into the enemy, at most about a third of the defender's depth; the
+    defender is dented at the impact point, deeper on the flank or rear; both relax over a few seconds.
+  - Engaged: the contact line becomes a ragged melee band; where one side is wider, the ends that overlap the other
+    side's front curl inward.
+  - Breakaway: cavalry pulls out of the contact, leaving a few stragglers behind.
+  - Wavering: ranks loosen and men shuffle.
+  - Breaking: the rear ranks turn and leave first while the front ranks still fight.
+  - Shattering: the source unit's soldiers are dealt to the remnants by direction and run to them; nobody teleports.
+  - Routing: a scattered stream with stragglers at the back, who are caught by pursuers.
+  - Rallying and merging: men gather on the banner first, then take a few seconds to re-form ranks.
+  - In paddies ranks are looser.
+  - One interface: each unit gives the soldier layer a single looseness value from 0 to 1, estimated for now by the
+    presentation layer from the unit state; once the rules core has formation integrity (rules phase 2), that value
+    replaces the estimate.
+- Do, casualties: when troops drop, the soldiers who fall are those on the contact edge or the side that was shot,
+  no longer the rear ranks, and rear ranks step forward to fill. Bodies stay where they fell, fade to half
+  transparency over about 30 battlefield seconds, and remain until the battle ends; the number of bodies is capped,
+  and the oldest go first.
+- Do, readability: banners and counters always stand at the rules position. When a unit is not engaged, shattering,
+  or routing, its soldiers stay within a quarter of the rules box depth outside the box. Clicking any soldier selects
+  its unit (an enemy is inspected read-only). The selected unit's rules box is drawn as a thin dashed line; holding
+  Alt shows every unit's box.
+- Do, tuning: every deformation parameter lives in one presentation header (not `src/core/rules/Constants.h`) and
+  is a slider in the dev tools panel so the author can tune while playing. Defaults are clearly visible but never
+  chaotic.
+- Acceptance:
+  - Rules core unchanged: as in the V2 test, 400 ticks with and without the soldier layer give identical state
+    hashes; the 100-battle baseline and the tick-by-tick comparison are unchanged.
+  - A test runs the same replay to the same tick with different frame pacing, and the soldier state hashes match.
+  - Performance: p95 ≤ 16.7 ms with the most soldiers on screen. Neighbour queries use a spatial hash and run only
+    within a unit and between two units in contact.
+  - Screenshots at 3× of a charge, an impact, a melee, a break, shattering, a rout, and a rally, plus one of the
+    field after the battle with bodies visible.
+  - After V5 is merged, stop and put the screenshots and a recording of about 30 to 60 seconds into PROGRESS for the
+    author; the recording includes one complete charge, melee, breakaway, and re-forming.
+
+### V6 Art pipeline
+
+- Do: a Blender render script under `tools/art/` renders a model in 8 directions with several frames each, in an
+  ink-line style, into the current atlas layout; a checker tool validates the atlas size and cells. Portraits keep
+  the existing interface. AI_ASSETS.md gets a fixed registration format. Crests follow research: Tachibana Muneshige
+  uses 中結祇園守 (naka-musubi gion mamori), Kobayakawa Takakage uses 左三つ巴 (hidari mitsudomoe).
+- If Blender is not installed on the machine, write the script but do not install it; stop and ask the author.
+
+### V7 Near-view map
+
+- Do: at 3× to 4×, ground texture, paddy ridges, and trees hold up the picture, in the style of the silk-scroll base
+  map.
+
+### V8 Near-view effects
+
+- Do: dust, smoke, and debris scale their size and count with the zoom in the near view.
+
 ## Glossary
 
 Code, docs, and PRs use the terms in this table.
@@ -1852,3 +1926,41 @@ When an agent runs into one of these questions it continues with the "default" a
 | Saves and multiple scenarios | The demo has one scenario, no saves, only settings | After the demo |
 | macOS build | Not supported in the demo; CI only has Windows and Ubuntu | After the demo |
 | Repository language | Decided: the repository is English (code, docs, PR descriptions, commit messages); other languages only where listed in "Hard rules" | Decided |
+| M4 deviations | Decided (M4 acceptance, 2026-11-02): all accepted: right-drag pans only above 1× after 6 pixels; soldiers drawn larger than life; Japanese generals drawn mounted; clicking an enemy inspects it read-only; Korean descriptions kept as a draft | Decided |
+| Art route | Decided: AI generation now, artists later for key images such as portraits; every AI asset registered in AI_ASSETS.md. Style: gongbi or woodblock, flat colour, ink outlines, three-quarter view, matching the silk-scroll map. Soldier atlas: 3D models rendered in Blender with an ink-line style and assembled into the atlas layout. Portraits: single AI images. Banners: code or vector drawings | Decided |
+| Soldier size and near view | Decided: soldiers stay larger than life; the near view stays at 2×, cross-faded between 1.8× and 2.2× | Decided |
+| Banner characters | Decided: 帥, 李, 楊 adopted; 明 kept for now, pending the author | 明 pending |
+| Unit descriptions | Decided: zh-Hant and en for all eight unit types accepted; Korean remains a draft | Decided |
+| Korean | On hold: ko.json and the Korean font stay in the repository but are not offered in the settings or shipped; the L1 Korean review is on hold | On hold |
+| Rules phase 2: formation integrity and quality tiers | Approach decided, not scheduled; see "Rules phase 2" below | Not scheduled |
+
+### Rules phase 2 (approach decided, not scheduled)
+
+Documentation only; no code or `data/` changes until it is scheduled.
+
+- Besides morale, units gain formation integrity: morale says whether they still dare to fight, integrity says
+  whether the ranks still hold together.
+- Both armies share three quality tiers: elite, veteran, raw. String keys will be `tier.elite`, `tier.veteran`,
+  `tier.raw`, in Traditional Chinese 精銳, 老練, 新募 and in English Elite, Veteran, Raw. The tier replaces today's
+  elite flag, which is only a label.
+- Tiers affect only rules about integrity: integrity lost when charging and in melee, re-forming speed, the cost and
+  duration of cavalry breakaway, the interval before charging again after an impact, and the morale line for
+  wavering. Impact, melee, and armour stay with the unit type. The pike wall's resistance to charges and arquebus
+  volley effect are multiplied by integrity, with no separate tier values.
+- Tiers of the current units: elite: jiading, lirusong, tachibana, kobayakawa; veteran: liaodong, samurai, yari,
+  teppo; raw: none yet, kept for later scenarios.
+- Draft multipliers, with veteran as the base (veteran equals the current rules):
+  - Integrity lost when charging: elite 0.6, raw 1.4.
+  - Integrity lost in melee: elite 0.7, raw 1.3.
+  - Re-forming speed: elite 1.6, raw 0.6.
+  - Cavalry breakaway: elite loses 1% of men and no morale; veteran as now, 3% of men and 5 morale; raw loses 5% of
+    men and 10 morale, and must fight for a few seconds before it can break away.
+  - Interval before charging again after an impact: elite 30 s, veteran 48 s, raw 72 s.
+  - Morale line for wavering: elite 45, veteran 55, raw 62.
+- Part of jiading's higher impact value really expresses "charging in good order"; the implementation moves that
+  part into the tier so the elite are not counted twice.
+- Every value is tuned with 50 headless battles before it is fixed: compare the outcome distribution before and
+  after, and how many rounds of charge, breakaway, re-form, and charge again jiading and liaodong each complete. The
+  100-battle baseline in CI stays as it is and is re-recorded by the usual rules when this is implemented.
+- Once implemented, the rules part ways with the prototype and the tick-by-tick comparison no longer applies. Before
+  implementing, tag and archive the current rules and update the rule spec first.

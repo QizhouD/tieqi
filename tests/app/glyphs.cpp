@@ -1,3 +1,4 @@
+#include "app/Languages.h"
 #include "app/TextStyle.h"
 #include "data/Load.h"
 
@@ -75,10 +76,12 @@ TEST_CASE("every string has a glyph in its role font") {
     const std::filesystem::path root(TQ_SOURCE_DIR);
     const StringTable zh = loadStrings(root / "data" / "strings" / "zh-Hant.json");
     const StringTable en = loadStrings(root / "data" / "strings" / "en.json", &zh);
-    const StringTable ko = loadStrings(root / "data" / "strings" / "ko.json", &zh);
     std::map<std::string, sf::Font> fonts;
     int missing = 0;
-    for (const StringTable *table : {&zh, &en, &ko}) {
+    // Only the shipped languages are checked; Korean is on hold and not packaged.
+    for (const StringTable *table : {&zh, &en}) {
+        REQUIRE(std::find(kShippedLanguages.begin(), kShippedLanguages.end(), table->language) !=
+                kShippedLanguages.end());
         std::set<std::string> keys;
         collectKeys(*table, keys);
         for (const std::string &key : keys) {

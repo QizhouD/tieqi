@@ -1,3 +1,4 @@
+#include "app/Languages.h"
 #include "app/Report.h"
 #include "app/TextCache.h"
 #include "data/Load.h"
@@ -155,4 +156,12 @@ TEST_CASE("wrapping keeps English and Korean words whole and Chinese text intact
         }
         CHECK(joined == text);
     }
+}
+
+TEST_CASE("Korean is on hold: settings offer zh-Hant and en, and a saved ko falls back to zh-Hant") {
+    CHECK(kShippedLanguages.size() == 2);
+    CHECK(shippedLanguage("zh-Hant") == "zh-Hant");
+    CHECK(shippedLanguage("en") == "en");
+    CHECK(shippedLanguage("ko") == "zh-Hant");
+    CHECK(shippedLanguage("") == "zh-Hant");
 }

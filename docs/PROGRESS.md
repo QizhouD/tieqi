@@ -28,10 +28,26 @@
 | V2 | Done | #27 | Soldier layer from 2× zoom: one soldier per 10 cavalry or 20 infantry (at most 60 per unit) in ranks inside the formation, losses from the rear; idle, march, charge with dust, engaged front-rank interleave, waver, turn-about on breaking, scattering rout; one atlas, one VertexArray, sorted by y; placeholder atlas drawn in code, replaceable by `assets/textures/soldiers/soldiers.png`; `--dump-atlas` | Rules core unchanged; a test steps 400 ticks with and without laying out soldiers every tick and the state hashes match. Soldiers keep no state; jitter and phase are hashed from unit id and index. Figures are drawn larger than life (a 32-pixel cell spans 9 m) because at true scale a rider is only a few pixels even at 3×. Ming has only cavalry, so the placeholder has no Ming foot figures beyond the general; the Japanese generals are drawn mounted although they are infantry in the rules (presentation only). The middle soldier of a general unit's front rank is the general figure. From 2× the formation dots and charge speed lines are hidden and the block fill is halved; the full counter stays until V3. At 1× the screen is unchanged (about 400 of 1.6 M pixels differ by more than 24, in animated text and wobble; two runs of the same build differ by about 100). Full dev build with zero warnings, ctest passing, slow baseline passing. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.5 ms, max 102.0 ms; 2× for the whole run (the most soldiers on screen) mean 0.4 ms, p95 0.5 ms, max 112.9 ms; 4× mean 0.3–0.4 ms, p95 0.5 ms, max 56.2–98.9 ms |
 | V3 | Done | #28 | Near and far views: below 2× blocks and full counters as before; from 2× soldiers, banners, and a counter at 0.55 size; Ming flags with a character (李 retainers, 明 Liaodong cavalry, 帥 commander, 楊 Yang Yuan), Japanese sashimono with placeholder Tachibana and Kobayakawa crests; picking follows the small counter | Banner characters are new glyph keys `glyph.flag.*` (glyph role, brush font, same in all three languages) and need author review: 李 for the Li family retainers, 明 for the Liaodong cavalry, 帥 for the commander's guard, 楊 for Yang Yuan's units. The crests are placeholders, not researched designs. Broken and routing units drop their banner. In the near view the formation blocks are hidden entirely; the selection frame stays. Rules core unchanged. Full dev build with zero warnings, ctest passing, slow baseline passing, glyph test passing. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.6 ms, max 105.5 ms; 2× (near view, most soldiers and banners on screen) mean 0.4 ms, p95 0.5 ms, max 104.3 ms; 4× mean 0.4 ms, p95 0.5 ms, max 106.6 ms |
 | V4 | Done | #29 | Unit card: portrait box (placeholder figure from the soldier atlas, or `assets/textures/portraits/<type id>.png`) and a description per unit type from `desc.type.<type id>`; with nothing selected, clicking an enemy inspects it read-only | Descriptions written in zh-Hant and en as asked, plus a Korean draft so the Korean card does not fall back to Chinese; all listed for review in the next section. Japanese units cannot be selected, so inspection was added to show their descriptions: a left click on an enemy with nothing selected (which did nothing before) shows its card without order buttons. The card grows with the description; the battle log card gives up the space. Rules core unchanged. Full dev build with zero warnings, ctest passing, slow baseline passing, glyph and slur tests passing. release, seed 1, scripted, 2× to the result, with a unit selected: mean 0.4 ms, p95 0.5 ms, max 99.0 ms; near view for the whole run: mean 0.4 ms, p95 0.5 ms, max 102.9 ms |
+| M4 fixes | Done | #30 | M4 acceptance recorded; impact screenshot recaptured at tick 59, 3.8×; floating text keeps a fixed screen size and rise, shrinks to 0.75 in the near view, and stacks when texts overlap; near and far views cross-fade between 1.8× and 2.2× with the counter shrinking smoothly; Korean hidden (settings offer zh-Hant and en, a saved ko falls back to zh-Hant, ko.json and Noto Serif KR not packaged, glyph test checks shipped languages); V5–V8 and rules phase 2 written into DEVELOPMENT.md | Floating text was already a fixed screen size; it rose at a fixed world speed, so it moved faster when zoomed in, and it looked large next to the small soldiers. Both are fixed. Korean tests on ko.json content stay (the file stays in the repository). The demo README no longer lists Korean or the Korean font. V6–V8 are placed in a new milestone M5 (art). Rules core unchanged. The rebuilt demo package contains only zh-Hant.json and en.json and no Noto Serif KR. Full dev build with zero warnings, ctest passing, slow baseline passing. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.5 ms, max 107.4 ms; 1.95× (mid cross-fade, both layers drawn) mean 0.4 ms, p95 0.5 ms, max 97.7 ms; 4× mean 0.4 ms, p95 0.5 ms, max 121.1 ms |
 
 The source language check (`tools/check_source_language.py`) scans src, tests, tools, cmake, CMakeLists.txt, .github/workflows, and .gitignore. tools/parity/anchors.json holds Chinese snippets used to match the prototype and is excluded; node_modules and tools/parity/work are skipped too.
 
-## Stopped here: M4 review and the art direction
+## M4 review and the art direction (accepted 2026-11-02)
+
+Author's acceptance, also recorded in the decisions table of DEVELOPMENT.md:
+
+- Every listed deviation is accepted: the right-drag rule, soldiers larger than life, Japanese generals mounted,
+  read-only inspection of enemies, the Korean description draft.
+- Art route: AI generation and artists combined. AI for now, every asset registered in AI_ASSETS.md; key images
+  such as portraits may later be replaced by an artist. Style: gongbi or woodblock, flat colour, ink outlines,
+  three-quarter view, matching the silk-scroll map. Soldier atlas: 3D models rendered in Blender with an ink-line
+  style, assembled into the current atlas layout. Portraits: single AI images. Banners: code or vector drawings.
+- Soldiers stay larger than life. The near view stays at 2×, cross-faded between 1.8× and 2.2× instead of a hard
+  switch (done in the M4 fixes).
+- Banner characters 帥, 李, 楊 adopted; 明 kept for now, pending the author. The eight unit descriptions in
+  Traditional Chinese and English are accepted; Korean stays a draft.
+
+The review material as it was shown:
 
 M4 (V1–V4) is merged. As agreed, work stops here so the author can judge the effect and choose the art direction
 before the art pipeline, the map, and the effects continue. Everything below is placeholder art drawn in code; the
@@ -56,7 +72,8 @@ Near view, 3×, the opening (Ming banners 帥, 李, 明):
 
 ![banners](images/m4/m4-near-banners-3x.jpg)
 
-Near view, 3.8×, a breakthrough and the scattering that follows:
+Near view, 3.8×, tick 59 (00:47), just after the breakthrough (recaptured in the M4 fixes; the first version
+showed tick 52 drawn with V2):
 
 ![impact](images/m4/m4-near-impact-4x.jpg)
 
@@ -84,9 +101,9 @@ Decisions needed from the author: the art style and source for figures, banners,
 AI-generated and registered in AI_ASSETS.md, or both); whether figures stay larger than life (a cell spans 9 m now);
 and whether the near view threshold of 2× feels right.
 
-## Unit descriptions and banner characters awaiting author review (V4, V3)
+## Unit descriptions and banner characters (V4, V3)
 
-All entries below are **awaiting author review**. The brief asked for Traditional Chinese and English descriptions; a Korean draft was added too, because the en and ko tables must own every zh-Hant key and a Korean card should not fall back to Chinese. Wording aims to be neutral and dignified for both sides; historical claims are limited to the common account (Li Rusong retook Pyongyang in the first month of 1593 and met the Japanese army at Byeokjegwan; Tachibana Muneshige led the vanguard; Kobayakawa Takakage directed the main body). Banner characters are the same in all three languages, like counter glyphs.
+Status after the M4 review: the zh-Hant and en descriptions are accepted; the Korean ones remain a draft; banner characters 帥, 李, 楊 are adopted and 明 is pending the author. As first written, all entries below were awaiting author review. The brief asked for Traditional Chinese and English descriptions; a Korean draft was added too, because the en and ko tables must own every zh-Hant key and a Korean card should not fall back to Chinese. Wording aims to be neutral and dignified for both sides; historical claims are limited to the common account (Li Rusong retook Pyongyang in the first month of 1593 and met the Japanese army at Byeokjegwan; Tachibana Muneshige led the vanguard; Kobayakawa Takakage directed the main body). Banner characters are the same in all three languages, like counter glyphs.
 
 | Key | zh-Hant | en | ko |
 | --- | --- | --- | --- |
@@ -105,6 +122,8 @@ All entries below are **awaiting author review**. The brief asked for Traditiona
 | `glyph.flag.yang_right` | 楊 | 楊 | 楊 |
 
 ## Translations awaiting author review (L1)
+
+Korean review: **on hold** (Korean is not shipped for now). English review: still awaiting the author.
 
 The table below lists every translation written in L1, all **awaiting author review**: 259 en entries, 259 ko entries, plus 7 new zh-Hant terms for the settings card (marked "(new)"). Proper nouns already in the original table (place names, Li Rusong, Yang Yuan, Tachibana Muneshige, Kobayakawa Takakage, unit type names, counter glyphs) were kept and are not listed. Terminology: the Japanese side is Japanese army / Japanese forces in English (adjective Japanese) and 일본군 in Korean; the Ming army is 명군; in Korean a counter is 기물, to avoid confusion with 말 (horse); derogatory terms such as 왜, 倭, and 오랑캐 are not used, and `tests/app/l10n.cpp` checks that they never appear. After review, edit `data/strings/` only; no code changes are needed.
 
