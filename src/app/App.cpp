@@ -254,6 +254,7 @@ std::optional<Vec2> App::assaultPoint() const {
 
 void App::drawFrame() {
     window_.setViewShake(effects_.shakePixels());
+    window_.setZoom(camera_.zoom());
     window_.beginWorld();
     const bool exitOpen = battle_ && battle_->exitOpen();
     mapView_.draw(window_, soundTime_, exitOpen);
@@ -412,6 +413,10 @@ void App::handleInput() {
     const float mapW = data_.scenario.map.width;
     const float mapH = data_.scenario.map.height;
     for (const PointerSample &sample : window_.takePointers()) {
+        if (sample.type == PointerSample::Type::Wheel) {
+            camera_.handle(sample, mapW, mapH);
+            continue;
+        }
         const Hud::Input input = hud_.handle(sample);
         if (input.action != HudAction::None) {
             applyHud(input.action);
@@ -419,11 +424,23 @@ void App::handleInput() {
         if (input.consumed) {
             continue;
         }
-        for (Command command : applyPointer(orders_, *battle_, sample, mapW, mapH, alpha)) {
+        const CameraControl::Result view = camera_.handle(sample, mapW, mapH);
+        if (view.startedPan) {
+            orders_.pressing = false;
+            orders_.box = false;
+        }
+        if (view.consumed) {
+            continue;
+        }
+        for (Command command : applyPointer(orders_, *battle_, sample, mapW, mapH, alpha, camera_.zoom())) {
             issue(std::move(command));
         }
     }
     for (sf::Keyboard::Key key : window_.pressedKeys()) {
+        if (key == sf::Keyboard::Key::Home) {
+            camera_.reset();
+            continue;
+        }
         const std::optional<OrderKey> order = orderKeyFromKeyboard(key);
         if (!order) {
             continue;

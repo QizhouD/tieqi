@@ -62,6 +62,8 @@ class Window {
     PixelMap pixelMap() const;
     void setViewShake(sf::Vector2f pixels);
     void beginWorld();
+    // The map camera for beginWorld, beginMap, pixelsPerMeter, and visibleWorld.
+    void setZoom(const Zoom &zoom) { zoom_ = zoom; }
     // Pieces are drawn in the map rectangle. The viewport is clipped to the map, so units outside it do not paint the
     // dark margin.
     void beginMap();
@@ -84,6 +86,7 @@ class Window {
     sf::Vector2u worldSize_{kWindowWidth, kWindowHeight};
     sf::Vector2f camera_{kWindowWidth * 0.5f, kWindowHeight * 0.5f};
     sf::Vector2f shakePixels_{};
+    Zoom zoom_;
     bool done_ = false;
     bool fullscreen_ = false;
 

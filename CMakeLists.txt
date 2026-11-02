@@ -124,6 +124,7 @@ if(TQ_BUILD_TESTS)
         tests/app/glyphs.cpp
         tests/app/dev.cpp
         tests/app/l10n.cpp
+        tests/app/camera.cpp
         src/app/TextCache.cpp
         src/app/dev/Intent.cpp
         src/app/Launch.cpp

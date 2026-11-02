@@ -1319,7 +1319,7 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 
 - Logical resolution 1600 × 1000. The default window is at most 90% of the desktop (rounded down), and the window has no maximum size. The minimum size is the smaller of 1280 × 800 and 90% of the desktop, so a 1366 × 768 screen still fits. At any window aspect ratio, letterboxing keeps the logical aspect ratio. The battlefield rectangle is the canvas measured on the prototype at 1600×1000: (17, 55), 1216×932. The `.field` outer frame is (16, 54), 1218×934; the extra is a 1px border and is not part of the canvas. The top bar sits above the canvas and the right panel to its right.
 - The system window title uses the string game.title.
-- The battlefield is the logical screen minus the top bar and the right panel, given by `battlefieldRect()`. The map is centred in this area with scale `sc = min((battlefield width - 20) / W, (battlefield height - 20) / H)`. Unit drawing and mouse conversion both use this rectangle. The prototype has no zoom or pan; as an optional task: the mouse wheel zooms 1× to 3× around the cursor, middle-drag pans, Home resets.
+- The battlefield is the logical screen minus the top bar and the right panel, given by `battlefieldRect()`. The map is centred in this area with scale `sc = min((battlefield width - 20) / W, (battlefield height - 20) / H)`. Unit drawing and mouse conversion both use this rectangle. The prototype has no zoom or pan; V1 adds them: the mouse wheel zooms 1× to 4× around the cursor (×1.25 per notch), middle-drag pans, right-drag pans once zoomed in (more than 6 pixels; a right click still orders, and at 1× right-drag does nothing), and Home resets to 1×. Zoom 1 is the whole map, laid out exactly as before. A zoomed view is clamped so it never shows anything beyond the map edge, and an axis that fits on screen stays centred. Every conversion between pointer and world (`mapCamera`, `worldFromLogical`, `logicalFromWorld`) takes the zoom, so picking and orders stay accurate. The base map and ground marks are rendered at 3 pixels per metre with mipmaps, so they stay sharp at 4×. Scripts can `wheel x y notches`, `mdrag x0 y0 x1 y1`, and `rdrag x0 y0 x1 y1`.
 - Unit positions and facings are drawn interpolated as `prev + (cur - prev) * alpha`, where alpha is the fraction of a tick left in the main loop accumulator. The brokenSec used for flipping is drawn as `brokenSec + kTickSeconds × (1 − alpha)`, one tick behind like the position, so the flip is continuous at 0.5× speed too.
 
 ### Time
@@ -1618,8 +1618,12 @@ Each card is one PR's worth of work. The author opens an issue per card on GitHu
 | A6 | Debug tools | A2, C7 | M3 |
 | L1 | English and Korean | A4 | M3 |
 | R1 | Demo package | All | M3 |
+| V1 | Zoom and pan | R1 | M4 |
+| V2 | Soldier layer | V1 | M4 |
+| V3 | Near and far views, banners | V2 | M4 |
+| V4 | Unit card | V3 | M4 |
 
-Milestones: M1 the rules core is complete and passes parity; M2 a full battle can be played; M3 the demo package. After B0, C1, D1, and A0 can proceed in parallel; after C2 the rules track and the presentation track run in parallel.
+Milestones: M1 the rules core is complete and passes parity; M2 a full battle can be played; M3 the demo package; M4 visual upgrade: each unit reads as a body of soldiers. M4 never touches the rules core (`src/core`): the 100-battle baseline and the tick-by-tick comparison must stay exactly as they are. After B0, C1, D1, and A0 can proceed in parallel; after C2 the rules track and the presentation track run in parallel.
 
 ### B0 Repository skeleton and CI
 
@@ -1683,7 +1687,7 @@ Milestones: M1 the rules core is complete and passes parity; M2 a full battle ca
 
 ### A1 Base map and camera
 
-- Do: render layers 1 to 4; fitting the map in the centre; optional zoom and pan go to a separate A1b.
+- Do: render layers 1 to 4; fitting the map in the centre; zoom and pan moved to V1.
 - Acceptance: side-by-side screenshots with the prototype show paddies, hills, the main road, place names, the seal, and the scale bar in the same positions.
 
 ### A2 Units and counters
@@ -1720,6 +1724,30 @@ Milestones: M1 the rules core is complete and passes parity; M2 a full battle ca
 
 - Do: package a Windows release build (executable, data, assets, font licenses); write the version into replays; AI\_ASSETS.md; player notes.
 - Acceptance: unzips and plays on a Windows PC without a development environment.
+
+### M4 visual upgrade
+
+M4 makes each unit read as a body of men and horses on the map. Everything in it is presentation: the rules core (`src/core`) is not changed, presentation randomness never touches `tq::Rng`, and the 100-battle baseline and the tick-by-tick comparison must stay exactly the same. Every card is held to p95 ≤ 16.7 ms with the `--perf` run, including with the most soldiers on screen, and its PR carries before and after screenshots.
+
+### V1 Zoom and pan
+
+- Do: the mouse wheel zooms around the cursor, from 1× to 4×; middle-drag or right-drag pans; Home resets. Picking and orders go through the same conversion as A3, so they stay accurate when zoomed.
+- Acceptance: tests show the world point under the cursor stays put while zooming, panning never leaves the map, a right click still orders, and clicks select, move, and attack the right unit at 2× and 3×; screenshots at 1× match those before the card.
+
+### V2 Soldier layer
+
+- Do: soldiers are presentation only, computed every frame from each unit's interpolated position, facing, frontage, depth, troops, and state; they never touch the simulation's random numbers. Each unit seeds its own small jitter from its id. One soldier stands for 10 cavalry or 20 infantry, at most 60 per unit, in ranks and files inside the formation rectangle, and casualties are taken from the rear ranks. Animation states: idle, marching, charging (horses gallop and raise dust), engaged (front ranks interleave), wavering, breaking (turning around), routing (scattering individually). Soldiers are drawn sorted by y, all from one atlas through one VertexArray. The atlas is drawn in code at startup as silhouette placeholders (cavalry, spear, arquebus, samurai, and general, each in 8 directions with a few frames per direction); a finished PNG atlas later replaces it without code changes.
+- Acceptance: tests for soldier counts, rear-rank losses, determinism per unit id, and that the rules core output is unchanged; perf within budget with the most soldiers; screenshots before and after, plus one at 3×.
+
+### V3 Near and far views, banners
+
+- Do: below 2× the current formation blocks and counters are shown; at 2× and above, soldiers, banners, and a small counter. Ming units carry unit banners with a character; Japanese units carry sashimono. Banner faces are placeholder art drawn in code for now.
+- Acceptance: the switch happens at 2×; picking works in both views; screenshots before and after, plus one at 3×.
+
+### V4 Unit card
+
+- Do: selecting a unit shows a portrait slot for its unit type (placeholder art for now) and a description in the command card. The descriptions live in the string tables under `desc.type.<unit type id>`, in Traditional Chinese and English, covering historical background, equipment, strengths, and weaknesses, in neutral and dignified language for both sides, and listed in PROGRESS as awaiting author review.
+- Acceptance: every unit type has a description in zh-Hant and en, the glyph test passes, and the text does not overflow the card. After V4 is merged, stop: put screenshots of the near and far views and a recording of about 30 seconds into PROGRESS for the author to judge the effect and choose the art direction before the art pipeline, map, and effects continue.
 
 ## Glossary
 
@@ -1793,7 +1821,7 @@ When an agent runs into one of these questions it continues with the "default" a
 | Balance | Prototype starting values. In the scripted baseline Li Rusong falls in half the battles, which may be too hard, but values do not change before P1 parity passes | After M2 playtesting |
 | Fatigue system | Not in the demo; only cavalry tiring in melee | After the demo |
 | Fog of war | Not in the demo | After the demo |
-| Camera zoom and pan | Whole map shown by default; zoom is the optional card A1b | M2 |
+| Camera zoom and pan | Decided: V1, wheel 1× to 4×, middle or right drag, Home resets | Decided |
 | AI difficulty | One level only | After the demo |
 | Historical check of troops and terrain | Values marked provisional; the intro overlay keeps the prototype's note | Before the demo package |
 | Joseon land perspective | Not in the demo; naval battles to be discussed later | After the demo |

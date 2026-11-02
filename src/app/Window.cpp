@@ -50,7 +50,15 @@ PointerSample pointerAt(PointerSample::Type type, PointerSample::Device device, 
 }
 
 int pointerButton(sf::Mouse::Button button) {
+    if (button == sf::Mouse::Button::Middle) {
+        return kPointerMiddle;
+    }
     return button == sf::Mouse::Button::Right ? kPointerRight : kPointerLeft;
+}
+
+bool trackedButton(sf::Mouse::Button button) {
+    return button == sf::Mouse::Button::Left || button == sf::Mouse::Button::Right ||
+           button == sf::Mouse::Button::Middle;
 }
 
 } // namespace
@@ -156,31 +164,39 @@ sf::Vector2f Window::shakenCenter(sf::Vector2f center, float scale) const {
 void Window::beginWorld() {
     const ScreenRect field = battlefieldRect();
     const sf::Vector2f map = mapExtent(worldSize_);
-    const MapCamera placed = mapCamera(field, map.x, map.y);
-    applyView(shakenCenter({map.x * 0.5f, map.y * 0.5f}, placed.scale),
-              {field.w / placed.scale, field.h / placed.scale}, field);
+    const MapCamera placed = mapCamera(field, map.x, map.y, zoom_);
+    const sf::Vector2f center{(field.x + field.w * 0.5f - placed.originX) / placed.scale,
+                              (field.y + field.h * 0.5f - placed.originY) / placed.scale};
+    applyView(shakenCenter(center, placed.scale), {field.w / placed.scale, field.h / placed.scale}, field);
 }
 
 void Window::beginMap() {
+    const ScreenRect field = battlefieldRect();
     const sf::Vector2f map = mapExtent(worldSize_);
-    const MapCamera placed = mapCamera(battlefieldRect(), map.x, map.y);
-    const ScreenRect screen{placed.originX, placed.originY, map.x * placed.scale, map.y * placed.scale};
-    applyView(shakenCenter({map.x * 0.5f, map.y * 0.5f}, placed.scale), {map.x, map.y}, screen);
+    const MapCamera placed = mapCamera(field, map.x, map.y, zoom_);
+    // The map rectangle on screen, cut to the battlefield when zoomed in.
+    const float left = std::max(placed.originX, field.x);
+    const float top = std::max(placed.originY, field.y);
+    const float right = std::min(placed.originX + map.x * placed.scale, field.x + field.w);
+    const float bottom = std::min(placed.originY + map.y * placed.scale, field.y + field.h);
+    const ScreenRect screen{left, top, std::max(1.f, right - left), std::max(1.f, bottom - top)};
+    const sf::Vector2f size{screen.w / placed.scale, screen.h / placed.scale};
+    const sf::Vector2f center{(left - placed.originX) / placed.scale + size.x * 0.5f,
+                              (top - placed.originY) / placed.scale + size.y * 0.5f};
+    applyView(shakenCenter(center, placed.scale), size, screen);
 }
 
 float Window::pixelsPerMeter() const {
     const sf::Vector2f map = mapExtent(worldSize_);
-    return mapCamera(battlefieldRect(), map.x, map.y).scale;
+    return mapCamera(battlefieldRect(), map.x, map.y, zoom_).scale;
 }
 
 sf::FloatRect Window::visibleWorld() const {
     const ScreenRect field = battlefieldRect();
-    const float mapW = static_cast<float>(std::max(1u, worldSize_.x));
-    const float mapH = static_cast<float>(std::max(1u, worldSize_.y));
-    const MapCamera placed = mapCamera(field, mapW, mapH);
-    const float viewW = field.w / placed.scale;
-    const float viewH = field.h / placed.scale;
-    return sf::FloatRect({mapW * 0.5f - viewW * 0.5f, mapH * 0.5f - viewH * 0.5f}, {viewW, viewH});
+    const sf::Vector2f map = mapExtent(worldSize_);
+    const MapCamera placed = mapCamera(field, map.x, map.y, zoom_);
+    return sf::FloatRect({(field.x - placed.originX) / placed.scale, (field.y - placed.originY) / placed.scale},
+                         {field.w / placed.scale, field.h / placed.scale});
 }
 
 void Window::addPointer(PointerSample sample) {
@@ -218,14 +234,21 @@ void Window::poll() {
             pixelSize_ = resized->size;
             applyUiView();
         } else if (const auto *pressed = event->getIf<sf::Event::MouseButtonPressed>()) {
-            if (pressed->button == sf::Mouse::Button::Left || pressed->button == sf::Mouse::Button::Right) {
+            if (trackedButton(pressed->button)) {
                 addPointer(pointerAt(PointerSample::Type::Down, PointerSample::Device::Mouse,
                                      pointerButton(pressed->button), pressed->position, pixelSize_, shiftDown()));
             }
         } else if (const auto *released = event->getIf<sf::Event::MouseButtonReleased>()) {
-            if (released->button == sf::Mouse::Button::Left || released->button == sf::Mouse::Button::Right) {
+            if (trackedButton(released->button)) {
                 addPointer(pointerAt(PointerSample::Type::Up, PointerSample::Device::Mouse,
                                      pointerButton(released->button), released->position, pixelSize_, shiftDown()));
+            }
+        } else if (const auto *scrolled = event->getIf<sf::Event::MouseWheelScrolled>()) {
+            if (scrolled->wheel == sf::Mouse::Wheel::Vertical) {
+                PointerSample sample = pointerAt(PointerSample::Type::Wheel, PointerSample::Device::Mouse,
+                                                 kPointerLeft, scrolled->position, pixelSize_, shiftDown());
+                sample.wheel = scrolled->delta;
+                addPointer(sample);
             }
         } else if (const auto *moved = event->getIf<sf::Event::MouseMoved>()) {
             addPointer(pointerAt(PointerSample::Type::Move, PointerSample::Device::Mouse, kPointerLeft, moved->position,
@@ -272,7 +295,7 @@ sf::Keyboard::Key Window::keyFromName(const std::string &name) {
         {"Down", sf::Keyboard::Key::Down},   {"Left", sf::Keyboard::Key::Left},     {"Right", sf::Keyboard::Key::Right},
         {"Tab", sf::Keyboard::Key::Tab},     {"F1", sf::Keyboard::Key::F1},         {"F2", sf::Keyboard::Key::F2},
         {"F3", sf::Keyboard::Key::F3},       {"F4", sf::Keyboard::Key::F4},         {"F5", sf::Keyboard::Key::F5},
-        {"F6", sf::Keyboard::Key::F6},
+        {"F6", sf::Keyboard::Key::F6},       {"Home", sf::Keyboard::Key::Home},
     };
     if (const auto found = named.find(name); found != named.end()) {
         return found->second;
