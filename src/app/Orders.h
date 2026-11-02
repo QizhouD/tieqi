@@ -83,7 +83,9 @@ inline void toggleRunning(bool &running, const Battle &battle) {
 }
 
 // Several hits keep the one closest to the pointer. A tie keeps the earlier unit.
-UnitId pickUnit(const Battle &battle, float worldX, float worldY, float pixelsPerMeter, float alpha);
+// chitScale shrinks the counter hit box in the near view; the formation still counts.
+UnitId pickUnit(const Battle &battle, float worldX, float worldY, float pixelsPerMeter, float alpha,
+                float chitScale = 1.f);
 
 // zoom is the map camera; picking and orders convert the pointer through it.
 std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const PointerSample &sample, float mapW,

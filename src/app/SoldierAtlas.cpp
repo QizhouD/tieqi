@@ -266,14 +266,75 @@ void figure(sf::VertexArray &tris, sf::Vector2f anchor, Side side, SoldierKind k
     painter.paint(tris, parts);
 }
 
+void flatRect(sf::VertexArray &tris, sf::FloatRect box, sf::Color color) {
+    const sf::Vector2f a = box.position;
+    const sf::Vector2f c = box.position + box.size;
+    tris.append({a, color});
+    tris.append({{c.x, a.y}, color});
+    tris.append({c, color});
+    tris.append({a, color});
+    tris.append({c, color});
+    tris.append({{a.x, c.y}, color});
+}
+
+void flatDisc(sf::VertexArray &tris, sf::Vector2f center, float radius, sf::Color color) {
+    constexpr int kSteps = 24;
+    for (int i = 0; i < kSteps; ++i) {
+        const float a0 = 2.f * kPi * static_cast<float>(i) / kSteps;
+        const float a1 = 2.f * kPi * static_cast<float>(i + 1) / kSteps;
+        tris.append({center, color});
+        tris.append({{center.x + std::cos(a0) * radius, center.y + std::sin(a0) * radius}, color});
+        tris.append({{center.x + std::cos(a1) * radius, center.y + std::sin(a1) * radius}, color});
+    }
+}
+
+void flatRing(sf::VertexArray &tris, sf::Vector2f center, float radius, float width, sf::Color color) {
+    constexpr int kSteps = 32;
+    for (int i = 0; i < kSteps; ++i) {
+        const float a0 = 2.f * kPi * static_cast<float>(i) / kSteps;
+        const float a1 = 2.f * kPi * static_cast<float>(i + 1) / kSteps;
+        const sf::Vector2f o0{std::cos(a0), std::sin(a0)};
+        const sf::Vector2f o1{std::cos(a1), std::sin(a1)};
+        const float inner = radius - width;
+        tris.append({center + o0 * inner, color});
+        tris.append({center + o0 * radius, color});
+        tris.append({center + o1 * radius, color});
+        tris.append({center + o0 * inner, color});
+        tris.append({center + o1 * radius, color});
+        tris.append({center + o1 * inner, color});
+    }
+}
+
+// The extras row: a dust puff and three placeholder banner cloths, each filling its cell.
 void extras(sf::VertexArray &tris, float top) {
-    // Dust puff: soft concentric discs.
-    const sf::Vector2f dust{kAtlasCellPx * (kAtlasDustColumn + 0.5f), top + kAtlasCellPx * 0.5f};
+    const float cell = static_cast<float>(kAtlasCellPx);
+    const sf::Vector2f dust{cell * (kAtlasDustColumn + 0.5f), top + cell * 0.5f};
     for (int ring = 0; ring < 8; ++ring) {
         const float radius = 14.f - static_cast<float>(ring) * 1.6f;
-        const sf::Color color{0xb8, 0xa0, 0x7a, static_cast<std::uint8_t>(18 + ring * 6)};
-        const Painter painter(dust, 0);
-        painter.paint(tris, {disc({0.f, 0.f, 0.f}, radius, color, false)});
+        flatDisc(tris, dust, radius, sf::Color{0xb8, 0xa0, 0x7a, static_cast<std::uint8_t>(18 + ring * 6)});
+    }
+
+    // Ming unit banner: vermilion with a gold border; the character is drawn over it at run time.
+    const float ming = cell * kAtlasMingBannerColumn;
+    flatRect(tris, {{ming, top}, {cell, cell}}, sf::Color{0xd9, 0xb4, 0x66});
+    flatRect(tris, {{ming + 2.f, top + 2.f}, {cell - 4.f, cell - 4.f}}, sf::Color{0xb0, 0x30, 0x24});
+    flatRect(tris, {{ming + 2.f, top + 2.f}, {cell - 4.f, 6.f}}, sf::Color{0xc2, 0x3b, 0x2a});
+
+    // Japanese sashimono: off-white with a black placeholder crest. Vanguard (Tachibana) and main body (Kobayakawa).
+    const sf::Color cloth{0xef, 0xe5, 0xcb};
+    const sf::Color crest{0x1b, 0x1b, 0x1f};
+    const float van = cell * kAtlasJpVanguardBannerColumn;
+    flatRect(tris, {{van, top}, {cell, cell}}, cloth);
+    flatRing(tris, {van + cell * 0.5f, top + cell * 0.45f}, 9.f, 2.2f, crest);
+    flatRect(tris, {{van + cell * 0.5f - 1.2f, top + cell * 0.45f - 9.f}, {2.4f, 18.f}}, crest);
+    flatRect(tris, {{van + cell * 0.5f - 9.f, top + cell * 0.45f - 1.2f}, {18.f, 2.4f}}, crest);
+    const float main = cell * kAtlasJpMainBannerColumn;
+    flatRect(tris, {{main, top}, {cell, cell}}, cloth);
+    for (int i = 0; i < 3; ++i) {
+        const float angle = -kPi * 0.5f + static_cast<float>(i) * 2.f * kPi / 3.f;
+        const sf::Vector2f at{main + cell * 0.5f + std::cos(angle) * 5.5f, top + cell * 0.47f + std::sin(angle) * 5.5f};
+        flatDisc(tris, at, 4.2f, crest);
+        flatDisc(tris, at + sf::Vector2f{std::cos(angle + 1.6f), std::sin(angle + 1.6f)} * 2.6f, 2.2f, crest);
     }
 }
 

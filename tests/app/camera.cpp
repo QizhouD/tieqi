@@ -158,3 +158,25 @@ TEST_CASE("scripts can wheel and pan") {
     CHECK(panned.back().type == PointerSample::Type::Up);
     CHECK(samplesForScript(events[2])[1].button == kPointerRight);
 }
+
+TEST_CASE("the near view starts at 2x and still picks units") {
+    CHECK_FALSE(nearView(zoomAround({}, 1.9f, 625.f, 521.f, kMapW, kMapH)));
+    CHECK(nearView(zoomAround({}, 2.f, 625.f, 521.f, kMapW, kMapH)));
+
+    const GameData data = loadByeok();
+    BattleOptions options;
+    options.aiEnabled = false;
+    Battle battle(data.defs, data.scenario, 1, options);
+    battle.step();
+    const UnitId li = *battle.sceneUnit("li_rusong");
+    const Zoom zoom = zoomAround({}, 3.f, 625.f, 300.f, kMapW, kMapH);
+    const float scale = mapCamera(battlefieldRect(), kMapW, kMapH, zoom).scale;
+    const Vec2 at = battle.unit(li).pos;
+    CHECK(pickUnit(battle, at.x, at.y, scale, 0.f, kNearChitScale) == li);
+
+    OrderState state;
+    const Vec2 click = logicalFromWorld(at.x, at.y, kMapW, kMapH, zoom);
+    applyPointer(state, battle, mouse(PointerSample::Type::Down, kPointerLeft, click), kMapW, kMapH, 0.f, zoom);
+    applyPointer(state, battle, mouse(PointerSample::Type::Up, kPointerLeft, click), kMapW, kMapH, 0.f, zoom);
+    CHECK(state.selected == std::vector<UnitId>{li});
+}

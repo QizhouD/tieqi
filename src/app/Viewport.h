@@ -110,6 +110,9 @@ inline float mapScale(float pixelW, float pixelH, float mapW, float mapH, float 
 
 inline constexpr float kMinZoom = 1.f;
 inline constexpr float kMaxZoom = 4.f;
+// From this zoom level up the near view shows soldiers, banners, and a small counter instead of blocks and counters.
+inline constexpr float kNearZoom = 2.f;
+inline constexpr float kNearChitScale = 0.55f;
 
 // Zoom 1 shows the whole map. focus is the world point at the centre of the battlefield; empty means the map centre.
 struct Zoom {
@@ -135,6 +138,8 @@ inline Vec2 clampFocus(ScreenRect field, float mapW, float mapH, float scale, Ve
     };
     return {axis(focus.x, mapW, field.w, scale), axis(focus.y, mapH, field.h, scale)};
 }
+
+inline bool nearView(const Zoom &zoom) { return zoom.level >= kNearZoom; }
 
 inline MapCamera mapCamera(ScreenRect field, float mapW, float mapH, const Zoom &zoom = {}) {
     const float fit = mapScale(field.w, field.h, mapW, mapH);

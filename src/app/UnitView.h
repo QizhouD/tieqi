@@ -12,7 +12,7 @@ namespace tq {
 
 // Blocks, chits, order lines, the odds arrow, and the drag box.
 // afterBlocks runs above the blocks and under the order lines. afterChits runs above the chits and under the preview.
-// With soldiers, the soldier layer stands in for the formation dots, so blocks keep only a faint footprint.
+// With soldiers (the near view) the soldier layer replaces the blocks and counters are drawn small.
 class UnitView {
   public:
     void draw(Window &window, const Battle &battle, const StringTable &strings, const sf::Font &glyphFont,

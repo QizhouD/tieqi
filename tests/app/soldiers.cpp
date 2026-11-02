@@ -7,6 +7,7 @@
 #include <cmath>
 #include <filesystem>
 #include <numbers>
+#include <string>
 #include <vector>
 
 using namespace tq;
@@ -182,4 +183,44 @@ TEST_CASE("drawing soldiers every tick leaves the battle unchanged") {
         REQUIRE(plain.stateHash() == watched.stateHash());
     }
     CHECK_FALSE(soldiers.empty());
+}
+
+TEST_CASE("banners: Ming units carry one, Japanese crests follow the source unit, broken units drop theirs") {
+    const GameData data = loadByeok();
+    const Battle battle = makeBattle(data);
+    const Unit &li = named(battle, "li_rusong");
+    CHECK(bannerKind(battle, li) == BannerKind::Ming);
+    CHECK(bannerKind(battle, named(battle, "van_teppo_left")) == BannerKind::JpVanguard);
+
+    Unit fragment = named(battle, "van_yari");
+    fragment.vanguard = false;
+    fragment.origin = named(battle, "van_yari").id;
+    CHECK(bannerKind(battle, fragment) == BannerKind::JpVanguard);
+    fragment.origin = kNoUnit;
+    CHECK(bannerKind(battle, fragment) == BannerKind::JpMain);
+
+    Unit broken = li;
+    broken.state = UnitState::Broken;
+    CHECK(bannerKind(battle, broken) == BannerKind::None);
+    CHECK(unitBanner(battle, broken, 1.f, 0.f).kind == BannerKind::None);
+
+    Unit still = li;
+    still.prevPos = still.pos;
+    still.prevFacing = still.facing;
+    const Banner banner = unitBanner(battle, still, 1.f, 0.f);
+    const Vec2 offset = banner.base - still.pos;
+    CHECK(std::hypot(offset.x, offset.y) == doctest::Approx(still.depth * 0.3f));
+}
+
+TEST_CASE("every Ming unit type has a banner character in every language") {
+    const GameData data = loadByeok();
+    for (const UnitType &type : data.defs.types) {
+        if (type.side != Side::Ming) {
+            continue;
+        }
+        const std::string key = "glyph.flag." + type.id;
+        CHECK_MESSAGE(data.zhHant.entries.count(key) == 1, key);
+    }
+    CHECK(data.zhHant.entries.count("glyph.flag.yang_left") == 1);
+    CHECK(data.zhHant.entries.count("glyph.flag.yang_right") == 1);
 }

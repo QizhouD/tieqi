@@ -1355,15 +1355,22 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 
 ### Soldier layer (V2)
 
-- From 2× zoom up, the formation dots and the charge speed lines give way to soldiers, and the formation block keeps only a faint footprint. Below 2× nothing changes.
+- The view has two ranges (V3). Below 2× zoom it is the far view: formation blocks and full counters, unchanged from M3. From 2× up it is the near view: soldiers, banners, and a counter at 0.55 of its size at the unit centre; formation blocks and charge speed lines are hidden, and the selection frame, order lines, and odds preview stay. Picking uses the small counter box in the near view; the formation rectangle counts in both.
 - Soldiers are presentation only. Every frame `layoutSoldiers` derives them from the unit snapshot: interpolated position and facing, frontage, depth, troops, and state. They keep no state and never touch `tq::Rng`; jitter and animation phase come from a hash of the unit id and the soldier index.
 - One soldier stands for 10 cavalry or 20 infantry, at least one while any men are left, at most 60 per unit. The full-strength count (from maxMen) is laid out in ranks and files filling the formation rectangle, front rank first, so losses take men off the rear ranks.
 - Kinds: cavalry, spear, arquebus, samurai, and a general figure in the middle of a general unit's front rank.
 - Animation states, chosen from the unit: idle (some men look aside), marching (move cycle), charging (faster cycle, riders bob and raise dust puffs that drift back and fade), engaged (the front rank steps in and out of line in turn and strikes), wavering (men turn and shuffle), broken (each man turns about, some later than others, as the unit flips), routing (men run, scattering outward over 24 battlefield seconds, slightly darkened).
 - Animation runs on presentation time that stops while paused, during hit-stop, and when frozen.
 - All soldiers are sorted by y and drawn from one atlas in a single VertexArray, dust first. A cell spans 9 m on the map, larger than life so a figure reads at 2× to 4×.
-- Atlas layout (`src/app/SoldierAtlas.h`): 32-pixel cells; columns are frames (0 idle, 1–4 move cycle, 5–6 strike, 7 idle looking aside); row = (side × 5 + kind) × 8 + direction, with side 0 Ming and 1 Japanese, kinds in the order above, and directions 0 east then clockwise in 45° steps; the last row holds extras (column 0 dust puff, 1 Ming banner, 2 Japanese sashimono). Feet stand at (16, 26) in the cell. The atlas is 256 × 2592 pixels.
+- Atlas layout (`src/app/SoldierAtlas.h`): 32-pixel cells; columns are frames (0 idle, 1–4 move cycle, 5–6 strike, 7 idle looking aside); row = (side × 5 + kind) × 8 + direction, with side 0 Ming and 1 Japanese, kinds in the order above, and directions 0 east then clockwise in 45° steps; the last row holds extras (column 0 dust puff, 1 Ming banner cloth, 2 Japanese vanguard (Tachibana) sashimono, 3 Japanese main body (Kobayakawa) sashimono; a cloth fills its cell). Feet stand at (16, 26) in the cell. The atlas is 256 × 2592 pixels.
 - The placeholder atlas is drawn in code at startup from simple projected shapes. A PNG at `assets/textures/soldiers/soldiers.png` with the same layout replaces it without code changes; a file of the wrong size is ignored with a warning. `tieqi --dump-atlas <file>` writes the placeholder as a template for artists.
+
+### Banners (V3)
+
+- In the near view every unit able to fight carries one banner; broken and routing units drop it. The pole stands 0.3 of the depth behind the unit centre and rises 16 m straight up the screen; banners are sorted by y and drawn over the soldiers.
+- Ming: a square 8 × 8 m flag from the top of the pole whose free edge waves, with one character in the brush font. The character is `glyph.flag.<scene id>` when that key exists (楊 for Yang Yuan's two units), otherwise `glyph.flag.<unit type id>`: 李 for the Li family retainers (`jiading`), 明 for the Liaodong cavalry, 帥 for the commander's guard. Like counter glyphs, these are Traditional Chinese in all three languages.
+- Japanese: a tall 3.6 × 10 m sashimono hanging from a crossbar, its bottom swinging. Units of the vanguard, and remnants or detachments whose source was in the vanguard, show the Tachibana crest; all others the Kobayakawa crest. Both crests are placeholders drawn in code.
+- Banner cloths come from the extras row of the soldier atlas, so finished art replaces them through the same PNG.
 
 ### Events: effects, sound, and battle log
 

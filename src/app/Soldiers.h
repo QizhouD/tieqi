@@ -2,6 +2,7 @@
 
 #include "core/defs/UnitType.h"
 #include "core/math/Vec2.h"
+#include "core/sim/Battle.h"
 #include "core/sim/Unit.h"
 
 #include <cstdint>
@@ -16,8 +17,6 @@ namespace tq {
 inline constexpr float kMenPerCavalrySoldier = 10.f;
 inline constexpr float kMenPerInfantrySoldier = 20.f;
 inline constexpr int kMaxSoldiersPerUnit = 60;
-// Soldiers replace the formation dots from this zoom level up.
-inline constexpr float kSoldierZoom = 2.f;
 
 enum class SoldierKind : std::uint8_t { Cavalry, Spear, Gun, Samurai, General };
 inline constexpr int kSoldierKinds = 5;
@@ -75,6 +74,26 @@ SoldierGrid soldierGrid(const UnitType &type, const Unit &unit);
 
 // Local slot position: x along the facing (front positive), y across the frontage.
 Vec2 soldierSlot(const SoldierGrid &grid, int index);
+
+enum class BannerKind : std::uint8_t { None, Ming, JpVanguard, JpMain };
+
+// Banner geometry in metres: the pole stands in the rear half of the formation and rises straight up the screen.
+inline constexpr float kBannerPole = 16.f;
+inline constexpr float kMingBannerWidth = 8.f;
+inline constexpr float kMingBannerHeight = 8.f;
+inline constexpr float kJpBannerWidth = 3.6f;
+inline constexpr float kJpBannerHeight = 10.f;
+
+struct Banner {
+    BannerKind kind = BannerKind::None;
+    Vec2 base{};
+    // Horizontal sway of the free edge of the cloth, in metres.
+    float sway = 0.f;
+};
+
+// Only units able to fight carry a banner. Japanese remnants and detachments keep the crest of their source unit.
+BannerKind bannerKind(const Battle &battle, const Unit &unit);
+Banner unitBanner(const Battle &battle, const Unit &unit, float alpha, float animTime);
 
 // Appends the unit's soldiers. animTime is presentation time that stops while paused.
 void layoutSoldiers(const Unit &unit, const UnitType &type, float alpha, float animTime, std::vector<Soldier> &out);

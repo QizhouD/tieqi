@@ -70,8 +70,8 @@ void issueAttack(OrderState &state, const Battle &battle, UnitId target, std::ve
 }
 
 void updateHover(OrderState &state, const Battle &battle, float worldX, float worldY, float pixelsPerMeter,
-                 float alpha) {
-    const UnitId hit = pickUnit(battle, worldX, worldY, pixelsPerMeter, alpha);
+                 float alpha, float chitScale) {
+    const UnitId hit = pickUnit(battle, worldX, worldY, pixelsPerMeter, alpha, chitScale);
     if (aliveUnit(battle, hit) && battle.unit(hit).side == Side::Jp) {
         state.hover = hit;
     } else {
@@ -112,8 +112,8 @@ void boxSelect(OrderState &state, const Battle &battle, float x0, float y0, floa
 }
 
 void handleClick(OrderState &state, const Battle &battle, Vec2 world, int button, PointerSample::Device device,
-                 bool shift, float pixelsPerMeter, float alpha, std::vector<Command> &issued) {
-    const UnitId hit = pickUnit(battle, world.x, world.y, pixelsPerMeter, alpha);
+                 bool shift, float pixelsPerMeter, float alpha, float chitScale, std::vector<Command> &issued) {
+    const UnitId hit = pickUnit(battle, world.x, world.y, pixelsPerMeter, alpha, chitScale);
     const bool hitUnit = aliveUnit(battle, hit);
     const Unit *unit = hitUnit ? &battle.unit(hit) : nullptr;
     if (button == kPointerRight) {
@@ -184,7 +184,7 @@ void dropGone(OrderState &state, const Battle &battle) {
 
 } // namespace
 
-UnitId pickUnit(const Battle &battle, float worldX, float worldY, float pixelsPerMeter, float alpha) {
+UnitId pickUnit(const Battle &battle, float worldX, float worldY, float pixelsPerMeter, float alpha, float chitScale) {
     const float scale = std::max(pixelsPerMeter, 1e-3f);
     UnitId best = kNoUnit;
     float bestDistance = 0.f;
@@ -195,7 +195,8 @@ UnitId pickUnit(const Battle &battle, float worldX, float worldY, float pixelsPe
         const Pose pose = interpolatedPose(unit, alpha);
         const float dx = worldX - pose.pos.x;
         const float dy = worldY - pose.pos.y;
-        const float halfChit = chitPixels(scale, unit.maxMen, battle.typeOf(unit).men) / scale * 0.5f + 4.f / scale;
+        const float halfChit =
+            chitPixels(scale, unit.maxMen, battle.typeOf(unit).men) * chitScale / scale * 0.5f + 4.f / scale;
         bool hit = std::abs(dx) <= halfChit && std::abs(dy) <= halfChit;
         if (!hit) {
             const float cosine = std::cos(pose.facing);
@@ -225,13 +226,14 @@ std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const
     const bool inside = insideBattlefield(sample.x, sample.y);
     const float scale = mapCamera(battlefieldRect(), mapW, mapH, zoom).scale;
     const Vec2 world = worldFromLogical(sample.x, sample.y, mapW, mapH, zoom);
+    const float chitScale = nearView(zoom) ? kNearChitScale : 1.f;
 
     if (sample.type == PointerSample::Type::Move) {
         if (sample.device == PointerSample::Device::Mouse) {
             if (!inside) {
                 state.hover.reset();
             } else {
-                updateHover(state, battle, world.x, world.y, scale, alpha);
+                updateHover(state, battle, world.x, world.y, scale, alpha, chitScale);
             }
         }
         const bool canDrag = state.pressing && state.pressButton == kPointerLeft &&
@@ -241,7 +243,7 @@ std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const
             const float dy = sample.y - state.pressY;
             if (!state.box && std::hypot(dx, dy) > kDragThresholdPx) {
                 const Vec2 down = worldFromLogical(state.pressX, state.pressY, mapW, mapH, zoom);
-                if (pickUnit(battle, down.x, down.y, scale, alpha) == kNoUnit) {
+                if (pickUnit(battle, down.x, down.y, scale, alpha, chitScale) == kNoUnit) {
                     state.box = true;
                     state.boxX0 = state.pressX;
                     state.boxY0 = state.pressY;
@@ -291,7 +293,7 @@ std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const
     if (!inside) {
         return issued;
     }
-    handleClick(state, battle, world, button, device, shift, scale, alpha, issued);
+    handleClick(state, battle, world, button, device, shift, scale, alpha, chitScale, issued);
     return issued;
 }
 
