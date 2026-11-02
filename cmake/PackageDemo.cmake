@@ -46,8 +46,10 @@ file(REMOVE_RECURSE "${stage}")
 file(REMOVE "${out}/${name}.zip")
 file(MAKE_DIRECTORY "${stage}")
 file(COPY "${EXECUTABLE}" DESTINATION "${stage}")
-file(COPY "${SOURCE_DIR}/data" DESTINATION "${stage}" PATTERN ".gitkeep" EXCLUDE)
-file(COPY "${SOURCE_DIR}/assets" DESTINATION "${stage}" PATTERN ".gitkeep" EXCLUDE)
+# Korean is on hold: its string table and font stay in the repository but are not shipped.
+file(COPY "${SOURCE_DIR}/data" DESTINATION "${stage}" PATTERN ".gitkeep" EXCLUDE PATTERN "ko.json" EXCLUDE)
+file(COPY "${SOURCE_DIR}/assets" DESTINATION "${stage}" PATTERN ".gitkeep" EXCLUDE
+     PATTERN "NotoSerifKR-Regular.otf" EXCLUDE)
 file(COPY "${SOURCE_DIR}/assets/AI_ASSETS.md" DESTINATION "${stage}")
 configure_file("${SOURCE_DIR}/docs/demo/README.txt" "${stage}/README.txt" @ONLY NEWLINE_STYLE WIN32)
 

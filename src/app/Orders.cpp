@@ -236,7 +236,7 @@ std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const
     const bool inside = insideBattlefield(sample.x, sample.y);
     const float scale = mapCamera(battlefieldRect(), mapW, mapH, zoom).scale;
     const Vec2 world = worldFromLogical(sample.x, sample.y, mapW, mapH, zoom);
-    const float chitScale = nearView(zoom) ? kNearChitScale : 1.f;
+    const float chitScale = chitScaleFor(zoom);
 
     if (sample.type == PointerSample::Type::Move) {
         if (sample.device == PointerSample::Device::Mouse) {

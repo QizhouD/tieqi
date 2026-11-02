@@ -23,11 +23,11 @@ English follows the Traditional Chinese text.
 - 暫停時也可以下令。開局畫面有騎兵要訣，建議先讀完再開戰。
 
 【設定】
-右上角「設定」可以切換語言（繁體中文、English、한국어）和「減少動態」（關掉震屏、縮短頓幀）。設定存在 tieqi.exe 旁邊的 settings.txt；如果資料夾不能寫入，下次啟動會回到預設值。
+右上角「設定」可以切換語言（繁體中文、English）和「減少動態」（關掉震屏、縮短頓幀）。設定存在 tieqi.exe 旁邊的 settings.txt；如果資料夾不能寫入，下次啟動會回到預設值。
 
 【已知事項】
 - 兵種數值與地形、兵力都是暫定，尚待對照史料核實。
-- 英文與韓文是初稿，正在審校。
+- 英文是初稿，正在審校。
 - 音效是程式即時合成的暫代音。
 - 沒有存檔，只保存設定。
 
@@ -36,7 +36,7 @@ English follows the Traditional Chinese text.
 
 【授權與素材】
 - 第三方程式庫的授權見 THIRD_PARTY_NOTICES.txt。
-- 字型（思源宋體 TC／KR、霞鶩文楷 TC）採用 SIL Open Font License，授權檔在 assets/fonts。
+- 字型（思源宋體 TC、霞鶩文楷 TC）採用 SIL Open Font License，授權檔在 assets/fonts。
 - AI 生成素材的清單見 AI_ASSETS.md。
 
 ================================================================
@@ -59,11 +59,11 @@ CONTROLS
 - You can give orders while paused. The opening screen explains cavalry essentials; read it before you begin.
 
 SETTINGS
-"Settings" at the top right switches the language (繁體中文, English, 한국어) and "Reduce motion" (no screen shake, shorter hit-stop). Settings are saved to settings.txt next to tieqi.exe; if the folder is not writable, the defaults return on the next start.
+"Settings" at the top right switches the language (繁體中文, English) and "Reduce motion" (no screen shake, shorter hit-stop). Settings are saved to settings.txt next to tieqi.exe; if the folder is not writable, the defaults return on the next start.
 
 KNOWN ISSUES
 - Unit values, terrain, and troop numbers are provisional and still to be checked against historical sources.
-- The English and Korean text is a first draft under review.
+- The English text is a first draft under review.
 - Sound effects are placeholders synthesized at run time.
 - There are no saved games; only settings are kept.
 
@@ -72,5 +72,5 @@ Please include the version (@VERSION@), your Windows version, your graphics card
 
 LICENSES AND ASSETS
 - Third-party library licenses: THIRD_PARTY_NOTICES.txt.
-- Fonts (Noto Serif TC/KR, LXGW WenKai TC) are under the SIL Open Font License; license files are in assets/fonts.
+- Fonts (Noto Serif TC, LXGW WenKai TC) are under the SIL Open Font License; license files are in assets/fonts.
 - AI-generated assets are listed in AI_ASSETS.md.

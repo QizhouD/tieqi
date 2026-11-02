@@ -60,7 +60,10 @@ class Effects {
     sf::Vector2f shakePixels();
 
     void drawDust(sf::RenderTarget &target) const;
-    void drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold, float pixelsPerMeter) const;
+    // Floating text keeps a fixed screen size (times textScale) and rises at a fixed screen speed whatever the zoom;
+    // texts that would overlap are stacked upward in the order they appeared.
+    void drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold, float pixelsPerMeter,
+                 float textScale = 1.f) const;
 
   private:
     enum class Kind : std::uint8_t { Dust, Smoke, Flash, Chip, Ring, Mark, Text };

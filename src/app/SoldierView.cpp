@@ -70,7 +70,10 @@ std::string flagText(const StringTable &strings, const Unit &unit, const UnitTyp
 } // namespace
 
 void SoldierView::draw(sf::RenderTarget &target, const Battle &battle, const SoldierAtlas &atlas, float alpha,
-                       float animTime, const StringTable &strings, const sf::Font &brush) {
+                       float animTime, const StringTable &strings, const sf::Font &brush, float opacity) {
+    const auto fadeTo = [opacity](float alpha) {
+        return static_cast<std::uint8_t>(std::clamp(alpha * opacity, 0.f, 1.f) * 255.f + 0.5f);
+    };
     soldiers_.clear();
     for (const Unit &unit : battle.units()) {
         layoutSoldiers(unit, battle.typeOf(unit), alpha, animTime, soldiers_);
@@ -81,7 +84,7 @@ void SoldierView::draw(sf::RenderTarget &target, const Battle &battle, const Sol
     const sf::IntRect dust = SoldierAtlas::cell(kAtlasExtraRow, kAtlasDustColumn);
     for (const Soldier &soldier : soldiers_) {
         if (soldier.dust > 0.f) {
-            const auto a = static_cast<std::uint8_t>(std::clamp(soldier.dust, 0.f, 1.f) * 255.f);
+            const std::uint8_t a = fadeTo(soldier.dust);
             appendSprite(tris_, {soldier.dustPos.x - kDustMeters * 0.5f, soldier.dustPos.y - kDustMeters * 0.5f},
                          {kDustMeters, kDustMeters}, dust, sf::Color{255, 255, 255, a});
         }
@@ -93,16 +96,20 @@ void SoldierView::draw(sf::RenderTarget &target, const Battle &battle, const Sol
         const sf::IntRect cell = SoldierAtlas::cell(atlasRow(soldier.side, soldier.kind, soldier.direction),
                                                     soldier.frame);
         appendSprite(tris_, {soldier.pos.x - kAtlasAnchorX * scale, soldier.pos.y - kAtlasAnchorY * scale}, size, cell,
-                     sf::Color{shade, shade, shade, 255});
+                     sf::Color{shade, shade, shade, fadeTo(1.f)});
     }
     sf::RenderStates states;
     states.texture = &atlas.texture();
     target.draw(tris_, states);
-    drawBanners(target, battle, atlas, alpha, animTime, strings, brush);
+    drawBanners(target, battle, atlas, alpha, animTime, strings, brush, opacity);
 }
 
 void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, const SoldierAtlas &atlas, float alpha,
-                              float animTime, const StringTable &strings, const sf::Font &brush) {
+                              float animTime, const StringTable &strings, const sf::Font &brush, float opacity) {
+    const auto alphaOf = [opacity](sf::Color color) {
+        color.a = static_cast<std::uint8_t>(std::clamp(opacity, 0.f, 1.f) * static_cast<float>(color.a) + 0.5f);
+        return color;
+    };
     struct Placed {
         Banner banner;
         UnitId unit = kNoUnit;
@@ -119,7 +126,7 @@ void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, co
 
     sf::VertexArray poles(sf::PrimitiveType::Triangles);
     tris_.clear();
-    const sf::Color wood{0x4a, 0x36, 0x24};
+    const sf::Color wood = alphaOf({0x4a, 0x36, 0x24});
     for (const Placed &item : placed) {
         const Banner &banner = item.banner;
         const float x = banner.base.x;
@@ -139,7 +146,8 @@ void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, co
                                            {x + 0.25f + w, top + 0.4f + banner.sway},
                                            {x + 0.25f + w, top + 0.4f + h + banner.sway},
                                            {x + 0.25f, top + 0.4f + h}};
-            appendQuad(tris_, cloth, SoldierAtlas::cell(kAtlasExtraRow, kAtlasMingBannerColumn), sf::Color::White);
+            appendQuad(tris_, cloth, SoldierAtlas::cell(kAtlasExtraRow, kAtlasMingBannerColumn),
+                       alphaOf(sf::Color::White));
         } else {
             // A tall sashimono hanging from a crossbar; the bottom swings.
             const float w = kJpBannerWidth;
@@ -150,7 +158,7 @@ void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, co
                                            {x + 0.25f + w, top + 0.3f},
                                            {x + 0.25f + w + banner.sway * 0.6f, top + 0.3f + h},
                                            {x + 0.25f + banner.sway * 0.6f, top + 0.3f + h}};
-            appendQuad(tris_, cloth, SoldierAtlas::cell(kAtlasExtraRow, column), sf::Color::White);
+            appendQuad(tris_, cloth, SoldierAtlas::cell(kAtlasExtraRow, column), alphaOf(sf::Color::White));
         }
     }
     target.draw(poles);
@@ -175,7 +183,7 @@ void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, co
         const sf::Vector2f center{item.banner.base.x + 0.25f + kMingBannerWidth * 0.5f,
                                   item.banner.base.y - kBannerPole + 0.4f + kMingBannerHeight * 0.5f +
                                       item.banner.sway * 0.5f};
-        drawText(target, brush, kGlyphPixels, false, text, sf::Color{0xf4, 0xdb, 0xa4}, center,
+        drawText(target, brush, kGlyphPixels, false, text, alphaOf({0xf4, 0xdb, 0xa4}), center,
                  {bounds.position.x + bounds.size.x * 0.5f, bounds.position.y + bounds.size.y * 0.5f},
                  {scale, scale});
     }

@@ -14,6 +14,9 @@
 namespace tq {
 namespace {
 
+// Floating text rises this many logical pixels per second of effect time, the prototype's 18 m/s at 1x.
+constexpr float kFloatRisePixels = 15.f;
+
 sf::Color ink() { return {0x2a, 0x22, 0x1b}; }
 
 sf::Color cinnabar() { return {0xa8, 0x38, 0x2a}; }
@@ -348,9 +351,12 @@ void Effects::drawDust(sf::RenderTarget &target) const {
     }
 }
 
-void Effects::drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold, float pixelsPerMeter) const {
+void Effects::drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold, float pixelsPerMeter,
+                      float textScale) const {
     ensureBlob();
     const float scale = std::max(pixelsPerMeter, 1e-3f);
+    // Screen rectangles of the texts placed so far this frame, in world units.
+    std::vector<sf::FloatRect> placed;
     for (const Item &item : items_) {
         if (!(item.span > 0.f)) {
             continue;
@@ -416,12 +422,27 @@ void Effects::drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold,
                 break;
             }
             const float pop = 1.f + 0.35f * std::max(0.f, 1.f - item.life * 6.f);
-            const auto size = static_cast<unsigned>(std::max(1, static_cast<int>(std::lround(item.pixels / scale))));
+            const float pixels = item.pixels * textScale;
+            const auto size = static_cast<unsigned>(std::max(1, static_cast<int>(std::lround(pixels / scale))));
             const sf::FloatRect bounds = textBounds(font, size, bold, item.text);
             const sf::Vector2f origin{bounds.position.x + bounds.size.x * 0.5f,
                                       bounds.position.y + bounds.size.y * 0.5f};
-            const float y = item.y - 18.f * item.life;
-            const float thickness = std::max(2.f, item.pixels * 0.14f) / scale;
+            float y = item.y - kFloatRisePixels * item.life / scale;
+            // Stack upward past any text already placed this frame.
+            sf::FloatRect box({item.x - bounds.size.x * 0.5f, y - bounds.size.y * 0.5f}, bounds.size);
+            for (int attempt = 0; attempt < 8; ++attempt) {
+                const auto hit = std::find_if(placed.begin(), placed.end(), [&](const sf::FloatRect &other) {
+                    return box.findIntersection(other).has_value();
+                });
+                if (hit == placed.end()) {
+                    break;
+                }
+                const float step = box.position.y + box.size.y - hit->position.y + 2.f / scale;
+                y -= step;
+                box.position.y -= step;
+            }
+            placed.push_back(box);
+            const float thickness = std::max(2.f, pixels * 0.14f) / scale;
             drawOutlinedText(target, font, size, bold, item.text, withAlpha(item.color, fade), {item.x, y}, origin,
                              {pop, pop}, withAlpha({239, 229, 203}, fade * 0.9f), thickness);
             break;

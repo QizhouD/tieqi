@@ -126,7 +126,8 @@ flowchart LR
 | M1 Rules core | B0, C1, D1, C2, C3, C4, C5, C6, C7, H1, P1 | Headless battles run to the end and every prototype comparison passes |
 | M2 A full battle | A0, A1, A2, A3, A4, A5 | A whole Byeokjegwan battle can be played in the game window |
 | M3 Demo package | A6, L1, R1 | Unzips and plays on a Windows PC without a development environment, in all three languages |
-| M4 Visual upgrade | V1, V2, V3, V4 | Zoomed in, each unit reads as a body of soldiers with banners; the rules core is unchanged |
+| M4 Visual upgrade | V1, V2, V3, V4, V5 | Zoomed in, each unit reads as a body of soldiers with banners whose formation deforms in battle; the rules core is unchanged |
+| M5 Art | V6, V7, V8 | Finished soldier atlas and crests, near-view map and effects |
 
 The scope and acceptance criteria of each card are in the "Task breakdown" chapter of DEVELOPMENT.md.
 

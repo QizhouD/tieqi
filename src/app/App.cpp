@@ -96,12 +96,11 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
 
     data_ = loadGameData(root_ / "data", options.scenario + ".json");
     en_ = loadStrings(root_ / "data" / "strings" / "en.json", &data_.zhHant);
-    ko_ = loadStrings(root_ / "data" / "strings" / "ko.json", &data_.zhHant);
     if (options.timeScale) {
         data_.config.timeScale = *options.timeScale;
     }
 
-    language_ = data_.config.language;
+    language_ = shippedLanguage(data_.config.language);
     speed_ = data_.config.defaultSpeed;
     perf_ = options.perf;
     reducedMotion_ = data_.config.reducedMotion;
@@ -109,7 +108,7 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
 
     SaveData saved;
     if (saved.load(settingsFile_)) {
-        language_ = saved.language;
+        language_ = shippedLanguage(saved.language);
         reducedMotion_ = saved.reducedMotion;
         audio_.setMasterVolume(saved.volume);
         const auto &speeds = data_.config.playerSpeeds;
@@ -180,9 +179,6 @@ void App::saveSettings() const {
 }
 
 const StringTable &App::active() const {
-    if (language_ == "ko") {
-        return ko_;
-    }
     if (language_ == "en") {
         return en_;
     }
@@ -274,21 +270,23 @@ void App::drawFrame() {
     window_.beginMap();
     const TextStyle floater = textStyle(active().language, TextRole::Floater);
     const float alpha = std::clamp(accumulator_, 0.f, 1.f);
-    const bool soldiers = nearView(camera_.zoom());
+    const float blend = nearBlend(camera_.zoom());
     unitView_.draw(
         window_, *battle_, active(), fontFor(active(), glyph.face), fontFor(active(), body.face), soundTime_, alpha,
         orders_,
         [&] {
-            if (soldiers) {
+            if (blend > 0.f) {
                 soldierView_.draw(window_.target(), *battle_, soldierAtlas_, alpha, animTime_, active(),
-                                  fontFor(active(), glyph.face));
+                                  fontFor(active(), glyph.face), blend);
             }
             effects_.drawDust(window_.target());
         },
         [&] {
-            effects_.drawAir(window_.target(), fontFor(active(), floater.face), floater.bold, window_.pixelsPerMeter());
+            // In the near view the floating text shrinks a little so it covers fewer soldiers.
+            effects_.drawAir(window_.target(), fontFor(active(), floater.face), floater.bold, window_.pixelsPerMeter(),
+                             1.f - 0.25f * blend);
         },
-        soldiers);
+        blend, chitScaleFor(camera_.zoom()));
 #ifdef TQ_DEV_TOOLS
     window_.beginMap();
     dev_.drawOverlay(window_.target(), *battle_, data_.defs, alpha);
@@ -316,7 +314,7 @@ void App::drawFrame() {
     frame.originY = pixels.originY;
     frame.scale = pixels.scale;
     std::vector<LanguageChoice> languages;
-    for (const StringTable *table : {&data_.zhHant, &en_, &ko_}) {
+    for (const StringTable *table : {&data_.zhHant, &en_}) {
         languages.push_back({table->language, table->text("lang.self"), &fontFor(*table, FontFace::Body), false});
     }
     frame.languages = &languages;
@@ -368,9 +366,11 @@ void App::applyHud(HudAction action) {
         return;
     }
     if (action == HudAction::Language0 || action == HudAction::Language1 || action == HudAction::Language2) {
-        const StringTable *tables[] = {&data_.zhHant, &en_, &ko_};
-        const std::size_t index = action == HudAction::Language0 ? 0 : action == HudAction::Language1 ? 1 : 2;
-        setLanguage(tables[index]->language);
+        const StringTable *tables[] = {&data_.zhHant, &en_};
+        if (action == HudAction::Language2) {
+            return;
+        }
+        setLanguage(tables[action == HudAction::Language0 ? 0 : 1]->language);
         return;
     }
     if (action == HudAction::ToggleReducedMotion) {

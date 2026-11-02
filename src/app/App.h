@@ -4,6 +4,7 @@
 #include "app/CameraControl.h"
 #include "app/Effects.h"
 #include "app/Hud.h"
+#include "app/Languages.h"
 #include "app/Launch.h"
 #include "app/MapView.h"
 #include "app/Orders.h"
@@ -57,7 +58,6 @@ class App {
     std::filesystem::path settingsFile_;
     GameData data_;
     StringTable en_;
-    StringTable ko_;
     std::string language_ = "zh-Hant";
     float speed_ = 1.f;
     bool reducedMotion_ = false;

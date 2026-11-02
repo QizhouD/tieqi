@@ -20,12 +20,12 @@ namespace tq {
 class SoldierView {
   public:
     void draw(sf::RenderTarget &target, const Battle &battle, const SoldierAtlas &atlas, float alpha, float animTime,
-              const StringTable &strings, const sf::Font &brush);
+              const StringTable &strings, const sf::Font &brush, float opacity = 1.f);
     std::size_t lastCount() const { return soldiers_.size(); }
 
   private:
     void drawBanners(sf::RenderTarget &target, const Battle &battle, const SoldierAtlas &atlas, float alpha,
-                     float animTime, const StringTable &strings, const sf::Font &brush);
+                     float animTime, const StringTable &strings, const sf::Font &brush, float opacity);
 
     std::vector<Soldier> soldiers_;
     sf::VertexArray tris_{sf::PrimitiveType::Triangles};

@@ -111,7 +111,10 @@ inline float mapScale(float pixelW, float pixelH, float mapW, float mapH, float 
 inline constexpr float kMinZoom = 1.f;
 inline constexpr float kMaxZoom = 4.f;
 // From this zoom level up the near view shows soldiers, banners, and a small counter instead of blocks and counters.
+// Between kNearFadeStart and kNearFadeEnd the two views cross-fade and the counter shrinks smoothly.
 inline constexpr float kNearZoom = 2.f;
+inline constexpr float kNearFadeStart = 1.8f;
+inline constexpr float kNearFadeEnd = 2.2f;
 inline constexpr float kNearChitScale = 0.55f;
 
 // Zoom 1 shows the whole map. focus is the world point at the centre of the battlefield; empty means the map centre.
@@ -140,6 +143,13 @@ inline Vec2 clampFocus(ScreenRect field, float mapW, float mapH, float scale, Ve
 }
 
 inline bool nearView(const Zoom &zoom) { return zoom.level >= kNearZoom; }
+
+// 0 is the far view, 1 the near view, in between a cross-fade.
+inline float nearBlend(const Zoom &zoom) {
+    return std::clamp((zoom.level - kNearFadeStart) / (kNearFadeEnd - kNearFadeStart), 0.f, 1.f);
+}
+
+inline float chitScaleFor(const Zoom &zoom) { return 1.f + (kNearChitScale - 1.f) * nearBlend(zoom); }
 
 inline MapCamera mapCamera(ScreenRect field, float mapW, float mapH, const Zoom &zoom = {}) {
     const float fit = mapScale(field.w, field.h, mapW, mapH);
