@@ -210,6 +210,7 @@ void App::stepSim() {
             mapView_.addScar(event.pos, event.value);
         }
     }
+    formation_.tick(*battle_, events);
     noteEvents(orders_, *battle_, events);
     hud_.note(*battle_, active(), events);
     effects_.onEvents(*battle_, active(), events, reducedMotion_, assaultPoint());
@@ -276,7 +277,7 @@ void App::drawFrame() {
         orders_,
         [&] {
             if (blend > 0.f) {
-                soldierView_.draw(window_.target(), *battle_, soldierAtlas_, alpha, animTime_, active(),
+                soldierView_.draw(window_.target(), *battle_, formation_, soldierAtlas_, alpha, animTime_, active(),
                                   fontFor(active(), glyph.face), blend);
             }
             effects_.drawDust(window_.target());
@@ -286,7 +287,7 @@ void App::drawFrame() {
             effects_.drawAir(window_.target(), fontFor(active(), floater.face), floater.bold, window_.pixelsPerMeter(),
                              1.f - 0.25f * blend);
         },
-        blend, chitScaleFor(camera_.zoom()));
+        blend, chitScaleFor(camera_.zoom()), window_.isKeyDown(sf::Keyboard::Key::LAlt));
 #ifdef TQ_DEV_TOOLS
     window_.beginMap();
     dev_.drawOverlay(window_.target(), *battle_, data_.defs, alpha);
@@ -412,6 +413,7 @@ void App::restart() {
     options.aiEnabled = aiEnabled_;
     battle_.emplace(data_.defs, data_.scenario, seed_, options);
     orders_ = {};
+    formation_.reset();
     hud_.reset();
     effects_.clear();
     accumulator_ = 0.f;
@@ -431,6 +433,11 @@ void App::handleInput() {
     const float alpha = std::clamp(accumulator_, 0.f, 1.f);
     const float mapW = data_.scenario.map.width;
     const float mapH = data_.scenario.map.height;
+    // In the near view, clicking any soldier picks its unit.
+    const float blend = nearBlend(camera_.zoom());
+    orders_.soldierPick = [this, blend, alpha](Vec2 world) {
+        return blend > 0.f ? formation_.pick(*battle_, world, kSoldierPickRadius, alpha) : kNoUnit;
+    };
     for (const PointerSample &sample : window_.takePointers()) {
         if (sample.type == PointerSample::Type::Wheel) {
             camera_.handle(sample, mapW, mapH);
@@ -613,10 +620,12 @@ void App::run() {
         }
         view.running = running_;
         view.recorded = recorded_.size();
+        view.formation = &formationTuning_;
         dev::DevRequests requests = dev_.build(view);
         window_.beginPixels();
         dev_.render(window_.native());
         applyDev(std::move(requests));
+        formation_.setTuning(formationTuning_);
 #endif
         window_.endDraw();
         if (perf_ && battle_ && battle_->isOver()) {

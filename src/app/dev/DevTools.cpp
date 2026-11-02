@@ -103,7 +103,7 @@ DevRequests DevTools::build(const DevView &view) {
     ImGui::SetNextWindowSize(ImVec2(560.f, 620.f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Dev tools (F1 toggles, F2 next tab)", &visible_)) {
         if (ImGui::BeginTabBar("dev")) {
-            static constexpr const char *kNames[kTabs] = {"Sim", "Units", "Spawn", "AI", "Constants"};
+            static constexpr const char *kNames[kTabs] = {"Sim", "Units", "Spawn", "AI", "Constants", "Formation"};
             for (int index = 0; index < kTabs; ++index) {
                 const ImGuiTabItemFlags flags = tabPending_ == index ? ImGuiTabItemFlags_SetSelected : 0;
                 if (!ImGui::BeginTabItem(kNames[index], nullptr, flags)) {
@@ -123,8 +123,11 @@ DevRequests DevTools::build(const DevView &view) {
                 case 3:
                     aiTab(view);
                     break;
-                default:
+                case 4:
                     constantsTab();
+                    break;
+                default:
+                    formationTab(view);
                     break;
                 }
                 ImGui::EndTabItem();
@@ -334,6 +337,20 @@ void DevTools::aiTab(const DevView &view) {
         ImGui::TextUnformatted(intent.aggressive ? "yes" : "no");
     }
     ImGui::EndTable();
+}
+
+void DevTools::formationTab(const DevView &view) {
+    if (view.formation == nullptr) {
+        ImGui::TextUnformatted("no soldier layer");
+        return;
+    }
+    ImGui::TextUnformatted("Soldier layer deformation (presentation only). Changes apply at once.");
+    if (ImGui::Button("defaults")) {
+        *view.formation = FormationTuning{};
+    }
+    for (const FormationSlider &slider : kFormationSliders) {
+        ImGui::SliderFloat(slider.name, &(view.formation->*slider.field), slider.min, slider.max);
+    }
 }
 
 void DevTools::constantsTab() {

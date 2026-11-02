@@ -18,6 +18,15 @@ bool insideBattlefield(float x, float y) {
     return x >= field.x && y >= field.y && x < field.x + field.w && y < field.y + field.h;
 }
 
+UnitId pickAt(const OrderState &state, const Battle &battle, Vec2 world, float pixelsPerMeter, float alpha,
+              float chitScale) {
+    const UnitId hit = pickUnit(battle, world.x, world.y, pixelsPerMeter, alpha, chitScale);
+    if (hit == kNoUnit && state.soldierPick) {
+        return state.soldierPick(world);
+    }
+    return hit;
+}
+
 bool containsId(const std::vector<UnitId> &ids, UnitId id) {
     return std::find(ids.begin(), ids.end(), id) != ids.end();
 }
@@ -71,7 +80,7 @@ void issueAttack(OrderState &state, const Battle &battle, UnitId target, std::ve
 
 void updateHover(OrderState &state, const Battle &battle, float worldX, float worldY, float pixelsPerMeter,
                  float alpha, float chitScale) {
-    const UnitId hit = pickUnit(battle, worldX, worldY, pixelsPerMeter, alpha, chitScale);
+    const UnitId hit = pickAt(state, battle, {worldX, worldY}, pixelsPerMeter, alpha, chitScale);
     if (aliveUnit(battle, hit) && battle.unit(hit).side == Side::Jp) {
         state.hover = hit;
     } else {
@@ -113,7 +122,7 @@ void boxSelect(OrderState &state, const Battle &battle, float x0, float y0, floa
 
 void handleClick(OrderState &state, const Battle &battle, Vec2 world, int button, PointerSample::Device device,
                  bool shift, float pixelsPerMeter, float alpha, float chitScale, std::vector<Command> &issued) {
-    const UnitId hit = pickUnit(battle, world.x, world.y, pixelsPerMeter, alpha, chitScale);
+    const UnitId hit = pickAt(state, battle, world, pixelsPerMeter, alpha, chitScale);
     const bool hitUnit = aliveUnit(battle, hit);
     const Unit *unit = hitUnit ? &battle.unit(hit) : nullptr;
     if (button == kPointerRight) {
@@ -253,7 +262,7 @@ std::vector<Command> applyPointer(OrderState &state, const Battle &battle, const
             const float dy = sample.y - state.pressY;
             if (!state.box && std::hypot(dx, dy) > kDragThresholdPx) {
                 const Vec2 down = worldFromLogical(state.pressX, state.pressY, mapW, mapH, zoom);
-                if (pickUnit(battle, down.x, down.y, scale, alpha, chitScale) == kNoUnit) {
+                if (pickAt(state, battle, down, scale, alpha, chitScale) == kNoUnit) {
                     state.box = true;
                     state.boxX0 = state.pressX;
                     state.boxY0 = state.pressY;

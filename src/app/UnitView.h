@@ -13,13 +13,14 @@ namespace tq {
 // Blocks, chits, order lines, the odds arrow, and the drag box.
 // afterBlocks runs above the blocks and under the order lines. afterChits runs above the chits and under the preview.
 // nearBlend fades the blocks out toward the near view (1), where the soldier layer replaces them; chitScale sizes
-// the counters.
+// the counters. In the near view the selected unit's rules box is a thin dashed line; allBoxes (Alt held) draws every
+// unit's rules box.
 class UnitView {
   public:
     void draw(Window &window, const Battle &battle, const StringTable &strings, const sf::Font &glyphFont,
               const sf::Font &bodyFont, float timeSec, float alpha, const OrderState &orders,
               const std::function<void()> &afterBlocks = {}, const std::function<void()> &afterChits = {},
-              float nearBlend = 0.f, float chitScale = 1.f) const;
+              float nearBlend = 0.f, float chitScale = 1.f, bool allBoxes = false) const;
 };
 
 } // namespace tq

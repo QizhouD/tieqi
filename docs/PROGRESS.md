@@ -32,6 +32,15 @@
 
 The source language check (`tools/check_source_language.py`) scans src, tests, tools, cmake, CMakeLists.txt, .github/workflows, and .gitignore. tools/parity/anchors.json holds Chinese snippets used to match the prototype and is excluded; node_modules and tools/parity/work are skipped too.
 
+## Stopped here: V5 in progress (usage limit)
+
+V5 formation deformation is implemented on branch `task/V5-formation` but not yet reviewed or merged: stateful
+soldiers stepped per tick (`src/app/Formation.*`), deformation from rules signals, casualties on the threat side,
+bodies, rules boxes (selected, Alt for all), soldier picking, all parameters in `src/app/FormationTuning.h` with a
+Formation tab in the dev panel. Tests in tests/app/soldier_formation.cpp pass locally (rules core unchanged, same
+soldier hash across frame pacing, no teleporting, box clamp, picking, bodies). Still to do: check the 3x deformation
+screenshots, release perf runs, spec text, PR and CI, the 30–60 s recording, and the author review.
+
 ## M4 review and the art direction (accepted 2026-11-02)
 
 Author's acceptance, also recorded in the decisions table of DEVELOPMENT.md:
