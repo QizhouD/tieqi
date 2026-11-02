@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "byeokjegwan",
   "name_key": "scn.byeokjegwan",
-  "start_clock": "07:00",          // 战场时钟起点，用于显示时辰
+  "start_clock": "07:00",          // battlefield clock start, used to show the time of day
   "map": {
     "width": 880, "height": 1100,
     "paddies": [[230,250,150,150],[500,280,160,140],[250,720,150,150],[500,760,150,130],[330,520,80,70]],

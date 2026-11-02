@@ -1,17 +1,18 @@
-## 卡号
+## Card
 
-<!-- 例如 [C3] contacts and charge impact，并写 Closes #issue号 -->
+<!-- For example [C3] contacts and charge impact, plus Closes #<issue> -->
 
-## 做了什么
+## What was done
 
-## 怎么验证的
+## How it was verified
 
-## 遗留问题，或与规格冲突的地方
+## Open issues, or conflicts with the spec
 
-## 检查清单
+## Checklist
 
-- [ ] 构建无警告（GCC/Clang 开 -Wall -Wextra -Wpedantic，MSVC 开 /W4），代码已用 clang-format 格式化
-- [ ] ctest 全部通过，新逻辑都有测试
-- [ ] 改动规则时：docs/DEVELOPMENT.md 的"规则规格"已同步，原型对照测试仍在允许误差内
-- [ ] 改动数据格式时：data/schema/ 和"数据格式"一章已同步
-- [ ] 游戏内文字只走 data/strings/，中文为繁体
+- [ ] Builds with no warnings (`-Wall -Wextra -Wpedantic` on GCC/Clang, `/W4` on MSVC), code formatted with clang-format
+- [ ] ctest all passing, every new piece of logic has tests
+- [ ] When rules change: the "Rule spec" in docs/DEVELOPMENT.md is updated and the prototype comparison tests are still within tolerance
+- [ ] When data formats change: data/schema/ and the "Data formats" chapter are updated
+- [ ] In-game text goes only through data/strings/, with Chinese in Traditional characters
+- [ ] Code, docs, and this description are in English
