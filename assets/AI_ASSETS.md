@@ -1,6 +1,6 @@
-# AIGC 素材清单
+# AI-generated assets
 
-上架 Steam 时需要在商店页披露 AI 生成的内容。每加入一个由 AIGC 生成或修改过的素材，就在下表登记一行。
+A Steam release must disclose AI-generated content on the store page. Every asset generated or modified with AI tools gets one row in the table below when it is added.
 
-| 文件 | 用途 | 工具与模型 | 生成日期 | 提示词或说明 | 人工修改 |
+| File | Use | Tool and model | Generated on | Prompt or notes | Human edits |
 |---|---|---|---|---|---|

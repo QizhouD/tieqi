@@ -1,24 +1,25 @@
-# Tieqi（Afterglow: Imjin 1593）
+# Tieqi (Afterglow: Imjin 1593)
 
-C++20 + SFML 3 的可暂停实时制战棋。完整规格见 docs/DEVELOPMENT.md，
-规则参考实现见 reference/prototype/byeokjegwan.html（浏览器直接打开）。
+A pausable real-time tactics game in C++20 and SFML 3. The full spec is in docs/DEVELOPMENT.md,
+and the reference implementation of the rules is reference/prototype/byeokjegwan.html (open it in a browser).
 
-## 构建与测试
+## Build and test
 cmake --preset dev
 cmake --build --preset dev
 ctest --preset dev
 
-## 硬性规则
-- src/core 不得引用 SFML、ImGui 或系统头文件
-- 模拟里的随机数只用 Battle 自己的 tq::Rng；表现层（粒子、音效）用自己的生成器，不许碰模拟的随机数；遍历单位按 UnitId 升序
-- 兵种数值只放 data/*.json；规则常数只放 src/core/rules/Constants.h
-- 改规则必须同步 docs/DEVELOPMENT.md 的"规则规格"
-- 每个任务对应"任务拆分"里的一张卡，分支名 task/<卡号>-<短名>
-- 不确定时在 PR 里提问，不要猜
-- 游戏内中文一律繁体（zh-Hant），文案以 data/strings/zh-Hant.json 为准。源代码（含注释、日志、测试）一律英文，不出现中文；玩家可见的文字只放 data/strings/；中文只出现在 data/、docs/、reference/。
+## Hard rules
+- src/core must not include SFML, ImGui, or system headers
+- Randomness in the simulation comes only from the Battle's own tq::Rng; the presentation layer (particles, sound) uses its own generators and never touches the simulation's; iterate units in ascending UnitId
+- Unit values live only in data/*.json; rule constants only in src/core/rules/Constants.h
+- Rule changes must update the "Rule spec" in docs/DEVELOPMENT.md
+- Each task is one card in the "Task breakdown"; branch name task/<card>-<short-name>
+- When unsure, ask in the PR instead of guessing
+- Chinese in the game is always Traditional (zh-Hant); data/strings/zh-Hant.json is the source text
+- The repository is written in English: source code (including comments, logs, and tests), documentation, PR descriptions, and commit messages. Player-visible text lives only in data/strings/. Other languages appear only in data/strings/, the player notes docs/demo/README.txt, game text quoted in the docs, tools/parity/anchors.json (snippets matched against the prototype), and reference/
 
-## 目录
-src/core 规则核心 · src/data 数据加载 · src/app 表现层 · tools/headless 无头对战
-data 兵种与场景 · tests 测试 · reference 原型与参考资料
+## Layout
+src/core rules core · src/data data loading · src/app presentation · tools/headless headless battles
+data unit types and scenarios · tests tests · reference prototype and reference material
 
-连续开发的流程和停止条件见 docs/AGENT_LOOP.md
+Process and stop conditions for continuous development are in docs/AGENT_LOOP.md

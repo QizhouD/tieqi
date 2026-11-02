@@ -1,320 +1,342 @@
-# Afterglow: Imjin 1593 设计文档
+# Afterglow: Imjin 1593 design document
 
 2026-10-27
 
-## 概述
+## Overview
 
-游戏名 Afterglow: Imjin 1593（繁中 餘暉：壬辰 1593），代号 Tieqi，demo 场景是碧蹄馆之战。这个 demo 用一场碧蹄馆之战，验证"可暂停实时制 + 棋子表现"的战术玩法是否好玩，以及是否有人愿意看、愿意玩。
+The game is titled Afterglow: Imjin 1593 (Traditional Chinese 餘暉：壬辰 1593), codename Tieqi, and the demo scenario is the Battle of Byeokjegwan. The demo uses this one battle to test whether "pausable real time plus counters" tactics is fun to play, and whether people want to watch it and play it.
 
-- **定位**：以明军辽东骑兵为主视角的壬辰战争（1592–1598）陆战战术游戏，个人兴趣项目。
-- **参考**：机制框架参考 Sengoku Jidai: Shadow of the Shogun，但改为实时制；数值、规则表述、美术全部自制，不使用其数据、脚本或素材。
-- **demo 范围**：1 个场景（碧蹄馆），明军和日军两方，5 个兵种和 3 名将领，单人对 AI，PC 平台。
-- **不在范围内**：海战、朝鲜阵营、战役层、多人联机。
-- **试水目标**：在 B 站发布开发日志、开设 Steam 页面，用播放量、评论和心愿单数量衡量兴趣。
-- **原型**：[碧蹄馆 HTML 可玩原型](https://claude.ai/artifact/GEGVr72yHEmDop4MWd4fDy)，是规则的参考实现，正式版移植以它为准。
+- **Positioning**: a land-battle tactics game about the Imjin War (1592–1598), played mainly from the side of the Ming army's Liaodong cavalry. A personal hobby project.
+- **Reference**: the mechanical framework draws on Sengoku Jidai: Shadow of the Shogun, but in real time; all numbers, rule wording, and art are original, and none of its data, scripts, or assets are used.
+- **Demo scope**: one scenario (Byeokjegwan), two sides (Ming and Japanese), five unit types and three generals, single player against the AI, PC.
+- **Out of scope**: naval battles, a Joseon faction, a campaign layer, multiplayer.
+- **Market test**: publish development logs on Bilibili and open a Steam page, and measure interest by views, comments, and wishlists.
+- **Prototype**: the [Byeokjegwan HTML playable prototype](https://claude.ai/artifact/GEGVr72yHEmDop4MWd4fDy) is the reference implementation of the rules, and the port follows it.
 
-## 设计支柱
+## Design pillars
 
-核心目标是"玩起来爽"：好的布局要换来快速、明确、看得懂的胜利。
+The core goal is that it feels great to play: good positioning should pay off in fast, clear, readable victories.
 
-1. **决定性**：好的操作要有明确、快速的回报，不让玩家长时间等待结果。
-2. **可预期**：随机性有边界，进攻前能看到大致胜算，输了知道为什么。
-3. **爽要靠布局换来**：骑兵正面冲稳固枪阵必须吃亏；先打乱、再侧击，才有破阵的回报。
-4. **反馈要夸张**：没有小兵动画，手感全靠冲击、溃逃这些瞬间的视听反馈。
+1. **Decisive**: good play gets a clear, quick reward; the player never waits long for a result.
+2. **Predictable**: randomness has bounds, the rough odds are visible before attacking, and after a loss the player knows why.
+3. **Thrills are earned by positioning**: cavalry charging a steady pike block head-on must lose; disrupt first, then hit the flank, and breaking the line is the reward.
+4. **Exaggerated feedback**: there are no soldier animations, so the feel comes entirely from the sound and visuals of moments like impacts and routs.
 
-### 针对 SJ 痛点的解决方案
+### Answers to the pain points of SJ
 
-| SJ 的痛点                        | 本作的做法                                                                                                              |
-|----------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| 随机性太大，优势被一次坏运气打崩 | 战斗每 0.5 秒结算一次，一场交锋是几十次小结算的累积，单次运气被自然抹平；随机波动限制在窄范围内，不设"一次检定定生死"   |
-| 战斗结算不透明                   | 下令前悬停显示胜算预览和修正项明细；单位状态用图标显示；战后给出战报，指出胜负关键                                      |
-| 近战拖沓，几回合分不出胜负       | 士气而非兵力决胜，单位在被消灭前崩溃；接战越久士气流失越快；侧翼、背后受攻大幅加速崩溃；目标是正面近战 10–20 秒分出胜负 |
-| AP 与转向微操琐碎                | 取消 AP；转向自动完成、只耗时间；命令保持高层级，单位自动面向威胁                                                       |
+| Pain point in SJ | What this game does |
+|---|---|
+| Too much randomness; an advantage is wiped out by one bad roll | Combat resolves every 0.5 seconds, so an engagement is the sum of dozens of small resolutions and single rolls even out; random variation is held in a narrow range, with no single check that decides life or death |
+| Opaque combat resolution | Hovering before an order shows the predicted odds and a breakdown of modifiers; unit states are shown as icons; a battle report afterwards points out what decided the outcome |
+| Slow melee that takes many turns to decide | Morale, not strength, decides; units break before they are destroyed; the longer an engagement lasts, the faster morale drains; attacks on the flank and rear speed up collapse sharply; the goal is a frontal melee decided in 10–20 seconds |
+| Fiddly AP and facing micromanagement | No AP; turning is automatic and costs only time; orders stay high level and units face threats on their own |
 
-## 核心机制
+## Core mechanics
 
-每个棋子是一个逻辑单位，在连续地图上实时移动；战斗按固定间隔结算，士气是决胜条件。以下规则和数值取自可玩原型，是正式版的起点而非定稿。
+Each counter is one logical unit moving in real time on a continuous map; combat resolves at a fixed interval, and morale decides the outcome. The rules and numbers below come from the playable prototype and are the starting point for the full version, not the final values.
 
-### 时间与尺度
+### Time and scale
 
-- 可暂停的实时制，变速 0.5×、1×、2×；暂停时也可以下令。
-- 逻辑以每秒 10 次的固定步长更新，与渲染帧率解耦；战斗每 0.5 秒结算一次。
-- 地图 1 单位约合 1 米（比例尺按明代一步约 1.6 米绘制）。正式版的移动速度按真实速度（米/秒）填写，再乘一个统一的时间压缩系数换算，调节奏只改这一个数。
+- Pausable real time at 0.5×, 1×, and 2×; orders can be given while paused.
+- Logic updates at a fixed step of 10 times per second, decoupled from the render frame rate; combat resolves every 0.5 seconds.
+- One map unit is about one metre (the scale bar is drawn with a Ming pace at about 1.6 m). In the full version movement speeds are entered as real speeds (m/s) and multiplied by a single time compression factor; changing the pace means changing only this number.
 
-### 单位模型
+### Unit model
 
-- 单位是一个有朝向的矩形，有正面宽度和纵深；棋子本身不转，旁边的楔形标出正面朝向。
-- 接触时按接触边判定正面、侧翼或背后，这是包抄和破阵的基础。
-- 运行时状态：人数、士气、列阵或行进、重整与装填计时、气势。
-- 战力按实际人数相对兵种满员人数换算（人数比例开平方），残部和分队不会因为"满编"而虚强。
+- A unit is an oriented rectangle with a frontage and a depth; the counter itself does not rotate, and a wedge beside it marks the facing.
+- On contact, the touching edge decides front, flank, or rear, which is the basis for envelopment and breakthroughs.
+- Runtime state: troops, morale, formed or marching, reform and reload timers, momentum.
+- Fighting power scales with actual troops relative to the unit type's full strength (square root of the ratio), so remnants and detachments are not artificially strong for being "full strength".
 
-### 命令与移动
+### Orders and movement
 
-- 命令：移动、进攻、坚守、撤往北口、分兵、合兵。进攻时距离足够会自动冲锋；用移动贴上敌人则只接战不冲锋，可用来牵制。
-- 骑兵比步兵快约三倍，转向也更快，边转边走只损失三成速度。水田让骑兵减速四成、山地减速两成，大路略快。
-- 坚守的单位会自动转向 150 米内最近的敌人，但转速只有正常的六成，从侧面快速冲来的骑兵仍有机会打到侧翼。
-- 接战中的骑兵可以下移动令脱离，代价是 3% 伤亡和少量士气；步兵接战后无法脱离。
+- Orders: move, attack, hold, retreat to the north exit, split, join. An attack charges automatically when the distance allows; moving into an enemy engages without charging, which can be used to pin.
+- Cavalry is about three times as fast as infantry and turns faster, losing only 30% of its speed when turning on the move. Paddies slow cavalry by 40% and hills by 20%; the main road is slightly faster.
+- A holding unit automatically turns toward the nearest enemy within 150 m, but at only 60% of normal turn speed, so cavalry coming in fast from the side can still reach the flank.
+- Engaged cavalry can break away with a move order at a cost of 3% casualties and a little morale; infantry cannot break away once engaged.
 
-### 射击
+### Shooting
 
-- 铁炮必须停下列阵 1.2 秒才能齐射，装填 6 秒；对未冲锋的目标会等到进入 75% 射程再开火。
-- 命中随距离衰减，主要效果是打击士气；对冲锋途中的骑兵伤亡和士气打击各 ×1.3。
-- 辽东骑兵冲锋接敌前约 60 米自动放一轮三眼铳，先手削弱目标士气。
+- Arquebusiers must stop and form for 1.2 seconds before a volley and take 6 seconds to reload; against targets that are not charging they wait until the target is within 75% of their range.
+- Hits fall off with distance, and the main effect is on morale; against cavalry in mid-charge, casualties and morale damage are both ×1.3.
+- Liaodong cavalry automatically fires a round of three-eyed guns about 60 m before contact in a charge, softening the target's morale first.
 
-### 冲锋冲击
+### Charge impact
 
-- 有效冲锋需要助跑：速度达到冲锋速度的七成，且已冲出 35 米以上。
-- 冲击倍数 = 冲击值 × 速度 × 方向（侧击 1.8、背击 2.4）× 目标状态（动摇 1.35、溃乱 2.2、铁炮装填中 1.25、铁炮未列阵 1.2）× 地形（水田 0.5、仰攻 0.8）× 气势 × 兵力 ÷ 目标抗冲。
-- 倍数达到 1.9 即破阵，目标当场崩溃；将领不会被一击破阵。
-- 正面撞上整齐的长枪阵：冲击 ×0.35，冲锋方反受 6% 伤亡和士气打击。
-- 冲锋后骑兵重整 6 秒（撞枪阵后 9 秒），期间不能再次冲锋，近战也略弱。
+- An effective charge needs a run-up: speed at 70% of charge speed or more, and at least 35 m covered.
+- Impact multiplier = impact value × speed × direction (flank 1.8, rear 2.4) × target state (wavering 1.35, disordered 2.2, arquebusiers reloading 1.25, arquebusiers not formed 1.2) × terrain (paddy 0.5, uphill 0.8) × momentum × strength ÷ target's charge resistance.
+- At a multiplier of 1.9 or more the line breaks and the target collapses on the spot; generals cannot be broken by a single impact.
+- Hitting a steady pike block head-on: impact ×0.35, and the charger takes 6% casualties and a morale blow in return.
+- After a charge, cavalry reforms for 6 seconds (9 after hitting pikes), during which it cannot charge again and is slightly weaker in melee.
 
-### 近战
+### Melee
 
-- 接战后每 0.5 秒结算伤亡和士气，士气流失随接战时间加速；侧击、背击分别使流失加快 1.5 和 2 倍，同时与多个敌人接战时战力分摊。
-- 长枪正面对骑兵近战 ×1.3，骑兵正面硬撼枪阵 ×0.7；骑兵缠斗超过 6 秒战力 ×0.85，鼓励冲、撤、再冲的循环。
-- 目标：一场正面近战 10–20 秒分出胜负。
+- Once engaged, casualties and morale resolve every 0.5 seconds, and morale drains faster the longer the engagement lasts; flank and rear attacks speed up the drain by 1.5× and 2×, and power is shared when fighting several enemies at once.
+- Pikes facing cavalry in melee fight at ×1.3, cavalry pressing into a pike front at ×0.7; cavalry that stays in melee longer than 6 seconds fights at ×0.85, which encourages a cycle of charge, pull back, charge again.
+- Goal: a frontal melee decided in 10–20 seconds.
 
-### 士气与连锁崩溃
+### Morale and chain collapse
 
-- 士气四级：稳定（55 以上）、动摇（30–55）、崩溃、溃逃；低于 30 即崩溃。
-- 一队崩溃时，170 米内的友军受士气冲击，可能连锁崩溃；附近敌军士气略升。
-- 未接战的单位缓慢回复士气，将领光环内回复更快、受损更少；士气上限随兵力损失下降。
-- 溃逃单位朝远离敌人的方向逃，途中不断逃散减员；远离敌人约 10 秒后可重新集结。
+- Four morale levels: steady (above 55), wavering (30–55), broken, routing; below 30 a unit breaks.
+- When a unit breaks, friends within 170 m take a morale shock and may break in turn; nearby enemies gain a little morale.
+- Units not in contact slowly recover morale, faster and with less damage inside a general's aura; the morale cap falls as troops are lost.
+- Routing units flee away from the enemy and keep losing men to desertion on the way; after about 10 seconds away from the enemy they can rally.
 
-### 溃散拆分与收拢
+### Scattering and regrouping
 
-- 崩溃时，330 人以上的部队散作三股，150 人以上散作两股，朝背离来敌的扇面各自逃散；主将不拆分。
-- 每股可被单独追击，小股被骑兵追上很快溃散；追谁、放谁、何时收手成为玩家的决策。
-- 集结后的同营残部相遇自动合并，日军 AI 会主动收拢残部。不被追击时，一队铁炮约 26 秒后能收拢回原兵力的八成左右。
+- On breaking, units of 330 or more scatter into three groups and units of 150 or more into two, each fleeing into a fan away from the attacker; the commander never splits.
+- Each group can be pursued separately, and a small group caught by cavalry dissolves quickly; whom to chase, whom to let go, and when to stop become the player's decisions.
+- Rallied remnants of the same unit merge automatically when they meet, and the Japanese AI actively regroups remnants. Left alone, a unit of arquebusiers regroups to about 80% of its original strength in about 26 seconds.
 
-### 分兵与合兵
+### Splitting and joining
 
-- 160 人以上、未接战的部队可分为两队，各领一半，并排展开；分队的冲击力和近战按人数打折，士气上限也更低。
-- 用途是一队牵制正面、一队绕侧破阵；同营分队一起选中下合兵令即可合回。
+- A unit of 160 or more that is not engaged can split into two, each taking half, deployed side by side; detachments have impact and melee discounted by troop count and a lower morale cap.
+- The use is to pin the front with one half and break the flank with the other; select detachments of the same unit and give the join order to merge them back.
 
-### 将领
+### Generals
 
-- 将领为光环内友军提供士气回复和抗压，自身可参与冲锋。
-- 兵力降到四分之一以下即阵亡，周围友军受大幅士气冲击。
+- Generals give friendly units inside their aura morale recovery and resistance to pressure, and can join charges themselves.
+- A general falls when his troops drop below a quarter, and nearby friends take a heavy morale shock.
 
-### 胜负
+### Victory and defeat
 
-- 失败：李如松阵亡、随溃兵逃离战场，或明军全部覆没。
-- 胜利：李如松从北口撤出，北口 260 米内未接战的部队随行撤出；按撤出兵力比例和击溃日军队数评定大胜、小胜、惨胜。
+- Defeat: Li Rusong falls, flees the field with routing troops, or the whole Ming army is destroyed.
+- Victory: Li Rusong leaves through the north exit, and units within 260 m of the exit that are not engaged leave with him; the share of troops withdrawn and the number of Japanese units routed decide a major victory, minor victory, or costly victory.
 
-## 阵营设计
+## Faction design
 
-明军靠骑兵冲击先手打崩敌阵，日军靠铁炮掩护贴身近战，两方的胜利路径截然不同。
+The Ming army breaks enemy lines first with cavalry impact; the Japanese army closes to melee under arquebus cover. The two sides have very different paths to victory.
 
-| 阵营             | 爽点           | 核心机制                                                                                               | 弱点                                                        |
-|------------------|----------------|--------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|
-| 明军（辽东骑兵） | 骑兵破阵、先攻 | 冲锋接敌前自动打一轮三眼铳，先手打击士气；侧击或冲击混乱之敌时冲击力倍增；破阵引发敌军连锁崩溃；机动快 | 正面冲整齐枪阵损失惨重；冲锋后需要重整；demo 中缺少步兵支援 |
-| 日军             | 近战           | 铁炮齐射接白刃突击的组合；近战获胜获得"气势"，可连续冲击下一个目标；武士近战效率远高于其他兵种         | 机动慢；被骑兵侧击时脆弱；铁炮装填期间容易被冲垮            |
-| 朝鲜（后续）     | 海战           | 海战作为独立模式后期开发；陆战爽点暂定为神机箭火车的齐射覆盖和守城战                                   | 不在 demo 范围内                                            |
+| Faction | Thrill | Core mechanics | Weaknesses |
+|---|---|---|---|
+| Ming (Liaodong cavalry) | Cavalry breakthroughs, striking first | Fires a round of three-eyed guns before contact in a charge, hitting morale first; impact multiplies on the flank or against disordered enemies; breakthroughs set off chain collapses in the enemy army; fast | Charging a steady pike line head-on is very costly; must reform after charging; no infantry support in the demo |
+| Japanese | Melee | Arquebus volleys followed by a shock assault with blades; winning a melee builds "momentum" for hitting the next target in a row; samurai are far more efficient in melee than any other unit type | Slow; vulnerable to cavalry on the flank; arquebusiers are easily overrun while reloading |
+| Joseon (later) | Naval battles | Naval combat is a separate mode for later development; the land thrill is tentatively hwacha rocket volleys and siege defense | Outside the demo scope |
 
-## 兵种列表
+## Unit types
 
-demo 共 5 个兵种和 3 名将领：明军 2 个兵种加主将李如松，日军 3 个兵种加立花宗茂、小早川隆景两名将领；杨元援军沿用辽东骑兵的数值。
+The demo has five unit types and three generals: two Ming unit types plus the commander Li Rusong, and three Japanese unit types plus two generals, Tachibana Muneshige and Kobayakawa Takakage. Yang Yuan's reinforcements use the Liaodong cavalry values.
 
-| 阵营 | 兵种               | 定位                             | 关键能力                                         | 克制                       | 被克制                           |
-|------|--------------------|----------------------------------|--------------------------------------------------|----------------------------|----------------------------------|
-| 明军 | 辽东家丁精骑       | 精锐重骑，主力破阵               | 三眼铳先手射击；高冲击、高士气                   | 铁炮足轻、混乱中的任何单位 | 正面的长枪足轻                   |
-| 明军 | 辽东骑兵           | 普通骑兵，数量多，负责包抄与追击 | 三眼铳先手射击；机动快                           | 铁炮足轻、溃逃单位         | 长枪足轻、武士                   |
-| 明军 | 李如松（将领）     | 主将，带亲兵                     | 士气光环；可参与冲锋；阵亡即失败                 | —                          | 被集火或包围                     |
-| 日军 | 铁炮足轻           | 远程火力                         | 齐射；装填时间长；近战弱                         | 冲锋途中的骑兵、正面密集阵 | 骑兵侧击                         |
-| 日军 | 长枪足轻           | 枪阵，正面防骑兵                 | 正面抵御冲击；转向慢                             | 正面冲锋的骑兵             | 侧翼、背后受攻                   |
-| 日军 | 武士               | 近战突击                         | 高冲击、高近战；获胜后积累气势                   | 普通骑兵、步兵             | 铁炮或骑兵在其接敌前的消耗       |
-| 日军 | 立花宗茂（将领）   | 先锋将领，前线突击               | 亲兵近战强；周围武士积累气势更快                 | 冲锋后正在重整的骑兵       | 被骑兵集火包围                   |
-| 日军 | 小早川隆景（将领） | 主将，统筹全军                   | 士气光环范围大；可发动一次全军齐射或总攻，有冷却 | —                          | 被突袭或包围；远离战线时光环失效 |
+| Faction | Unit type | Role | Key abilities | Strong against | Weak against |
+|---|---|---|---|---|---|
+| Ming | Liaodong retainer cavalry | Elite heavy cavalry, main breakthrough force | Three-eyed guns fire first; high impact, high morale | Arquebus ashigaru, any disordered unit | Spear ashigaru from the front |
+| Ming | Liaodong cavalry | Regular cavalry, numerous, used for envelopment and pursuit | Three-eyed guns fire first; fast | Arquebus ashigaru, routing units | Spear ashigaru, samurai |
+| Ming | Li Rusong (general) | Commander with bodyguards | Morale aura; can join charges; his death is defeat | — | Focused fire or encirclement |
+| Japanese | Arquebus ashigaru | Ranged firepower | Volleys; long reload; weak in melee | Cavalry in mid-charge, dense formations from the front | Cavalry on the flank |
+| Japanese | Spear ashigaru | Pike block, holds cavalry from the front | Resists impact from the front; slowest to turn | Cavalry charging head-on | Attacks on the flank and rear |
+| Japanese | Samurai | Melee shock troops | High impact, strong melee; builds momentum after winning | Regular cavalry, infantry | Attrition from arquebuses or cavalry before they make contact |
+| Japanese | Tachibana Muneshige (general) | Vanguard general, front-line assault | Strong bodyguard melee; nearby samurai build momentum faster | Cavalry reforming after a charge | Being surrounded by cavalry |
+| Japanese | Kobayakawa Takakage (general) | Commander of the whole army | Large morale aura; can order one army-wide volley or general assault, with a cooldown | — | Surprise attack or encirclement; his aura does nothing far from the line |
 
-### 属性表（原型初值）
+### Attributes (prototype starting values)
 
-| 兵种               | 人数 | 移动 | 冲锋 | 冲击 | 抗冲 | 近战 | 射程 / 装填   | 伤亡系数 | 士气 | 特性                          |
-|--------------------|------|------|------|------|------|------|---------------|----------|------|-------------------------------|
-| 辽东家丁精骑       | 400  | 34   | 70   | 1.6  | 1.0  | 1.05 | —             | 0.8      | 90   | 三眼铳；精锐                  |
-| 辽东骑兵           | 500  | 36   | 68   | 1.15 | 0.85 | 0.85 | —             | 1.0      | 72   | 三眼铳                        |
-| 李如松（将领）     | 200  | 34   | 66   | 1.2  | 1.1  | 1.15 | —             | 0.7      | 95   | 光环 170 米；阵亡即败         |
-| 铁炮足轻           | 500  | 10   | —    | —    | 0.6  | 0.55 | 175 米 / 6 秒 | 1.0      | 66   | 须列阵 1.2 秒才能齐射         |
-| 长枪足轻           | 600  | 9    | —    | —    | 1.3  | 0.85 | —             | 0.95     | 70   | 正面克骑兵；转向最慢          |
-| 武士               | 400  | 11   | 18   | 1.1  | 1.05 | 1.4  | —             | 0.85     | 82   | 气势（每层 +10%）             |
-| 立花宗茂（将领）   | 200  | 12   | 18   | 1.15 | 1.1  | 1.35 | —             | 0.75     | 95   | 光环 150 米；周围武士气势加倍 |
-| 小早川隆景（将领） | 250  | 10   | —    | —    | 1.15 | 1.05 | —             | 0.75     | 95   | 光环 240 米；撤退阶段下令总攻 |
+| Unit type | Troops | Move | Charge | Impact | Charge resistance | Melee | Range / reload | Casualty factor | Morale | Traits |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Liaodong retainer cavalry | 400 | 34 | 70 | 1.6 | 1.0 | 1.05 | — | 0.8 | 90 | Three-eyed guns; elite |
+| Liaodong cavalry | 500 | 36 | 68 | 1.15 | 0.85 | 0.85 | — | 1.0 | 72 | Three-eyed guns |
+| Li Rusong (general) | 200 | 34 | 66 | 1.2 | 1.1 | 1.15 | — | 0.7 | 95 | Aura 170 m; his death is defeat |
+| Arquebus ashigaru | 500 | 10 | — | — | 0.6 | 0.55 | 175 m / 6 s | 1.0 | 66 | Must form for 1.2 s before a volley |
+| Spear ashigaru | 600 | 9 | — | — | 1.3 | 0.85 | — | 0.95 | 70 | Counters cavalry from the front; slowest to turn |
+| Samurai | 400 | 11 | 18 | 1.1 | 1.05 | 1.4 | — | 0.85 | 82 | Momentum (+10% per level) |
+| Tachibana Muneshige (general) | 200 | 12 | 18 | 1.15 | 1.1 | 1.35 | — | 0.75 | 95 | Aura 150 m; doubles momentum for nearby samurai |
+| Kobayakawa Takakage (general) | 250 | 10 | — | — | 1.15 | 1.05 | — | 0.75 | 95 | Aura 240 m; orders the general assault in the withdrawal phase |
 
-移动和冲锋是原型单位（地图米 / 游戏秒），正式版改为真实速度乘时间压缩系数。冲击、抗冲、近战是相对值；伤亡系数越低越耐打。
+Move and charge are in prototype units (map metres per game second); the full version uses real speeds times the time compression factor. Impact, charge resistance, and melee are relative values; a lower casualty factor means tougher.
 
-## 场景设计：碧蹄馆之战
+## Scenario design: the Battle of Byeokjegwan
 
-场景分三个阶段，中间穿插斥候预警和杨元援军两个事件：先冲垮日军先锋，再顶住本队，最后护送李如松撤出。原型一局约 5 分钟，正式版按时间压缩系数放大到 20–30 分钟。
+The scenario has three phases with two events in between, the scout warning and Yang Yuan's reinforcements: first break the Japanese vanguard, then hold off the main body, and finally escort Li Rusong out. A prototype battle lasts about 5 minutes; the full version scales it to 20–30 minutes through the time compression factor.
 
-### 历史背景
+### Historical background
 
-1593 年初明军收复平壤后南下，李如松率以骑兵为主的前锋向汉城推进，在碧蹄馆一带遭遇兵力占优的日军。按通行记述，李如松带约两千人赶到，只领一半先冲，另一半交杨元押后；明军被小早川、立花等部合围时，杨元赶到夹击，李如松才得以脱身，突围中坐骑被射倒，亲兵李有升舍身护主。此战之后明军转向议和。双方兵力和伤亡在各方史料中出入很大，demo 不追求精确比例，定稿前需对照《明实录》《宣祖实录》核实。
+Early in 1593, after retaking Pyongyang, the Ming army moved south, and Li Rusong led a mostly cavalry vanguard toward Hanseong. Near Byeokjegwan it met a larger Japanese force. In the common account, Li Rusong arrived with about two thousand men, charged first with half of them, and left the other half with Yang Yuan in the rear; when the Ming were surrounded by the forces of Kobayakawa, Tachibana, and others, Yang Yuan arrived to strike from the other side and Li Rusong escaped. During the breakout his horse was shot from under him, and his bodyguard Li Yousheng died protecting him. After this battle the Ming turned toward peace talks. Troop numbers and casualties on both sides differ widely between sources; the demo does not aim for exact proportions, and before finalizing they need to be checked against the Ming Veritable Records and the Annals of King Seonjo.
 
-### 地图（初稿，需对照史料核实）
+### Map (first draft, to be checked against sources)
 
-- 丘陵之间的谷地，一条道路南北贯穿。
-- 两侧有水田和泥地，大幅降低骑兵速度和冲击力。
-- 北侧为明军撤退出口，南侧和侧翼为日军入场点。
+- A valley between hills, with a road running north to south.
+- Paddies and mud on both sides, which sharply reduce cavalry speed and impact.
+- The Ming withdrawal exit is to the north; the Japanese enter from the south and the flanks.
 
-### 阶段
+### Phases
 
-1. **遭遇**：明军 6 部对立花宗茂先锋 5 部，是教学段。至少持续 80 秒；到 160 秒，或先锋已有三队崩溃时，斥候来报。
-2. **主力压上**：斥候来报 20 秒后，小早川隆景本队 6 部越过砺石岘入场，北口撤退路线开放。
-3. **撤退**：本队到达 90 秒后，两翼武士绕山包抄北口，小早川下令总攻，日军士气 +12。
+1. **Meeting engagement**: six Ming units against Tachibana Muneshige's five vanguard units; this is the tutorial section. It lasts at least 80 seconds; at 160 seconds, or once three vanguard units have broken, the scouts report.
+2. **Main body advances**: 20 seconds after the scout report, Kobayakawa Takakage's six main units cross Ryeoseokhyeon and enter, and the north withdrawal route opens.
+3. **Withdrawal**: 90 seconds after the main body arrives, the samurai on both wings swing around the hills toward the north exit, Kobayakawa orders the general assault, and Japanese morale rises by 12.
 
-**杨元援军**：本队到达 20 秒后，一旦日军逼近李如松 220 米内、李如松陷入接战或士气动摇，杨元率两队辽骑共一千骑自北边入场，交由玩家指挥；最迟在撤退阶段开始 25 秒后到达。每局只来一次，李如松的位置决定援军何时赶到。
+**Yang Yuan's reinforcements**: from 20 seconds after the main body arrives, as soon as Japanese units come within 220 m of Li Rusong, Li Rusong is engaged, or his morale wavers, Yang Yuan enters from the north with two Liaodong cavalry units, a thousand riders in all, under the player's command; at the latest they arrive 25 seconds into the withdrawal phase. They come only once per battle, and Li Rusong's position decides when they arrive.
 
-### 胜利条件
+### Victory conditions
 
-- 失败：李如松阵亡。
-- 胜利：李如松撤出地图；按撤出部队比例和击溃敌军数量评定等级（如大胜、小胜、惨胜）。
+- Defeat: Li Rusong falls.
+- Victory: Li Rusong leaves the map; the share of units withdrawn and the number of enemy units routed decide the grade (major victory, minor victory, costly victory).
 
-## 表现与反馈
+## Presentation and feedback
 
-没有小兵动画，手感全靠棋子的动态反馈和清晰的界面；美术以 2D 为主，全部可由 AIGC 先行制作。
+There are no soldier animations, so the feel comes from the counters' dynamic feedback and a clear interface; the art is mostly 2D and can all be made first with AI generation.
 
-### 棋子
+### Counters
 
-- 棋子正面是兵种立绘，配阵营色边框；人数和士气用棋子边缘的条带显示。
-- 状态变化做成棋子的物理动作：混乱时倾斜晃动，崩溃时翻到"受损面"（借鉴桌面兵棋棋子翻面），溃逃时碎裂四散。
-- 原型中已做：楔形标出正面朝向；破阵时棋子碎片四溅、分成数枚小棋子飞散；残部是小棋子加虚线框，主动分出的分队是小棋子加实线框。
+- The face of a counter is a portrait of the unit type with a faction-coloured border; troops and morale are bars along the counter's edge.
+- State changes become physical actions of the counter: it tilts and shakes when disordered, flips to its "damaged side" when broken (borrowing the flipped counters of board wargames), and shatters when routing.
+- Already in the prototype: a wedge marks the facing; on a breakthrough the counter throws off debris and splits into several small counters; remnants are small counters with a dashed frame, and detachments split off on purpose are small counters with a solid frame.
 
-### 打击反馈
+### Impact feedback
 
-- 冲击瞬间：顿帧、镜头震动、尘土爆开，被撞棋子后退。
-- 齐射：三眼铳和铁炮的烟雾，弓箭的抛物线轨迹。
-- 连锁崩溃：相邻棋子依次翻面，形成可见的多米诺效果。
-- 音效：马蹄、齐射、喊杀、溃逃时的号角或锣声。
+- At the moment of impact: hit-stop, camera shake, a burst of dust, and the struck counter pushed back.
+- Volleys: smoke from three-eyed guns and arquebuses, parabolic arrow trails.
+- Chain collapse: neighbouring counters flip one after another, a visible domino effect.
+- Sound: hoofbeats, volleys, battle cries, and a horn or gong when units rout.
 
-### 界面
+### Interface
 
-- 胜算预览：悬停目标时显示预估结果和修正项明细（侧翼、混乱、地形等）。
-- 单位状态图标、士气条、可滚动的战斗日志。
-- 战后战报：伤亡、击溃顺序和决定胜负的关键事件。
+- Odds preview: hovering a target shows the predicted result and a breakdown of modifiers (flank, disorder, terrain, and so on).
+- Unit state icons, morale bars, and a scrollable battle log.
+- After-battle report: casualties, the order units were routed, and the key events that decided the battle.
 
-### AIGC 美术流程与考据
+### AI-generated art and historical research
 
-- AIGC 负责立绘、地图、界面、任务简报插画和加载画面，统一为工笔或版画风格。
-- 以万历年间的《平番得胜图》《出警入跸图》作为参考图和风格锚点，用于图生图或训练风格模型。
-- 固定一份风格指南（色板、线条、构图）和同一套模型与提示词模板，保证一致性。
-- AI 素材放在独立目录并规范命名，以后请美术时可逐个替换。
-- 考据要点：辽东骑兵为布面甲、明式头盔、三眼铳、弓、腰刀；日军为具足、阵笠、铁炮、长枪、旗指物。
-- 上架 Steam 时需在商店页披露 AI 生成的美术素材。
+- AI generation handles portraits, maps, interface art, mission briefing illustrations, and loading screens, in a consistent gongbi or woodblock style.
+- The Wanli-era paintings *Pingfan Desheng Tu* and *Chujing Rubi Tu* serve as reference images and style anchors for image-to-image generation or for training a style model.
+- One fixed style guide (palette, line work, composition) and one set of models and prompt templates keep the output consistent.
+- AI assets live in their own folder with consistent names, so each can be replaced when an artist is hired later.
+- Research points: Liaodong cavalry wear brigandine, Ming helmets, and carry three-eyed guns, bows, and sabres; the Japanese wear gusoku and jingasa and carry arquebuses, spears, and sashimono.
+- A Steam release must disclose AI-generated art on the store page.
 
-## 技术架构
+## Technical architecture
 
-C++20 + SFML 3，以 [2D-action-game](https://github.com/QizhouD/2D-action-game) 框架为底座：规则核心是不依赖 SFML 的静态库，SFML 只负责显示、输入和界面，两者通过命令和事件通信。
+C++20 and SFML 3, built on the [2D-action-game](https://github.com/QizhouD/2D-action-game) framework: the rules core is a static library that does not depend on SFML, SFML handles only display, input, and interface, and the two communicate through commands and events.
 
-![技术架构 · 规则核心、AI 与 SFML 表现层](images/design-architecture.png)
+```mermaid
+flowchart TB
+    input["Player input<br/>SFML captures mouse and hotkeys"]
+    tables["Data tables<br/>unit types and scenarios: JSON"]
+    subgraph core["Rules core (C++ static library): no SFML, runs headless and in unit tests"]
+        queue["Command queue<br/>executed in logic tick order"]
+        sim["Fixed-step simulation<br/>10 times a second, combat every 0.5 s"]
+        events["Events and state snapshots<br/>impacts, routs, volleys, and other events"]
+        ai["AI command<br/>utility scores pick targets and charge timing"]
+    end
+    subgraph app["SFML presentation layer: display, input, and interface only, no rules"]
+        counters["Counter rendering<br/>reads snapshots, interpolates between frames"]
+        feedback["Impact feedback<br/>subscribes to events: hit-stop, particles, sound"]
+        ui["Interface<br/>odds preview, battle log, report"]
+    end
+    input -->|player commands| queue
+    tables -->|loaded at startup| sim
+    queue --> sim
+    sim --> events
+    events -->|reads state| ai
+    ai -->|changes Japanese orders directly| sim
+    events -->|events and snapshots| app
+```
 
-玩家的命令带逻辑时刻进入命令队列，AI 在模拟内部直接下令，两者都由固定步长模拟统一执行；表现层只读取快照、订阅事件，不包含任何规则。
+Player commands enter the command queue stamped with a logic tick, the AI gives orders directly inside the simulation, and both are executed by the fixed-step simulation; the presentation layer only reads snapshots and subscribes to events, and contains no rules.
 
-- **规则核心**：C++20 静态库，不引用 SFML。单位是纯数据数组，各系统是遍历数组的函数；命令带逻辑时刻入队，每局固定随机种子，同样的命令序列必定重现同样的战斗，可以做回放和平衡测试。
-- **移植依据**：HTML 原型是规则的参考实现，逐条移植；关键结果（破阵阈值、几组典型对决的胜负）写成单测，与原型对照。
-- **时间与尺度**：地图 1 单位等于 1 米，兵种速度填真实米/秒，统一乘时间压缩系数。
-- **数据层**：兵种表和场景表（部署、阶段触发、援军条件）用 JSON，沿用框架"默认值 + 配置覆盖 + 坏值报警"的做法。
-- **表现层**：SFML 绘制绢本底图、棋子和特效，镜头可缩放平移；棋子与地图贴图由 AIGC 生成。游戏里的中文一律用繁体；正文用思源宋体的繁体与韩文版，标题和棋子字用霞鹜文楷 TC，两者均为 OFL 授权。
-- **界面**：游戏内界面（选中面板、胜算预览、战报）自绘；调参面板和单位检查器用 Dear ImGui（imgui-sfml），只在开发版开启。
-- **AI**：效用评分选择目标、冲锋时机和收拢残部，上层"指挥官"按阶段分配任务；先用规则式，不做搜索。
-- **工具**：命令行无头模式批量跑 AI 对战，输出伤亡和胜负统计，用于调平衡和 CI 回归。
+- **Rules core**: a C++20 static library that does not reference SFML. Units are plain data arrays and each system is a function over the arrays; commands are queued with a logic tick, each battle has a fixed random seed, and the same command sequence always reproduces the same battle, which enables replays and balance testing.
+- **Porting basis**: the HTML prototype is the reference implementation of the rules and is ported rule by rule; key results (the breakthrough threshold, the outcome of several typical duels) become unit tests compared against the prototype.
+- **Time and scale**: one map unit is one metre, unit speeds are real metres per second, and everything is multiplied by the time compression factor.
+- **Data layer**: unit tables and scenario tables (deployment, phase triggers, reinforcement conditions) are JSON, following the framework's approach of defaults, configuration overrides, and warnings for bad values.
+- **Presentation layer**: SFML draws the silk-scroll base map, counters, and effects, with a camera that can zoom and pan; counter and map textures are AI-generated. Chinese in the game is always Traditional; body text uses the Traditional Chinese and Korean versions of Noto Serif, and titles and counter glyphs use LXGW WenKai TC, all under the OFL.
+- **Interface**: the in-game interface (selection panel, odds preview, battle report) is drawn by the game itself; the tuning panel and unit inspector use Dear ImGui (imgui-sfml) and are only enabled in dev builds.
+- **AI**: utility scores choose targets, charge timing, and regrouping of remnants, and a higher-level "commander" assigns tasks by phase; rule-based first, no search.
+- **Tools**: a headless command-line mode runs AI battles in bulk and outputs casualty and outcome statistics for balancing and CI regression.
 
-### 为什么用 C++ / SFML 而不是 Unity
+### Why C++ and SFML rather than Unity
 
-原定方案是 Unity 加纯 C# 规则核心。改用 C++ / SFML 有三个理由：表现层是纯 2D 的棋子和绢本地图，用不到 Unity 的 3D 和动画；2D-action-game 已经具备固定步长主循环、不依赖引擎的核心库、单测、CI 和脚本回放，正是这套架构需要的骨架；代码量小、全部自有，配合 AI 编码助手迭代快。
+The original plan was Unity with a pure C# rules core. There are three reasons for switching to C++ and SFML: the presentation is pure 2D counters on a silk-scroll map and needs none of Unity's 3D or animation; 2D-action-game already has a fixed-step main loop, an engine-independent core library, unit tests, CI, and scripted replays, which is exactly the skeleton this architecture needs; and the code base is small and entirely owned, so iterating with AI coding assistants is fast.
 
-代价主要在界面和本地化：SFML 没有 UI 框架和场景编辑器，文字多的面板、中英韩字体和字符串表都要自己做。退路也留着：规则核心是独立的 C++ 库，如果界面成本失控，可以用 C 接口包成原生插件接入 Unity，只换表现层。
+The cost is mainly in the interface and localization: SFML has no UI framework or scene editor, so text-heavy panels, Chinese, English, and Korean fonts, and string tables must all be built by hand. A fallback remains: the rules core is a standalone C++ library, so if interface costs get out of hand it can be wrapped in a C interface as a native plugin for Unity, replacing only the presentation layer.
 
-### 复用 2D-action-game 框架
+### Reusing the 2D-action-game framework
 
-| 模块                  | 框架现状                                                | 本作处理                                                |
-|-----------------------|---------------------------------------------------------|---------------------------------------------------------|
-| 主循环                | 60 Hz 固定步长，渲染帧率可变                            | 沿用；模拟改为 10 Hz，渲染在两帧之间插值                |
-| 构建与 CI             | CMake + Ninja，Windows / Linux 双平台 CI，静态链接 SFML | 直接沿用                                                |
-| 核心库与单测          | minigame_core 不依赖 SFML，自带单测                     | 沿用这个分层，整个规则核心放进核心库                    |
-| 数值配置              | Balance：内置默认值，balance.ini 覆盖，坏值报警         | 沿用，改为兵种表和场景表                                |
-| 脚本回放              | 脚本驱动输入并截图，用于无头回归                        | 沿用，扩展为 AI 对战回放和平衡测试                      |
-| 资源、音频、粒子、HUD | ResourceManager、合成音效兜底、CPU 粒子、提示条         | 小改沿用：粒子做尘土、烟雾和碎片，提示条改成横幅和战报  |
-| 设计模式              | Command、Observer、Service Locator                      | 沿用思路：命令带逻辑时刻入队，Observer 改为战斗事件总线 |
-| 实体与系统            | 实体是带精灵的类，组件存在 map 里，系统逐个虚函数调用   | 重写：单位改为纯数据数组，与 SFML 完全分离              |
-| 碰撞                  | 瓦片地图加轴对齐包围盒                                  | 重写：连续坐标、有向矩形分离轴检测、地形采样            |
-| 输入与 AI             | 键盘手柄直接操控；巡逻、追击 AI                         | 重写：鼠标选择、框选与下令；效用评分 AI                 |
-| 界面                  | 无 UI 框架                                              | 新增：游戏内界面自绘，调参用 Dear ImGui                 |
+| Module | State in the framework | What this game does |
+|---|---|---|
+| Main loop | 60 Hz fixed step, variable render frame rate | Kept; the simulation runs at 10 Hz and rendering interpolates between frames |
+| Build and CI | CMake and Ninja, Windows and Linux CI, SFML linked statically | Kept as is |
+| Core library and unit tests | minigame_core does not depend on SFML and has its own unit tests | Keep this layering and put the whole rules core into the core library |
+| Tuning values | Balance: built-in defaults, balance.ini overrides, warnings for bad values | Kept, changed to unit tables and scenario tables |
+| Scripted replays | Scripts drive input and take screenshots for headless regression | Kept, extended to AI battle replays and balance tests |
+| Resources, audio, particles, HUD | ResourceManager, synthesized sound fallback, CPU particles, toast messages | Kept with small changes: particles for dust, smoke, and debris; toasts become banners and the battle log |
+| Design patterns | Command, Observer, Service Locator | Same ideas: commands queued with a logic tick, Observer becomes a battle event bus |
+| Entities and systems | Entities are classes with sprites, components in a map, systems call virtual functions one by one | Rewritten: units become plain data arrays, fully separated from SFML |
+| Collision | Tile map with axis-aligned bounding boxes | Rewritten: continuous coordinates, separating-axis tests on oriented rectangles, terrain sampling |
+| Input and AI | Direct keyboard and gamepad control; patrol and chase AI | Rewritten: mouse selection, box selection, and orders; utility-score AI |
+| Interface | No UI framework | New: in-game interface drawn by the game, Dear ImGui for tuning |
 
-SFML 3 已于 2024 年底发布，接口与 2.6 不兼容；框架基于 2.6，已决定趁代码量小迁到 SFML 3.1。
+SFML 3 was released at the end of 2024 and is incompatible with 2.6; the framework is on 2.6, and the decision is to move to SFML 3.1 while the code base is small.
 
-迁移要点、接口、规则公式、数据格式和任务拆分见[开发文档](https://claude.ai/artifact/6uRaYbNkV5QtLEZohtZ12b)（仓库里为 docs/DEVELOPMENT.md）。
+Migration notes, interfaces, rule formulas, data formats, and the task breakdown are in the [development spec](https://claude.ai/artifact/6uRaYbNkV5QtLEZohtZ12b) (docs/DEVELOPMENT.md in the repository).
 
-## 市场定位与国际化
+## Market positioning and localization
 
-语言按中文（繁体）、英文、韩文的顺序推进，日文暂缓；欧美历史兵棋玩家可能是对明军视角接受度最高的海外群体。
+Languages come in the order Chinese (Traditional), English, Korean, with Japanese on hold; Western historical wargamers may be the overseas audience most open to a Ming perspective.
 
-英文宣传的切入点：一场牵动中日韩三国、影响明朝衰落和满洲崛起，却在西方几乎无人知晓的东亚大战。
+The angle for English promotion: a great East Asian war that involved China, Japan, and Korea, shaped the decline of the Ming and the rise of the Manchus, and is almost unknown in the West.
 
-| 市场 | 优先级 | 机会                                                                                                                                                                                          | 风险与对策                                                                                                                                                                                                                                             |
-|------|--------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 中文 | 第一   | 明朝题材热度高，B 站开发日志是主要渠道                                                                                                                                                        | 考据要求严格：以同时代宫廷画为参考，把考据做成卖点                                                                                                                                                                                                     |
-| 英语 | 第二   | 欧美兵棋玩家在找欧洲以外的题材，对中日韩三方没有历史包袱；与美国兵棋和历史爱好者的交流也印证了兴趣；已有西方发行商推出同题材的电脑游戏和[桌面兵棋](https://www.avalon-digital.com/imjin-war/) | 玩家缺少背景知识：游戏内加入简短的历史注释和人物介绍                                                                                                                                                                                                   |
-| 韩文 | 第三   | 壬辰战争在韩国有大众热度，同题材手游 2026 年登顶人气榜（[来源](https://www.inews24.com/view/1967550)）                                                                                        | 明军主视角可能引发争议：诚实呈现明军失利，后续加入朝鲜陆战视角；"Imjin War"已被韩国开发商注册为商标（[来源](https://labs.invenglobal.com/articles/19730/legendary-korean-game-developers-new-title-project-imjin-reveals-combat-footage)），命名需避开 |
-| 日文 | 暂缓   | 战国题材玩家基数大                                                                                                                                                                            | 该题材在日本偏冷且敏感（[来源](https://books.bunshun.jp/articles/-/2709?page=3)）：日军以尊重的方式呈现，不做脸谱化反派                                                                                                                                |
+| Market | Priority | Opportunity | Risks and responses |
+|---|---|---|---|
+| Chinese | First | Ming-era subjects are popular, and Bilibili development logs are the main channel | Audiences expect rigorous historical research: use contemporary court paintings as references and make the research a selling point |
+| English | Second | Western wargamers are looking for subjects outside Europe and carry no historical baggage about China, Japan, or Korea; conversations with American wargamers and history enthusiasts confirmed interest; Western publishers have already released a computer game and a [board wargame](https://www.avalon-digital.com/imjin-war/) on the same subject | Players lack background knowledge: add short historical notes and character profiles in the game |
+| Korean | Third | The Imjin War is widely popular in Korea, and a mobile game on the same subject topped the popularity charts in 2026 ([source](https://www.inews24.com/view/1967550)) | A Ming-centred perspective may be controversial: show Ming setbacks honestly and add a Joseon land perspective later; "Imjin War" is trademarked by a Korean developer ([source](https://labs.invenglobal.com/articles/19730/legendary-korean-game-developers-new-title-project-imjin-reveals-combat-footage)), so the title must avoid it |
+| Japanese | On hold | Large audience for Sengoku-era subjects | The subject is little loved and sensitive in Japan ([source](https://books.bunshun.jp/articles/-/2709?page=3)): portray the Japanese army with respect, never as cardboard villains |
 
-- **技术准备**：所有界面文本走字符串表；中日韩字体和英文字体同时准备；界面为英文预留更长的文字空间。
-- **译名表**：统一维护人名、地名、兵种的中英韩译名，例如李如松 Li Rusong、碧蹄馆 Byeokjegwan、立花宗茂 Tachibana Muneshige；人名按各自语言转写，朝鲜地名用韩语罗马字。
-- **命名**：中文名和英文名分别确定，英文标题不直接使用"Imjin War"。
-- **渠道**：Steam 页面中英双语；开发日志同时发 B 站和 YouTube；英文兵棋和历史社区作为早期反馈来源。
+- **Technical preparation**: all interface text goes through string tables; CJK and Latin fonts are prepared together; the interface leaves extra room for longer English text.
+- **Name glossary**: keep one list of Chinese, English, and Korean names for people, places, and unit types, for example 李如松 Li Rusong, 碧蹄館 Byeokjegwan, 立花宗茂 Tachibana Muneshige; personal names are transliterated by their own language, and Korean place names use Revised Romanization.
+- **Naming**: the Chinese and English titles are chosen separately, and the English title does not use "Imjin War" directly.
+- **Channels**: a bilingual Chinese and English Steam page; development logs on both Bilibili and YouTube; English wargaming and history communities as early feedback.
 
-### 市场定位
+### Market positioning
 
-一套内容、一套数值，各市场只调整宣传角度和文案侧重；两套数值会引来"双标"争议，维护成本也会翻倍。
+One set of content and one set of numbers; each market only changes the promotional angle and emphasis of the copy. Two sets of numbers would invite accusations of double standards and double the maintenance.
 
-- **国内宣传**：以明军抗倭援朝为主线，突出辽东铁骑的冲锋演出、三眼铳齐射和明甲考据；明军的强大通过表现层体现，不靠调高数值。
-- **内容边界**：宣传和内容聚焦壬辰战争本身，不涉及明清易代和族群对立话题；若在国内正式上架，需申请版号并通过内容审核。
-- **国际宣传**：以"被遗忘的东亚大战"为钩子，讲述一场反侵略战争从劣势到反击的过程。
+- **Domestic promotion**: the main thread is the Ming army coming to Korea's aid against the Japanese invasion, highlighting the charges of the Liaodong cavalry, three-eyed gun volleys, and researched Ming armour; the Ming army's strength shows through presentation, not through inflated numbers.
+- **Content boundaries**: promotion and content stay focused on the Imjin War itself and do not touch the Ming–Qing transition or ethnic conflict; a formal release in mainland China would need a publishing licence and content review.
+- **International promotion**: the hook is "a forgotten great East Asian war", telling the story of a war against invasion going from disadvantage to counterattack.
 
-### 国际版叙事：三幕结构
+### International narrative: three acts
 
-1. **入侵与崩溃（1592）**：日军登陆釜山，约二十天攻入汉城，朝鲜几近亡国，形成弱者开局。
-2. **援军与反击**：明军入朝、收复平壤，辽东骑兵驰援是第一个高潮。
-3. **挫折与最终胜利**：碧蹄馆受挫、双方僵持议和，第二次入侵后以露梁海战结束战争；中段的挫折让最终胜利更有分量。
+1. **Invasion and collapse (1592)**: the Japanese army lands at Busan and takes Hanseong in about twenty days; Joseon is close to falling, an underdog opening.
+2. **Relief and counterattack**: the Ming army enters Korea and retakes Pyongyang; the arrival of the Liaodong cavalry is the first climax.
+3. **Setback and final victory**: the setback at Byeokjegwan, a stalemate and peace talks, and after the second invasion the war ends with the Battle of Noryang; the setback in the middle gives the final victory more weight.
 
-弱者开局主要是朝鲜的故事，因此朝鲜陆战视角可能需要比原计划更早加入。
+The underdog opening is mainly Joseon's story, so a Joseon land perspective may need to come earlier than planned.
 
-### 日军塑造原则
+### Principles for portraying the Japanese side
 
-- 战争的驱动力落在丰臣秀吉的野心上，而不是把日本人整体塑造成反派。
-- 将领有立体的动机：小西行长暗中推动议和，与主战的加藤清正互相掣肘；立花宗茂以骁勇著称。
-- 不丑化也不洗白：战争暴行作为史实在战役文本中如实交代，不使用血腥画面。
+- The war is driven by Toyotomi Hideyoshi's ambition, not by casting the Japanese as a whole as villains.
+- Generals have rounded motives: Konishi Yukinaga quietly pushes for peace and is at odds with the hawkish Katō Kiyomasa; Tachibana Muneshige is known for his courage.
+- Neither demonize nor whitewash: wartime atrocities are stated as historical fact in campaign text, without gory images.
 
-## 里程碑与试水计划
+## Milestones and market test plan
 
-先验证冲锋和士气崩溃的手感是否成立，再投入内容和美术；每个里程碑以"可以演示"为完成标准。
+First prove that the feel of charges and morale collapse works, then invest in content and art; each milestone is done when it can be demonstrated.
 
-1. **规则原型（已完成）**：[HTML 可玩原型](https://claude.ai/artifact/GEGVr72yHEmDop4MWd4fDy)已验证冲锋破阵、枪阵相克、士气连锁、溃散拆分、分兵合兵和援军事件。
-2. **框架整理**：新建仓库，从 2D-action-game 保留主循环、构建、CI、配置和脚本回放，移除动作游戏内容，迁到 SFML 3。
-3. **规则核心移植**：原型规则逐条移植到 C++ 核心库，单测覆盖冲击计算和典型对决，无头 AI 对战跑通整场。
-4. **SFML 表现层**：底图、棋子、选择框选与下令、暂停变速、胜算预览、战报。
-5. **手感与节奏**：移植打击反馈和音效，定下时间压缩系数和地图尺寸。
-6. **demo 内容与美术**：AIGC 棋子与地图、考据核对、中英文本。
-7. **试水**：录制"骑兵冲垮整条阵线"的片段，在 B 站和 YouTube 发布开发日志，开设 Steam 页面，收集播放、评论和心愿单数据。
+1. **Rules prototype (done)**: the [HTML playable prototype](https://claude.ai/artifact/GEGVr72yHEmDop4MWd4fDy) has proven breakthroughs, the pike counter to cavalry, chained morale, scattering, splitting and joining, and the reinforcement event.
+2. **Framework cleanup**: create a new repository, keep the main loop, build, CI, configuration, and scripted replays from 2D-action-game, remove the action game content, and move to SFML 3.
+3. **Rules core port**: port the prototype rules one by one into the C++ core library, with unit tests covering impact calculation and typical duels, and headless AI battles running a whole battle.
+4. **SFML presentation layer**: base map, counters, selection, box selection and orders, pause and speed, odds preview, battle report.
+5. **Feel and pacing**: port the impact feedback and sound, and settle the time compression factor and map size.
+6. **Demo content and art**: AI-generated counters and maps, research checks, Chinese and English text.
+7. **Market test**: record a clip of "cavalry breaking a whole line", publish development logs on Bilibili and YouTube, open a Steam page, and collect views, comments, and wishlists.
 
-开发日志可以从第 1 步就开始记录，原型阶段的粗糙画面同样是有吸引力的素材。
+Development logs can start from step 1; the rough visuals of the prototype stage are attractive material too.
 
-## 待定问题
+## Open questions
 
-- [ ] 游戏的正式名称
-- [ ] 比例尺：一个棋子代表多少人
-- [ ] 碧蹄馆的地形、双方兵力、参战部队和将领，需对照史料核实
-- [ ] 是否需要战争迷雾和视野系统
-- [ ] 镜头：纯俯视 2D，还是带倾斜角度的 2.5D
-- [ ] AI 难度如何分级
-- [ ] 冲击力公式中各系数的取值范围
-- [x] SFML 版本：已定，迁到 SFML 3.1
-- [x] 游戏内中文：已定，一律用繁体
-- [ ] 朝鲜陆战视角是否提前加入（国际版弱者开局的需要）
-- [ ] 时间压缩系数（4×–6×）与地图尺寸（2–3 公里）
-- [ ] 疲劳系统是否保留（原型未实现）
+- [x] Official title of the game: decided, Afterglow: Imjin 1593
+- [ ] Scale: how many men one counter represents
+- [ ] Byeokjegwan's terrain, both sides' strength, the units and generals present, to be checked against sources
+- [ ] Whether fog of war and line of sight are needed
+- [ ] Camera: pure top-down 2D, or 2.5D with a tilt
+- [ ] How AI difficulty is graded
+- [ ] The range of each coefficient in the impact formula
+- [x] SFML version: decided, move to SFML 3.1
+- [x] Chinese in the game: decided, always Traditional
+- [ ] Whether to add the Joseon land perspective earlier (needed for the international underdog opening)
+- [ ] Time compression factor (4×–6×) and map size (2–3 km)
+- [ ] Whether to keep a fatigue system (not implemented in the prototype)
 
-## 参考书目
+## Bibliography
 
-- Kenneth Swope, *A Dragon's Head and a Serpent's Tail: Ming China and the First Great East Asian War, 1592–1598*：从明朝视角研究这场战争，李如松和辽东军的记述较多，是明军考据的首选。
-- Samuel Hawley, *The Imjin War*：更偏朝鲜和日本视角，适合对照阅读。
+- Kenneth Swope, *A Dragon's Head and a Serpent's Tail: Ming China and the First Great East Asian War, 1592–1598*: studies the war from the Ming side, with more on Li Rusong and the Liaodong army; the first choice for Ming research.
+- Samuel Hawley, *The Imjin War*: leans more toward the Korean and Japanese sides; good for comparison.

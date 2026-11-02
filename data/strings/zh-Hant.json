@@ -1,4 +1,4 @@
-// 源语言。界面、战报从原型搬运；「重整约 6 秒」改成战场秒的 48 秒。
+// Source language. Interface and battle log text comes from the prototype; "reforms in about 6 seconds" became 48 battlefield seconds.
 {
   "schema": 1,
   "language": "zh-Hant",

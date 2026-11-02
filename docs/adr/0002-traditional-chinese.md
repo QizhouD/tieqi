@@ -1,20 +1,20 @@
-# 0002 游戏内中文一律用繁体
+# 0002 Chinese in the game is always Traditional
 
-- 状态：已采纳
-- 日期：2026-10-27
+- Status: accepted
+- Date: 2026-10-27
 
-## 背景
+## Context
 
-HTML 原型最初用简体字和马善政体，而马善政体只覆盖简体字。
+The HTML prototype originally used Simplified characters and the Ma Shan Zheng font, which covers only Simplified characters.
 
-## 决定
+## Decision
 
-- 游戏里的中文（界面、战报、棋子字、地图标注）一律用繁体，语言代码 `zh-Hant`，字形按台湾标准；从简体转写时只换字、不换词。"铁炮"写作"鐵砲"。
-- 棋子字在中文、英文、韩文三种语言下都用繁体汉字。
-- 字体：正文用思源宋体 TC / KR；标题、棋子字、飘字和横幅用霞鹜文楷 TC。三款都是 SIL OFL 授权。
-- 文档和代码注释仍用简体。
+- Chinese in the game (interface, battle log, counter glyphs, map labels) is always Traditional, language code `zh-Hant`, with glyph forms following the Taiwan standard; when transcribing from Simplified, only characters change, never words. 铁炮 is written 鐵砲.
+- Counter glyphs are Traditional Chinese characters in all three languages: Chinese, English, and Korean.
+- Fonts: body text uses Noto Serif TC / KR; titles, counter glyphs, floating text, and banners use LXGW WenKai TC. All three are under the SIL OFL.
+- Documentation and code comments were originally written in Simplified Chinese. Superseded on 2026-11-01: the repository, including documentation and comments, is now written in English.
 
-## 影响
+## Consequences
 
-- `data/strings/zh-Hant.json` 是源语言，其他语言缺键时回退到它。
-- 原型已改为繁体，界面文案可以直接从原型搬运。
+- `data/strings/zh-Hant.json` is the source language, and other languages fall back to it for missing keys.
+- The prototype has been converted to Traditional, so interface text can be carried over from it directly.

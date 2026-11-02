@@ -1,30 +1,42 @@
-# 连续开发的流程和停止条件
+# Continuous development: process and stop conditions
 
-一、收尾 A5（PR #21，分支 task/A5-fx）
-1. 用 REST API 查 #21 的 CI 结果（凭据用 Git 已保存的，只碰 QizhouD/tieqi，不要打印出来，也不要写进任何文件）。在 Linux 上用 GCC 13 编译时，tests/app/glyphs.cpp 第 89 行报 -Wdangling-reference，ci 预设下警告当错误，编译失败。这是误报：给 fontFor 传了临时 path。改法是先把路径存进局部变量再传。
-2. 不要沿用之前记录的数字，自己重新跑：dev 预设零警告；ctest 全过，包括 slow 标签的 100 场基线；release 预设下用 tieqi --perf 跑完种子 1 的 scripted 回放，要求 p95 ≤ 16.7 毫秒。把新数字更新到 PR 描述和 PROGRESS。
-3. CI 全绿后用 squash 合并 #21，删除分支。
+## 1. Finish A5 (PR #21, branch task/A5-fx)
 
-二、然后按顺序做 A6 → L1 → R1，每张卡一个 PR
-流程：从 main 拉分支 task/<卡号>-<英文短名>；读“给 agent 的工作约定”、这张卡，以及“表现层规格”“窗口与布局”“本地化与字体”“测试与验收”；实现，写测试；dev 预设零警告、ctest 全过；更新 PROGRESS；开 PR；等 CI。CI 全绿、下面的自检全部通过后，自己用 squash 合并，然后做下一张。
-- A6：调试工具只在 TQ_DEV_TOOLS=ON 时编译，不能进 release。
-- L1：起草 en、ko 字符串，在 PROGRESS 里把所有新译文列为“待作者审”。用词保持中立：日本一方英文写 Japanese army 或 Japanese forces，韩文写 일본군；明军写 명군，朝鲜写 조선。不用 왜、倭、오랑캐 之类贬称，任何一方都不丑化。人名、地名的写法和现有 en.json 一致。设置里可以切换语言；切换后重建地图文字；ko、en 各截一张整页图，检查有没有文字溢出。
-- R1：做 Windows 试玩包。release 静态链接 MSVC 运行库（CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded，SFML_USE_STATIC_STD_LIBS=ON），用 dumpbin /dependents 确认只依赖系统 DLL。包里放可执行文件、data、assets、字体和各自的许可证、THIRD_PARTY_NOTICES（SFML、FreeType、HarfBuzz、SheenBidi、ogg、vorbis、FLAC、miniaudio、nlohmann/json）、AI_ASSETS.md、繁中加英文的试玩说明。版本号写进回放文件。压缩包命名为 Afterglow-Imjin-1593-demo-<版本>-win64.zip，留在本地，不要发布 GitHub Release。
+1. Check the CI results of #21 with the REST API (use the credentials Git has already stored, touch only QizhouD/tieqi, never print them, and never write them into any file). When compiling with GCC 13 on Linux, tests/app/glyphs.cpp line 89 reports -Wdangling-reference, and the ci preset treats warnings as errors, so the build fails. It is a false positive: fontFor was given a temporary path. The fix is to store the path in a local variable first and pass that.
+2. Do not reuse previously recorded numbers; rerun everything yourself: zero warnings with the dev preset; ctest all passing, including the 100-battle baseline labelled slow; with the release preset, `tieqi --perf` runs the scripted replay of seed 1 to the end, with p95 ≤ 16.7 ms. Update the PR description and PROGRESS with the new numbers.
+3. Once CI is fully green, squash-merge #21 and delete the branch.
 
-三、每张卡合并前的自检
-1. 性能：同一-2 的 --perf 实测，达标才能合并。
-2. 字体：tests/app/glyphs.cpp 的缺字检查必须通过。
-3. 规则核心：只要改了 src/core，100 场基线和逐 tick 对照的结果必须和改之前完全一样。
-4. 截图：用 --script 和 --freeze-at 截出能证明这张卡验收的画面，放进 PR。
-5. 源代码（src、tests、tools、cmake、CMakeLists.txt、.github/workflows）里不出现中文；玩家看到的文字只放 data/strings/。
-6. 提交前用 GCC 的告警标准想一遍：CI 的 Ubuntu 任务用 GCC 13 且把警告当错误，Windows 本地编译通过不代表 CI 能过。
+## 2. Then do A6 → L1 → R1 in order, one PR per card
 
-四、停止条件（遇到任何一条就停）
-- 规格不清楚或和原型冲突，并且会影响玩法、数值或外观；小事按文档已有的默认做法定，写进 PR 和 PROGRESS。
-- 性能不达标，或者改了 src/core 后基线、对照结果变了。
-- 同一张卡 CI 修了 3 轮还是红的。
-- 需要新的第三方依赖，或者要做对外发布这类不可逆的操作。
-- 一律禁止：直接推送到 main、force push、合并 CI 没有全绿的 PR、跳过或删除测试、改 reference/、操作别的仓库。
-停下来时，把原因和你建议的做法写进 docs/PROGRESS.md 的“停在这里”一节，推送到当前分支（不要合并），再告诉我。
+Process: branch from main as task/<card>-<english-short-name>; read "Working agreement for agents", the card itself, and "Presentation spec", "Window and layout", "Localization and fonts", and "Tests and acceptance"; implement and write tests; zero warnings with the dev preset and ctest all passing; update PROGRESS; open the PR; wait for CI. When CI is fully green and every self-check below passes, squash-merge it yourself and move on to the next card.
 
-五、R1 合并后停下来，列出需要我亲自做的事：完整打三局（M2 手动验收）、试听音效、审阅英文和韩文译文、在一台没装开发环境的 Windows 电脑上解压试玩。每合并一个 PR 只回我一行，例如“A6 已合并 #22，p95 9.8 毫秒”。
+- A6: the debug tools are compiled only with TQ_DEV_TOOLS=ON and must never end up in release.
+- L1: draft the en and ko strings and list every new translation in PROGRESS as "awaiting author review". Keep the wording neutral: the Japanese side is Japanese army or Japanese forces in English and 일본군 in Korean; the Ming army is 명군 and Joseon is 조선. Do not use derogatory terms such as 왜, 倭, or 오랑캐, and do not demean any side. Spell personal and place names as in the existing en.json. The language can be switched in the settings; switching rebuilds the map text; take one full-page screenshot each in ko and en and check for overflowing text.
+- R1: build the Windows demo package. The release build links the MSVC runtime statically (CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded, SFML_USE_STATIC_STD_LIBS=ON); check with dumpbin /dependents that it depends only on system DLLs. The package contains the executable, data, assets, the fonts and each of their licenses, THIRD_PARTY_NOTICES (SFML, FreeType, HarfBuzz, SheenBidi, ogg, vorbis, FLAC, miniaudio, nlohmann/json), AI_ASSETS.md, and player notes in Traditional Chinese and English. Write the version into replay files. Name the zip Afterglow-Imjin-1593-demo-<version>-win64.zip, keep it local, and do not publish a GitHub Release.
+
+## 3. Self-checks before merging each card
+
+1. Performance: measured with the same `--perf` run as in 1.2; merge only if it meets the target.
+2. Fonts: the missing-glyph check in tests/app/glyphs.cpp must pass.
+3. Rules core: whenever src/core changes, the 100-battle baseline and the tick-by-tick comparison must give exactly the same results as before the change.
+4. Screenshots: use --script and --freeze-at to capture screens that prove the card's acceptance, and put them in the PR.
+5. No Chinese in the source code (src, tests, tools, cmake, CMakeLists.txt, .github/workflows); player-visible text lives only in data/strings/.
+6. Before committing, think it through against GCC's warning standards: the Ubuntu CI job uses GCC 13 with warnings as errors, and a clean local Windows build does not mean CI will pass.
+
+## 4. Stop conditions (stop on any one of these)
+
+- The spec is unclear or conflicts with the prototype, in a way that affects gameplay, values, or appearance; small matters follow the defaults already in the docs and are recorded in the PR and PROGRESS.
+- Performance misses the target, or the baseline or comparison results change after changing src/core.
+- CI for the same card is still red after 3 rounds of fixes.
+- A new third-party dependency is needed, or an irreversible action such as a public release is required.
+- Always forbidden: pushing directly to main, force pushing, merging a PR whose CI is not fully green, skipping or deleting tests, changing reference/, touching other repositories.
+
+When stopping, write the reason and your suggested course of action in the "Stopped here" section of docs/PROGRESS.md, push to the current branch (do not merge), and then report to the author.
+
+## 5. Stop after R1 is merged
+
+List what the author has to do personally: play three full battles (M2 manual acceptance), listen to the sound effects, review the English and Korean translations, and unzip and play the demo on a Windows PC without a development environment. After each merged PR, report only one line, for example "A6 merged as #22, p95 9.8 ms".
+
+## Repository language
+
+Everything committed to the repository is written in English: code, comments, logs, tests, docs, PR descriptions, and commit messages. The exceptions are listed in the hard rules of AGENTS.md.

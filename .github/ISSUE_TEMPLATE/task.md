@@ -1,16 +1,16 @@
 ---
-name: 任务卡
-about: 对应 docs/DEVELOPMENT.md"任务拆分"里的一张卡
-title: "[卡号] 标题"
+name: Task card
+about: One card from "Task breakdown" in docs/DEVELOPMENT.md
+title: "[Card] Title"
 labels: task
 ---
 
-**卡号**：
+**Card**:
 
-**依赖**：（全部合并后才能开工）
+**Depends on**: (work starts only after all of these are merged)
 
-**做**：（照抄任务卡）
+**Do**: (copied from the task card)
 
-**验收**：（照抄任务卡）
+**Acceptance**: (copied from the task card)
 
-**相关章节**：
+**Related chapters**:
