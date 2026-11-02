@@ -1,10 +1,13 @@
 #include "app/Hud.h"
 
+#include "app/SoldierAtlas.h"
+
 #include "app/TextCache.h"
 #include "app/TextStyle.h"
 #include "core/rules/Constants.h"
 
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/Sprite.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -234,6 +237,49 @@ Hud::Input Hud::handle(const PointerSample &sample) {
     return input;
 }
 
+namespace {
+
+// The unit card portrait box and description text (V4).
+constexpr float kPortraitW = 72.f;
+constexpr float kPortraitH = 88.f;
+constexpr float kDescSize = 12.f;
+constexpr float kDescLine = 16.f;
+
+// A finished portrait fills the box keeping its aspect; otherwise the unit type's figure from the soldier atlas
+// stands on a paper ground as a placeholder.
+void drawPortrait(const Pen &pen, const HudFrame &frame, const UnitType *type, float x, float y) {
+    pen.fill(x, y, kPortraitW, kPortraitH, rgb(0xe4d7b8));
+    if (type != nullptr) {
+        const sf::Texture *texture = nullptr;
+        sf::IntRect rect;
+        if (frame.portraits != nullptr) {
+            const auto found = frame.portraits->find(type->id);
+            if (found != frame.portraits->end() && found->second != nullptr) {
+                texture = found->second;
+                rect = {{0, 0}, {static_cast<int>(texture->getSize().x), static_cast<int>(texture->getSize().y)}};
+            }
+        }
+        if (texture == nullptr && frame.soldierAtlas != nullptr) {
+            texture = frame.soldierAtlas;
+            const SoldierKind kind = type->general ? SoldierKind::General : soldierKind(*type);
+            rect = SoldierAtlas::cell(atlasRow(type->side, kind, 2), kFrameIdle);
+        }
+        if (texture != nullptr && rect.size.x > 0 && rect.size.y > 0) {
+            const float fit = std::min((kPortraitW - 4.f) / static_cast<float>(rect.size.x),
+                                       (kPortraitH - 4.f) / static_cast<float>(rect.size.y));
+            const float w = static_cast<float>(rect.size.x) * fit;
+            const float h = static_cast<float>(rect.size.y) * fit;
+            sf::Sprite sprite(*texture, rect);
+            sprite.setPosition(pen.px(x + (kPortraitW - w) * 0.5f, y + (kPortraitH - h) * 0.5f));
+            sprite.setScale({fit * pen.scale, fit * pen.scale});
+            pen.target->draw(sprite);
+        }
+    }
+    pen.stroke(x, y, kPortraitW, kPortraitH, kRule);
+}
+
+} // namespace
+
 void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
     if (frame.battle == nullptr || frame.orders == nullptr || frame.strings == nullptr || frame.body == nullptr ||
         frame.title == nullptr || frame.speeds == nullptr) {
@@ -398,6 +444,10 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
             tagX += tw + 5.f;
         }
         rosterH += 20.f * rows;
+        if (!roster.description.empty()) {
+            const auto lines = pen.wrap(*pen.body, roster.description, kDescSize, innerW - kPortraitW - 10.f, false);
+            rosterH += 8.f + std::max(kPortraitH, kDescLine * static_cast<float>(lines.size())) + 4.f;
+        }
     } else {
         rosterH += 20.f + 28.f * static_cast<float>(std::min<std::size_t>(roster.rows.size(), 4));
     }
@@ -454,6 +504,19 @@ void Hud::draw(sf::RenderTarget &target, const HudFrame &frame) {
         }
         if (!roster.tags.empty()) {
             y += 20.f;
+        }
+        if (!roster.description.empty()) {
+            y += 8.f;
+            const UnitType *shown =
+                roster.unit < battle.units().size() ? &battle.typeOf(battle.unit(roster.unit)) : nullptr;
+            drawPortrait(pen, frame, shown, innerX, y);
+            const auto lines = pen.wrap(*pen.body, roster.description, kDescSize, innerW - kPortraitW - 10.f, false);
+            float lineY = y;
+            for (const std::string &line : lines) {
+                pen.text(*pen.body, line, kDescSize, innerX + kPortraitW + 10.f, lineY, kPaper, false);
+                lineY += kDescLine;
+            }
+            y += std::max(kPortraitH, kDescLine * static_cast<float>(lines.size())) + 4.f;
         }
     } else {
         pen.text(*pen.body, roster.manyHead, 13.f, innerX, y, kMuted, false);

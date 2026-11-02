@@ -129,6 +129,7 @@ if(TQ_BUILD_TESTS)
         tests/app/l10n.cpp
         tests/app/camera.cpp
         tests/app/soldiers.cpp
+        tests/app/unitcard.cpp
         src/app/TextCache.cpp
         src/app/dev/Intent.cpp
         src/app/Launch.cpp

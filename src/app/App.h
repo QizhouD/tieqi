@@ -22,6 +22,7 @@
 #endif
 
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -70,6 +71,8 @@ class App {
     UnitView unitView_;
     SoldierAtlas soldierAtlas_;
     SoldierView soldierView_;
+    // Finished unit portraits found at startup, by unit type id (V4).
+    std::map<std::string, const sf::Texture *> portraits_;
     // Presentation time for soldier animation; stops while paused, during hit-stop, and when frozen.
     float animTime_ = 0.f;
     OrderState orders_;

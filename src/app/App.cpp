@@ -137,6 +137,13 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
     const TextStyle title = textStyle(active().language, TextRole::Title);
     mapView_.build(data_.scenario, active(), fontFor(active(), title.face), title.bold);
     soldierAtlas_.load(root_ / "assets");
+    for (const UnitType &type : data_.defs.types) {
+        const std::filesystem::path portrait = root_ / "assets" / "textures" / "portraits" / (type.id + ".png");
+        std::error_code missing;
+        if (std::filesystem::exists(portrait, missing)) {
+            portraits_[type.id] = &resources_.texture(portrait);
+        }
+    }
     if (!options.script.empty()) {
         window_.loadScript(options.script);
     }
@@ -314,6 +321,8 @@ void App::drawFrame() {
     }
     frame.languages = &languages;
     frame.language = language_;
+    frame.portraits = &portraits_;
+    frame.soldierAtlas = &soldierAtlas_.texture();
     hud_.draw(window_.target(), frame);
 }
 

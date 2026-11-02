@@ -60,6 +60,11 @@ struct RosterCard {
     bool general = false;
     std::string name;
     std::string typeLine;
+    // V4: the unit type id (for the portrait) and its description from desc.type.<id>.
+    std::string typeId;
+    std::string description;
+    // The unit shown in One mode: the selected unit, or an inspected enemy.
+    UnitId unit = kNoUnit;
     std::string state;
     UnitState stateKind = UnitState::Steady;
     float menFraction = 0.f;

@@ -519,17 +519,25 @@ RosterCard rosterCard(const StringTable &strings, const Battle &battle, const Or
             selected.push_back(unit);
         }
     }
+    bool inspecting = false;
+    if (selected.empty() && orders.inspected) {
+        const Unit *unit = findUnit(battle, *orders.inspected);
+        if (unit != nullptr && aliveState(unit->state)) {
+            selected.push_back(unit);
+            inspecting = true;
+        }
+    }
     if (selected.empty()) {
         return card;
     }
-    card.showOrders = true;
+    card.showOrders = !inspecting;
     for (const Unit *unit : selected) {
         if (canSplit(battle, unit->id)) {
             card.canSplit = true;
             break;
         }
     }
-    card.canJoin = !joinGroups(battle, orders.selected).empty();
+    card.canJoin = !inspecting && !joinGroups(battle, orders.selected).empty();
     if (selected.size() > 1) {
         card.mode = RosterCard::Mode::Many;
         float men = 0.f;
@@ -550,10 +558,13 @@ RosterCard rosterCard(const StringTable &strings, const Battle &battle, const Or
     const Unit &unit = *selected.front();
     const UnitType &type = battle.typeOf(unit);
     card.mode = RosterCard::Mode::One;
+    card.unit = unit.id;
     card.glyph = strings.text(type.glyphKey);
     card.general = type.general;
     card.name = withSuffix(strings, unit);
     card.typeLine = strings.text(type.nameKey);
+    card.typeId = type.id;
+    card.description = strings.text("desc.type." + type.id);
     if (type.elite) {
         card.typeLine += " \u00b7 ";
         card.typeLine += strings.text("tag.elite");
