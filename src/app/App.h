@@ -8,6 +8,8 @@
 #include "app/MapView.h"
 #include "app/Orders.h"
 #include "app/ResourceManager.h"
+#include "app/SoldierAtlas.h"
+#include "app/SoldierView.h"
 #include "app/TextCache.h"
 #include "app/TextStyle.h"
 #include "app/UnitView.h"
@@ -66,6 +68,10 @@ class App {
     Window window_;
     MapView mapView_;
     UnitView unitView_;
+    SoldierAtlas soldierAtlas_;
+    SoldierView soldierView_;
+    // Presentation time for soldier animation; stops while paused, during hit-stop, and when frozen.
+    float animTime_ = 0.f;
     OrderState orders_;
     CameraControl camera_;
     Hud hud_;

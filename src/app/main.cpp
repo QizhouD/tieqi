@@ -1,5 +1,6 @@
 #include "app/App.h"
 #include "app/Launch.h"
+#include "app/SoldierAtlas.h"
 
 #include <exception>
 #include <filesystem>
@@ -8,6 +9,13 @@
 int main(int argc, char **argv) {
     try {
         const tq::LaunchOptions options = tq::parseLaunch(argc, argv);
+        if (!options.dumpAtlas.empty()) {
+            if (!tq::SoldierAtlas::placeholder().saveToFile(options.dumpAtlas)) {
+                std::cerr << "could not write " << options.dumpAtlas.string() << '\n';
+                return 1;
+            }
+            return 0;
+        }
         const std::filesystem::path executableDir = tq::executableDirectory(argc > 0 ? argv[0] : nullptr);
         const std::filesystem::path current = std::filesystem::current_path();
         std::error_code error;
