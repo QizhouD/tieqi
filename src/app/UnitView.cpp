@@ -220,10 +220,10 @@ void appendArc(sf::VertexArray &tris, Vec2 center, float radius, float fraction,
     appendStrip(tris, pts, thickness, color);
 }
 
-void appendBlock(sf::VertexArray &tris, const Unit &unit, float alpha, float sc) {
+void appendBlock(sf::VertexArray &tris, const Unit &unit, float alpha, float sc, bool soldiers) {
     const Pose pose = interpolatedPose(unit, alpha);
     const bool routing = !isFighting(unit.state);
-    const float cover = routing ? 0.45f : 1.f;
+    const float cover = (routing ? 0.45f : 1.f) * (soldiers ? 0.5f : 1.f);
     const float halfDepth = unit.depth * 0.5f;
     const float halfFront = unit.frontage * 0.5f;
     const sf::Color fill =
@@ -231,7 +231,7 @@ void appendBlock(sf::VertexArray &tris, const Unit &unit, float alpha, float sc)
     appendLocalRect(tris, pose.pos, pose.facing, -halfDepth, -halfFront, unit.depth, unit.frontage, fill);
 
     const int columns = blockColumns(unit.frontage);
-    const int count = blockDots(unit.frontage, unit.depth, unit.men, unit.maxMen);
+    const int count = soldiers ? 0 : blockDots(unit.frontage, unit.depth, unit.men, unit.maxMen);
     const sf::Color dot =
         unit.side == Side::Ming ? fade(rgba(128, 34, 24, 0.78f), cover) : fade(rgba(28, 36, 58, 0.82f), cover);
     for (int i = 0; i < count; ++i) {
@@ -257,7 +257,7 @@ void appendBlock(sf::VertexArray &tris, const Unit &unit, float alpha, float sc)
                      rotate(pose.pos, pose.facing, {halfDepth, halfFront})},
                     3.f, edge);
     }
-    if (unit.charging) {
+    if (unit.charging && !soldiers) {
         const sf::Color ink = rgba(42, 34, 27, 0.38f);
         for (int lane = -2; lane <= 2; ++lane) {
             const float across = static_cast<float>(lane) * halfFront / 2.5f;
@@ -550,7 +550,8 @@ void drawDragBox(sf::RenderTarget &target, float x0, float y0, float x1, float y
 
 void UnitView::draw(Window &window, const Battle &battle, const StringTable &strings, const sf::Font &glyphFont,
                     const sf::Font &bodyFont, float timeSec, float alpha, const OrderState &orders,
-                    const std::function<void()> &afterBlocks, const std::function<void()> &afterChits) const {
+                    const std::function<void()> &afterBlocks, const std::function<void()> &afterChits,
+                    bool soldiers) const {
     alpha = std::clamp(alpha, 0.f, 1.f);
     const float sc = std::max(window.pixelsPerMeter(), 1e-3f);
     sf::VertexArray blocks(sf::PrimitiveType::Triangles);
@@ -558,7 +559,7 @@ void UnitView::draw(Window &window, const Battle &battle, const StringTable &str
         if (unit.state == UnitState::Gone) {
             continue;
         }
-        appendBlock(blocks, unit, alpha, sc);
+        appendBlock(blocks, unit, alpha, sc, soldiers);
     }
     window.target().draw(blocks);
     if (afterBlocks) {

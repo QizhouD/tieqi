@@ -136,6 +136,7 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
     window_.snapCamera({map.width * 0.5f, map.height * 0.5f});
     const TextStyle title = textStyle(active().language, TextRole::Title);
     mapView_.build(data_.scenario, active(), fontFor(active(), title.face), title.bold);
+    soldierAtlas_.load(root_ / "assets");
     if (!options.script.empty()) {
         window_.loadScript(options.script);
     }
@@ -266,12 +267,20 @@ void App::drawFrame() {
     window_.beginMap();
     const TextStyle floater = textStyle(active().language, TextRole::Floater);
     const float alpha = std::clamp(accumulator_, 0.f, 1.f);
+    const bool soldiers = camera_.zoom().level >= kSoldierZoom;
     unitView_.draw(
         window_, *battle_, active(), fontFor(active(), glyph.face), fontFor(active(), body.face), soundTime_, alpha,
-        orders_, [&] { effects_.drawDust(window_.target()); },
+        orders_,
+        [&] {
+            if (soldiers) {
+                soldierView_.draw(window_.target(), *battle_, soldierAtlas_, alpha, animTime_);
+            }
+            effects_.drawDust(window_.target());
+        },
         [&] {
             effects_.drawAir(window_.target(), fontFor(active(), floater.face), floater.bold, window_.pixelsPerMeter());
-        });
+        },
+        soldiers);
 #ifdef TQ_DEV_TOOLS
     window_.beginMap();
     dev_.drawOverlay(window_.target(), *battle_, data_.defs, alpha);
@@ -575,7 +584,9 @@ void App::run() {
                 }
             }
         }
-        effects_.update(effectSeconds(frame, speed_, data_.config.timeScale, simHold || hitStop), frame);
+        const float fxDt = effectSeconds(frame, speed_, data_.config.timeScale, simHold || hitStop);
+        animTime_ += fxDt;
+        effects_.update(fxDt, frame);
 #ifdef TQ_DEV_TOOLS
         const float simMs = simClock.getElapsedTime().asSeconds() * 1000.f;
         sf::Clock drawClock;

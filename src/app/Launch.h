@@ -18,6 +18,8 @@ struct LaunchOptions {
     bool seedSet = false;
     bool perf = false;
     std::optional<std::uint32_t> freezeAt;
+    // Writes the placeholder soldier atlas to this PNG and exits, as a template for artists.
+    std::filesystem::path dumpAtlas;
 };
 
 struct AssetRootRequest {
