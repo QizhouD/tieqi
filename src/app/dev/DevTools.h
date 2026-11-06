@@ -2,6 +2,7 @@
 
 // Compiled only with TQ_DEV_TOOLS=ON. Release builds never include this header.
 
+#include "app/FormationTuning.h"
 #include "app/dev/Intent.h"
 #include "core/sim/Battle.h"
 
@@ -24,6 +25,8 @@ struct DevView {
     std::optional<UnitId> selected;
     bool running = false;
     std::size_t recorded = 0;
+    // The soldier layer's deformation parameters; the panel edits them in place.
+    FormationTuning *formation = nullptr;
 };
 
 // What the panel asked for this frame. The app applies it; the panel never touches the battle.
@@ -63,8 +66,9 @@ class DevTools {
     void spawnTab(const DevView &view, DevRequests &requests);
     void aiTab(const DevView &view);
     void constantsTab();
+    void formationTab(const DevView &view);
 
-    static constexpr int kTabs = 5;
+    static constexpr int kTabs = 6;
     bool attached_ = false;
     int tab_ = 0;
     std::optional<int> tabPending_;

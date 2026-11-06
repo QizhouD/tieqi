@@ -69,18 +69,29 @@ std::string flagText(const StringTable &strings, const Unit &unit, const UnitTyp
 
 } // namespace
 
-void SoldierView::draw(sf::RenderTarget &target, const Battle &battle, const SoldierAtlas &atlas, float alpha,
-                       float animTime, const StringTable &strings, const sf::Font &brush, float opacity) {
+void SoldierView::draw(sf::RenderTarget &target, const Battle &battle, const FormationLayer &formation,
+                       const SoldierAtlas &atlas, float alpha, float animTime, const StringTable &strings,
+                       const sf::Font &brush, float opacity) {
     const auto fadeTo = [opacity](float alpha) {
         return static_cast<std::uint8_t>(std::clamp(alpha * opacity, 0.f, 1.f) * 255.f + 0.5f);
     };
     soldiers_.clear();
-    for (const Unit &unit : battle.units()) {
-        layoutSoldiers(unit, battle.typeOf(unit), alpha, animTime, soldiers_);
-    }
+    formation.layout(battle, alpha, animTime, soldiers_);
     std::stable_sort(soldiers_.begin(), soldiers_.end(),
                      [](const Soldier &left, const Soldier &right) { return left.pos.y < right.pos.y; });
     tris_.clear();
+    // Bodies lie under everything: the standing figure squashed flat and darkened.
+    const float cellScale = kAtlasCellMeters / static_cast<float>(kAtlasCellPx);
+    for (const FallenSoldier &body : formation.bodies()) {
+        const float lying = 0.38f;
+        const sf::IntRect cell = SoldierAtlas::cell(atlasRow(body.side, body.kind, soldierDirection(body.facing)),
+                                                    kFrameIdle);
+        const auto shade = static_cast<std::uint8_t>(150);
+        appendSprite(tris_,
+                     {body.pos.x - kAtlasAnchorX * cellScale, body.pos.y - kAtlasAnchorY * cellScale * lying},
+                     {kAtlasCellMeters, kAtlasCellMeters * lying}, cell,
+                     sf::Color{shade, shade, shade, fadeTo(formation.bodyAlpha(body))});
+    }
     const sf::IntRect dust = SoldierAtlas::cell(kAtlasExtraRow, kAtlasDustColumn);
     for (const Soldier &soldier : soldiers_) {
         if (soldier.dust > 0.f) {

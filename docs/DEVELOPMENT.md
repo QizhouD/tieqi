@@ -1356,7 +1356,7 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 ### Soldier layer (V2)
 
 - The view has two ranges (V3), cross-faded between 1.8× and 2.2×: blocks fade out while soldiers and banners fade in, and the counter shrinks smoothly from full size to 0.55. Below 1.8× zoom it is the far view: formation blocks and full counters, unchanged from M3. From 2× up it is the near view: soldiers, banners, and a counter at 0.55 of its size at the unit centre; formation blocks and charge speed lines are hidden, and the selection frame, order lines, and odds preview stay. Picking uses the small counter box in the near view; the formation rectangle counts in both.
-- Soldiers are presentation only. Every frame `layoutSoldiers` derives them from the unit snapshot: interpolated position and facing, frontage, depth, troops, and state. They keep no state and never touch `tq::Rng`; jitter and animation phase come from a hash of the unit id and the soldier index.
+- Soldiers are presentation only. In V2, every frame `layoutSoldiers` derived them from the unit snapshot (V5 replaces this with soldiers that have state; see below): interpolated position and facing, frontage, depth, troops, and state. They keep no state and never touch `tq::Rng`; jitter and animation phase come from a hash of the unit id and the soldier index.
 - One soldier stands for 10 cavalry or 20 infantry, at least one while any men are left, at most 60 per unit. The full-strength count (from maxMen) is laid out in ranks and files filling the formation rectangle, front rank first, so losses take men off the rear ranks.
 - Kinds: cavalry, spear, arquebus, samurai, and a general figure in the middle of a general unit's front rank.
 - Animation states, chosen from the unit: idle (some men look aside), marching (move cycle), charging (faster cycle, riders bob and raise dust puffs that drift back and fade), engaged (the front rank steps in and out of line in turn and strikes), wavering (men turn and shuffle), broken (each man turns about, some later than others, as the unit flips), routing (men run, scattering outward over 24 battlefield seconds, slightly darkened).
@@ -1364,6 +1364,44 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 - All soldiers are sorted by y and drawn from one atlas in a single VertexArray, dust first. A cell spans 9 m on the map, larger than life so a figure reads at 2× to 4×.
 - Atlas layout (`src/app/SoldierAtlas.h`): 32-pixel cells; columns are frames (0 idle, 1–4 move cycle, 5–6 strike, 7 idle looking aside); row = (side × 5 + kind) × 8 + direction, with side 0 Ming and 1 Japanese, kinds in the order above, and directions 0 east then clockwise in 45° steps; the last row holds extras (column 0 dust puff, 1 Ming banner cloth, 2 Japanese vanguard (Tachibana) sashimono, 3 Japanese main body (Kobayakawa) sashimono; a cloth fills its cell). Feet stand at (16, 26) in the cell. The atlas is 256 × 2592 pixels.
 - The placeholder atlas is drawn in code at startup from simple projected shapes. A PNG at `assets/textures/soldiers/soldiers.png` with the same layout replaces it without code changes; a file of the wrong size is ignored with a warning. `tieqi --dump-atlas <file>` writes the placeholder as a template for artists.
+
+### Formation deformation (V5)
+
+- From V5 the soldiers have state (`src/app/Formation.*`). Each soldier keeps a position, a velocity, and a facing,
+  and chases a target point with a critically damped spring: its V2 slot plus deformation offsets. A soldier never
+  moves faster than 12 m/s (cavalry) or 5 m/s (infantry).
+- The layer advances only in `FormationLayer::tick`, called once after every `Battle::step()` with that step's
+  events, in 4 fixed sub-steps of 0.2 battlefield seconds. Drawing interpolates between the last two ticks. The same
+  replay therefore gives the same soldiers at the same tick whatever the frame rate, speed, or `--freeze-at`;
+  nothing moves while paused. Noise is hashed from per-soldier seeds; `tq::Rng` is never touched.
+- Signals come from the rules core only: charging and run distance, contacts and contact side, Impact (with its
+  side, ratio, and pike flag), volleys, breakaway, Broken and brokenSec, Shattered, Split, routing and routSec,
+  Rallied, Merged, and terrain.
+  - Charge: ranks open with the distance run, the middle bulges, faster horses lead.
+  - Impact: the attacker's front rank drives in up to about a third of the defender's depth; the defender is dented
+    at the struck edge, deeper on the flank (×1.5) or rear (×2), shallow against a pike wall; both relax over about
+    6 seconds.
+  - Melee: the rank facing the enemy becomes a ragged band, and soldiers beyond the enemy's width curl inward.
+  - Breakaway: some soldiers lag as stragglers.
+  - Wavering and paddies loosen the ranks.
+  - Broken: the rear ranks turn and leave first; the grid stays turned toward the enemy so ranks do not swap ends.
+  - Shattered: the source unit's soldiers are dealt to the remnants by their side of the scatter fan and run there.
+  - Routing: the body spreads into a stream, stragglers trailing toward the pursuers.
+  - Rallied and Merged: soldiers gather on the banner for 4 s, then re-form ranks over 8 s.
+- Looseness: `unitLooseness` gives each unit one value from 0 to 1, estimated from its state for now; once the
+  rules core has formation integrity (rules phase 2), that value replaces the estimate.
+- Casualties: when troops drop, the soldiers nearest the threat (the contact, the last attacker or shooter) fall and
+  the ranks close forward; routing desertion removes soldiers without bodies. Bodies are the idle figure lying flat
+  and darkened, fade to half opacity over 30 battlefield seconds, stay until the battle ends, and are capped at
+  2400 (oldest removed first).
+- Readability: banners and counters stay at the rules position. A unit that has not been engaged, broken, routing,
+  or rallying for 2 seconds keeps every soldier within a quarter of its depth outside the rules box; right after
+  such a state soldiers are eased back in at 6 m/s. Clicking within 2.5 m of a soldier picks its unit (an enemy is
+  inspected). In the near view the selected unit's rules box is a thin dashed line; holding Alt shows every unit's
+  box.
+- Neighbour pushes use a small spatial hash, only within a unit and between two units in contact (enemies keep 0.6
+  of the infantry spacing, so the melee band can interleave).
+- Every parameter lives in `src/app/FormationTuning.h` and is a slider on the Formation tab of the dev panel.
 
 ### Banners (V3)
 

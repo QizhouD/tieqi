@@ -7,6 +7,7 @@
 #include "core/rules/Preview.h"
 #include "core/sim/Battle.h"
 
+#include <functional>
 #include <istream>
 #include <optional>
 #include <span>
@@ -15,6 +16,9 @@
 #include <vector>
 
 namespace tq {
+
+// A click this close to a soldier, in metres, picks the soldier's unit in the near view.
+inline constexpr float kSoldierPickRadius = 2.5f;
 
 // A drag starts a box only after this many logical pixels. A drag that begins on a unit stays a click.
 inline constexpr float kDragThresholdPx = 6.f;
@@ -27,6 +31,8 @@ struct OrderState {
     std::optional<UnitId> pending;
     // An enemy clicked with nothing selected; the unit card shows it read-only (V4).
     std::optional<UnitId> inspected;
+    // Near view: the unit of the soldier under a world point, consulted when no counter or block is hit (V5).
+    std::function<UnitId(Vec2)> soldierPick;
     bool pressing = false;
     float pressX = 0.f;
     float pressY = 0.f;

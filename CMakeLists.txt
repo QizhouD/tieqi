@@ -63,7 +63,8 @@ add_executable(tieqi
     src/app/Effects.cpp
     src/app/Soldiers.cpp
     src/app/SoldierAtlas.cpp
-    src/app/SoldierView.cpp)
+    src/app/SoldierView.cpp
+    src/app/Formation.cpp)
 target_link_libraries(tieqi PRIVATE tq_core tq_data SFML::Graphics SFML::Audio)
 add_custom_command(TARGET tieqi POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:tieqi>/data
@@ -130,6 +131,7 @@ if(TQ_BUILD_TESTS)
         tests/app/camera.cpp
         tests/app/soldiers.cpp
         tests/app/unitcard.cpp
+        tests/app/soldier_formation.cpp
         src/app/TextCache.cpp
         src/app/dev/Intent.cpp
         src/app/Launch.cpp
@@ -138,6 +140,7 @@ if(TQ_BUILD_TESTS)
         src/app/SaveData.cpp
         src/app/Script.cpp
         src/app/Soldiers.cpp
+        src/app/Formation.cpp
         src/app/Synth.cpp
         tools/headless/Policy.cpp
         tools/headless/Run.cpp)

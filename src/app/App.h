@@ -2,6 +2,7 @@
 
 #include "app/AudioManager.h"
 #include "app/CameraControl.h"
+#include "app/Formation.h"
 #include "app/Effects.h"
 #include "app/Hud.h"
 #include "app/Languages.h"
@@ -71,6 +72,9 @@ class App {
     UnitView unitView_;
     SoldierAtlas soldierAtlas_;
     SoldierView soldierView_;
+    // Soldiers with state (V5); advanced once per simulation tick.
+    FormationLayer formation_;
+    FormationTuning formationTuning_;
     // Finished unit portraits found at startup, by unit type id (V4).
     std::map<std::string, const sf::Texture *> portraits_;
     // Presentation time for soldier animation; stops while paused, during hit-stop, and when frozen.

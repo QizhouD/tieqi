@@ -33,6 +33,7 @@ inline constexpr int kFrameAside = 7;
 inline constexpr int kAtlasDirections = 8;
 
 struct Soldier {
+    UnitId unit = kNoUnit;
     Vec2 pos{};
     float facing = 0.f;
     SoldierKind kind = SoldierKind::Samurai;

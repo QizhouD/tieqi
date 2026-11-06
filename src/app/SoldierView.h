@@ -1,5 +1,6 @@
 #pragma once
 
+#include "app/Formation.h"
 #include "app/SoldierAtlas.h"
 #include "app/Soldiers.h"
 #include "core/sim/Battle.h"
@@ -19,8 +20,9 @@ namespace tq {
 // glyph.flag.<unit id without "unit.">, or else glyph.flag.<unit type id>, in the brush font.
 class SoldierView {
   public:
-    void draw(sf::RenderTarget &target, const Battle &battle, const SoldierAtlas &atlas, float alpha, float animTime,
-              const StringTable &strings, const sf::Font &brush, float opacity = 1.f);
+    void draw(sf::RenderTarget &target, const Battle &battle, const FormationLayer &formation,
+              const SoldierAtlas &atlas, float alpha, float animTime, const StringTable &strings,
+              const sf::Font &brush, float opacity = 1.f);
     std::size_t lastCount() const { return soldiers_.size(); }
 
   private:

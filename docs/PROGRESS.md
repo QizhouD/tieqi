@@ -29,8 +29,66 @@
 | V3 | Done | #28 | Near and far views: below 2× blocks and full counters as before; from 2× soldiers, banners, and a counter at 0.55 size; Ming flags with a character (李 retainers, 明 Liaodong cavalry, 帥 commander, 楊 Yang Yuan), Japanese sashimono with placeholder Tachibana and Kobayakawa crests; picking follows the small counter | Banner characters are new glyph keys `glyph.flag.*` (glyph role, brush font, same in all three languages) and need author review: 李 for the Li family retainers, 明 for the Liaodong cavalry, 帥 for the commander's guard, 楊 for Yang Yuan's units. The crests are placeholders, not researched designs. Broken and routing units drop their banner. In the near view the formation blocks are hidden entirely; the selection frame stays. Rules core unchanged. Full dev build with zero warnings, ctest passing, slow baseline passing, glyph test passing. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.6 ms, max 105.5 ms; 2× (near view, most soldiers and banners on screen) mean 0.4 ms, p95 0.5 ms, max 104.3 ms; 4× mean 0.4 ms, p95 0.5 ms, max 106.6 ms |
 | V4 | Done | #29 | Unit card: portrait box (placeholder figure from the soldier atlas, or `assets/textures/portraits/<type id>.png`) and a description per unit type from `desc.type.<type id>`; with nothing selected, clicking an enemy inspects it read-only | Descriptions written in zh-Hant and en as asked, plus a Korean draft so the Korean card does not fall back to Chinese; all listed for review in the next section. Japanese units cannot be selected, so inspection was added to show their descriptions: a left click on an enemy with nothing selected (which did nothing before) shows its card without order buttons. The card grows with the description; the battle log card gives up the space. Rules core unchanged. Full dev build with zero warnings, ctest passing, slow baseline passing, glyph and slur tests passing. release, seed 1, scripted, 2× to the result, with a unit selected: mean 0.4 ms, p95 0.5 ms, max 99.0 ms; near view for the whole run: mean 0.4 ms, p95 0.5 ms, max 102.9 ms |
 | M4 fixes | Done | #30 | M4 acceptance recorded; impact screenshot recaptured at tick 59, 3.8×; floating text keeps a fixed screen size and rise, shrinks to 0.75 in the near view, and stacks when texts overlap; near and far views cross-fade between 1.8× and 2.2× with the counter shrinking smoothly; Korean hidden (settings offer zh-Hant and en, a saved ko falls back to zh-Hant, ko.json and Noto Serif KR not packaged, glyph test checks shipped languages); V5–V8 and rules phase 2 written into DEVELOPMENT.md | Floating text was already a fixed screen size; it rose at a fixed world speed, so it moved faster when zoomed in, and it looked large next to the small soldiers. Both are fixed. Korean tests on ko.json content stay (the file stays in the repository). The demo README no longer lists Korean or the Korean font. V6–V8 are placed in a new milestone M5 (art). Rules core unchanged. The rebuilt demo package contains only zh-Hant.json and en.json and no Noto Serif KR. Full dev build with zero warnings, ctest passing, slow baseline passing. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.5 ms, max 107.4 ms; 1.95× (mid cross-fade, both layers drawn) mean 0.4 ms, p95 0.5 ms, max 97.7 ms; 4× mean 0.4 ms, p95 0.5 ms, max 121.1 ms |
+| V5 | Done | #31 | Formation deformation: stateful soldiers advanced once per tick in 4 sub-steps; charge, impact dents and thrust, melee band and curl, breakaway stragglers, wavering, rear-first turning when broken, shattering by direction, rout stream, gather and re-form, looser in paddies; casualties on the threat side with bodies; rules boxes (selected, Alt for all); clicking a soldier picks its unit; Formation sliders in the dev panel | Rules core unchanged; a test steps 400 ticks with and without the layer and the state hashes match, and the slow baseline passes. A test runs the same battle with three frame patterns (one tick per frame, frames without ticks, up to eight ticks per frame) and the soldier hashes match. Soldier speed is capped at 12 m/s (cavalry) and 5 m/s (infantry). The rules box bound is hard once a unit has been calm for 2 s and eased in at 6 m/s before that, so soldiers do not snap when a melee or rally ends. Looseness is the single per-unit interface (`unitLooseness`) for rules phase 2. Full dev build with zero warnings, ctest passing including the slow baseline. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.5 ms, max 109.8 ms; 2× near view mean 0.4 ms, p95 0.5 ms, max 110.5 ms; 4× mean 0.4 ms, p95 0.5 ms, max 107.3 ms |
 
 The source language check (`tools/check_source_language.py`) scans src, tests, tools, cmake, CMakeLists.txt, .github/workflows, and .gitignore. tools/parity/anchors.json holds Chinese snippets used to match the prototype and is excluded; node_modules and tools/parity/work are skipped too.
+
+## Stopped here: V5 review
+
+V5 (formation deformation) is merged. As agreed, work stops here for the author's review. Everything is still
+placeholder art; the rules core is untouched, and the 100-battle baseline and the tick-by-tick comparison are
+unchanged.
+
+Recording, about 48 seconds at 1× speed and 2.4× zoom (animated WebP, 960 × 600; frames taken by the game's own
+script, so the frame rate is lower than live play): the Left Retainers charge the Tachibana spears head-on, hit the
+pike wall and stick in melee, are ordered back and break away, re-form, and are then charged by the samurai.
+
+![V5 recording](images/v5/v5-demo.webp)
+
+All at 3×, seed 1 with the scripted opening:
+
+Charge (tick 45): ranks open and the middle bulges as the Liaodong Right closes.
+
+![charge](images/v5/v5-charge-3x.jpg)
+
+Impact (tick 60): the riders have driven into the arquebusiers, who are dented where they were struck.
+
+![impact](images/v5/v5-impact-3x.jpg)
+
+Shattering (tick 63): the broken arquebusiers' men run toward their three remnants.
+
+![shatter](images/v5/v5-shatter-3x.jpg)
+
+Rout (tick 82): the remnants stream away, stragglers behind.
+
+![rout](images/v5/v5-rout-3x.jpg)
+
+Melee (tick 345): the samurai and the Liaodong Right fight in a ragged band in the paddy.
+
+![melee](images/v5/v5-melee-3x.jpg)
+
+Breaking (tick 403): the Liaodong Right breaks, rear ranks leaving first.
+
+![break](images/v5/v5-break-3x.jpg)
+
+Rally and re-forming (ticks 566 and 574): a remnant gathers on its banner, then re-forms.
+
+![rally](images/v5/v5-rally-3x.jpg)
+![reform](images/v5/v5-reform-3x.jpg)
+
+After the battle (tick 3050): bodies lie where the fighting was, faded to half opacity.
+
+![aftermath](images/v5/v5-aftermath-3x.jpg)
+
+Notes for the review:
+
+- All deformation parameters are sliders on the Formation tab of the dev panel (dev build, F1, then F2 to the last
+  tab); defaults can be restored with one button.
+- Bodies are the idle figure squashed flat and darkened; they read as dark marks at 3× and will need a proper fallen
+  frame in the V6 atlas.
+- Soldier speed is capped (cavalry 12 m/s, infantry 5 m/s); without it a fleeing unit that turns every tick swings
+  its stream targets so far that soldiers would cover tens of metres in a tick.
+- The rout stream is shorter than first planned (1.2 × depth for the farthest stragglers).
 
 ## M4 review and the art direction (accepted 2026-11-02)
 

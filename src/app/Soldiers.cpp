@@ -177,6 +177,7 @@ void layoutSoldiers(const Unit &unit, const UnitType &type, float alpha, float a
         local.y += (soldierNoise(id, i, 2) - 0.5f) * grid.fileSpacing * 0.3f;
         float facing = pose.facing;
         Soldier soldier;
+        soldier.unit = unit.id;
         soldier.side = unit.side;
         soldier.kind = type.general && i == grid.files / 2 ? SoldierKind::General : base;
         soldier.frame = kFrameIdle;

@@ -293,7 +293,7 @@ void drawChit(sf::RenderTarget &target, const Unit &unit, const UnitType &type, 
     const ChitFace face = chitFace(unit.state, brokenSec);
     const ChitColors colors = chitColors(unit.side, type.general, face.back);
 
-    if (selected) {
+    if (selected && chitScale >= 1.f) {
         sf::VertexArray mark(sf::PrimitiveType::Triangles);
         const float x0 = -unit.depth * 0.5f - 3.f;
         const float y0 = -unit.frontage * 0.5f - 3.f;
@@ -552,7 +552,7 @@ void drawDragBox(sf::RenderTarget &target, float x0, float y0, float x1, float y
 void UnitView::draw(Window &window, const Battle &battle, const StringTable &strings, const sf::Font &glyphFont,
                     const sf::Font &bodyFont, float timeSec, float alpha, const OrderState &orders,
                     const std::function<void()> &afterBlocks, const std::function<void()> &afterChits,
-                    float nearBlend, float chitScale) const {
+                    float nearBlend, float chitScale, bool allBoxes) const {
     alpha = std::clamp(alpha, 0.f, 1.f);
     const float sc = std::max(window.pixelsPerMeter(), 1e-3f);
     sf::VertexArray blocks(sf::PrimitiveType::Triangles);
@@ -567,6 +567,26 @@ void UnitView::draw(Window &window, const Battle &battle, const StringTable &str
         afterBlocks();
     }
     drawOrders(window.target(), battle, orders, alpha, sc);
+    if (nearBlend > 0.f) {
+        sf::VertexArray boxes(sf::PrimitiveType::Triangles);
+        for (const Unit &unit : battle.units()) {
+            if (unit.state == UnitState::Gone || (!allBoxes && !chosen(orders.selected, unit.id))) {
+                continue;
+            }
+            const Pose pose = interpolatedPose(unit, alpha);
+            const float x0 = -unit.depth * 0.5f;
+            const float y0 = -unit.frontage * 0.5f;
+            const float x1 = unit.depth * 0.5f;
+            const float y1 = unit.frontage * 0.5f;
+            const sf::Color ink = unit.side == Side::Ming ? rgba(217, 180, 102, 0.85f) : rgba(170, 180, 201, 0.85f);
+            dash(boxes,
+                 {rotate(pose.pos, pose.facing, {x0, y0}), rotate(pose.pos, pose.facing, {x1, y0}),
+                  rotate(pose.pos, pose.facing, {x1, y1}), rotate(pose.pos, pose.facing, {x0, y1}),
+                  rotate(pose.pos, pose.facing, {x0, y0})},
+                 4.f / sc, 3.f / sc, 1.f / sc, ink);
+        }
+        window.target().draw(boxes);
+    }
 
     auto drawSide = [&](Side side) {
         for (const Unit &unit : battle.units()) {
