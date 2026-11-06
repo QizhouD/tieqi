@@ -1,11 +1,15 @@
+#include "app/SoldierAtlas.h"
 #include "app/Soldiers.h"
 #include "core/sim/Battle.h"
 #include "data/Load.h"
 
 #include <doctest/doctest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <numbers>
 #include <string>
 #include <vector>
@@ -223,4 +227,26 @@ TEST_CASE("every Ming unit type has a banner character in every language") {
     }
     CHECK(data.zhHant.entries.count("glyph.flag.yang_left") == 1);
     CHECK(data.zhHant.entries.count("glyph.flag.yang_right") == 1);
+}
+
+TEST_CASE("the art tools use the same atlas layout as the game") {
+    std::ifstream in(std::filesystem::path(TQ_SOURCE_DIR) / "tools" / "art" / "atlas_layout.py");
+    REQUIRE(in.good());
+    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    const auto number = [&](const std::string &name) {
+        const std::size_t at = text.find("\n" + name + " = ");
+        REQUIRE(at != std::string::npos);
+        return std::stof(text.substr(at + name.size() + 4));
+    };
+    CHECK(number("CELL_PX") == doctest::Approx(static_cast<float>(kAtlasCellPx)));
+    CHECK(number("CELL_METERS") == doctest::Approx(kAtlasCellMeters));
+    CHECK(number("ANCHOR_X") == doctest::Approx(kAtlasAnchorX));
+    CHECK(number("ANCHOR_Y") == doctest::Approx(kAtlasAnchorY));
+    CHECK(number("DIRECTIONS") == doctest::Approx(static_cast<float>(kAtlasDirections)));
+    // Nine frame names, in column order, ending with the fallen frame.
+    const std::size_t frames = text.find("FRAMES = [");
+    REQUIRE(frames != std::string::npos);
+    const std::string list = text.substr(frames, text.find(']', frames) - frames);
+    CHECK(std::count(list.begin(), list.end(), ',') + 1 == kAtlasFrames);
+    CHECK(list.find("\"fallen\"") != std::string::npos);
 }
