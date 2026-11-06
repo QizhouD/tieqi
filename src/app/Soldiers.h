@@ -23,13 +23,14 @@ inline constexpr int kSoldierKinds = 5;
 
 enum class SoldierAnim : std::uint8_t { Idle, March, Charge, Engaged, Waver, Turn, Rout };
 
-// Atlas columns. 0 idle, 1-4 the move cycle, 5-6 strike, 7 idle looking aside.
-inline constexpr int kAtlasFrames = 8;
+// Atlas columns. 0 idle, 1-4 the move cycle, 5-6 strike, 7 idle looking aside, 8 fallen (a body on the ground).
+inline constexpr int kAtlasFrames = 9;
 inline constexpr int kFrameIdle = 0;
 inline constexpr int kFrameMove = 1;
 inline constexpr int kMoveFrames = 4;
 inline constexpr int kFrameStrike = 5;
 inline constexpr int kFrameAside = 7;
+inline constexpr int kFrameFallen = 8;
 inline constexpr int kAtlasDirections = 8;
 
 struct Soldier {

@@ -25,3 +25,4 @@ Thumbs.db
 # Prototype comparison stays on this machine and out of the build.
 tools/parity/node_modules/
 tools/parity/work/
+__pycache__/

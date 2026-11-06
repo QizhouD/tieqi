@@ -170,14 +170,14 @@ void rider(std::vector<Part> &parts, const Palette &p, int frame, bool general, 
     if (side == Side::Ming) {
         // Lance with a three-eyed gun slung; held level when striking.
         parts.push_back(thrust ? bar({1.f, 2.f, 14.f}, {reach, 2.2f, 14.5f}, 1.f, p.metal)
-                               : bar({-3.f, 2.f, 10.f}, {6.f, 2.4f, 24.f}, 1.f, p.wood));
+                               : bar({-3.f, 2.f, 10.f}, {4.f, 2.4f, 20.5f}, 1.f, p.wood));
     } else {
         parts.push_back(thrust ? bar({1.f, 2.f, 15.f}, {reach - 3.f, 2.2f, 12.f}, 1.2f, p.metal)
                                : bar({1.f, 2.f, 14.f}, {4.f, 2.4f, 19.f}, 1.2f, p.metal));
     }
     if (general) {
-        parts.push_back(bar({-1.5f, 0.f, 14.f}, {-1.5f, 0.f, 24.5f}, 0.8f, p.wood));
-        parts.push_back(bar({-1.5f, 0.f, 20.5f}, {-1.5f, 0.f, 24.f}, 3.2f, p.flag));
+        parts.push_back(bar({-1.5f, 0.f, 14.f}, {-1.5f, 0.f, 22.5f}, 0.8f, p.wood));
+        parts.push_back(bar({-1.5f, 0.f, 19.f}, {-1.5f, 0.f, 22.f}, 3.2f, p.flag));
     }
 }
 
@@ -214,9 +214,9 @@ void footman(std::vector<Part> &parts, const Palette &p, int frame, SoldierKind 
     case SoldierKind::Spear: {
         // Jingasa, and a long spear: upright at rest, levelled to fight.
         parts.push_back(bar({lean, -2.8f + aside, 16.2f}, {lean, 2.8f + aside, 16.2f}, 1.4f, p.helmet));
-        const float reach = frame == kFrameStrike + 1 ? 19.f : 16.f;
-        parts.push_back(thrust ? bar({-4.f, 1.6f, 11.f}, {reach, 1.6f, 11.5f}, 1.f, p.wood)
-                               : bar({-2.f, 1.6f, 3.f}, {5.f, 1.6f, 24.5f}, 1.f, p.wood));
+        const float reach = frame == kFrameStrike + 1 ? 13.5f : 12.f;
+        parts.push_back(thrust ? bar({-3.f, 1.6f, 11.f}, {reach, 1.6f, 11.5f}, 1.f, p.wood)
+                               : bar({-1.5f, 1.6f, 3.f}, {4.f, 1.6f, 21.5f}, 1.f, p.wood));
         break;
     }
     case SoldierKind::Gun: {
@@ -258,10 +258,22 @@ void figure(sf::VertexArray &tris, sf::Vector2f anchor, Side side, SoldierKind k
     } else {
         footman(parts, p, frame, kind, side);
     }
+    if (frame == kFrameFallen) {
+        // A body: the standing figure laid on the ground, head toward the facing, centred in the cell.
+        for (Part &part : parts) {
+            for (Local *point : {&part.a, &part.b}) {
+                point->f = (point->f + point->z * 0.85f) * 0.55f - 5.f;
+                point->r *= 0.8f;
+                point->z = point->z * 0.12f + 0.4f;
+            }
+        }
+    }
     // Ground shadow first, without outline.
-    std::vector<Part> shadow{disc({0.f, 0.f, 0.f}, kind == SoldierKind::Cavalry || general ? 5.f : 3.f,
+    std::vector<Part> shadow{disc({0.f, 0.f, 0.f}, kind == SoldierKind::Cavalry || general ? 4.f : 3.f,
                                   sf::Color{0x20, 0x16, 0x10, 70}, false)};
-    const Painter painter(anchor, direction);
+    const sf::Vector2f placed =
+        frame == kFrameFallen ? anchor - sf::Vector2f{0.f, kAtlasAnchorY - kAtlasCellPx * 0.5f} : anchor;
+    const Painter painter(placed, direction);
     painter.paint(tris, shadow);
     painter.paint(tris, parts);
 }
@@ -288,23 +300,6 @@ void flatDisc(sf::VertexArray &tris, sf::Vector2f center, float radius, sf::Colo
     }
 }
 
-void flatRing(sf::VertexArray &tris, sf::Vector2f center, float radius, float width, sf::Color color) {
-    constexpr int kSteps = 32;
-    for (int i = 0; i < kSteps; ++i) {
-        const float a0 = 2.f * kPi * static_cast<float>(i) / kSteps;
-        const float a1 = 2.f * kPi * static_cast<float>(i + 1) / kSteps;
-        const sf::Vector2f o0{std::cos(a0), std::sin(a0)};
-        const sf::Vector2f o1{std::cos(a1), std::sin(a1)};
-        const float inner = radius - width;
-        tris.append({center + o0 * inner, color});
-        tris.append({center + o0 * radius, color});
-        tris.append({center + o1 * radius, color});
-        tris.append({center + o0 * inner, color});
-        tris.append({center + o1 * radius, color});
-        tris.append({center + o1 * inner, color});
-    }
-}
-
 // The extras row: a dust puff and three placeholder banner cloths, each filling its cell.
 void extras(sf::VertexArray &tris, float top) {
     const float cell = static_cast<float>(kAtlasCellPx);
@@ -320,21 +315,14 @@ void extras(sf::VertexArray &tris, float top) {
     flatRect(tris, {{ming + 2.f, top + 2.f}, {cell - 4.f, cell - 4.f}}, sf::Color{0xb0, 0x30, 0x24});
     flatRect(tris, {{ming + 2.f, top + 2.f}, {cell - 4.f, 6.f}}, sf::Color{0xc2, 0x3b, 0x2a});
 
-    // Japanese sashimono: off-white with a black placeholder crest. Vanguard (Tachibana) and main body (Kobayakawa).
+    // Japanese sashimono cloths: plain off-white with a faint edge. The crests are vector shapes drawn over the
+    // cloth at run time (Crests.h), so they stay sharp on the tall banner.
     const sf::Color cloth{0xef, 0xe5, 0xcb};
-    const sf::Color crest{0x1b, 0x1b, 0x1f};
-    const float van = cell * kAtlasJpVanguardBannerColumn;
-    flatRect(tris, {{van, top}, {cell, cell}}, cloth);
-    flatRing(tris, {van + cell * 0.5f, top + cell * 0.45f}, 9.f, 2.2f, crest);
-    flatRect(tris, {{van + cell * 0.5f - 1.2f, top + cell * 0.45f - 9.f}, {2.4f, 18.f}}, crest);
-    flatRect(tris, {{van + cell * 0.5f - 9.f, top + cell * 0.45f - 1.2f}, {18.f, 2.4f}}, crest);
-    const float main = cell * kAtlasJpMainBannerColumn;
-    flatRect(tris, {{main, top}, {cell, cell}}, cloth);
-    for (int i = 0; i < 3; ++i) {
-        const float angle = -kPi * 0.5f + static_cast<float>(i) * 2.f * kPi / 3.f;
-        const sf::Vector2f at{main + cell * 0.5f + std::cos(angle) * 5.5f, top + cell * 0.47f + std::sin(angle) * 5.5f};
-        flatDisc(tris, at, 4.2f, crest);
-        flatDisc(tris, at + sf::Vector2f{std::cos(angle + 1.6f), std::sin(angle + 1.6f)} * 2.6f, 2.2f, crest);
+    const sf::Color edge{0xc9, 0xbd, 0x9f};
+    for (const int column : {kAtlasJpVanguardBannerColumn, kAtlasJpMainBannerColumn}) {
+        const float left = cell * static_cast<float>(column);
+        flatRect(tris, {{left, top}, {cell, cell}}, edge);
+        flatRect(tris, {{left + 1.f, top + 1.f}, {cell - 2.f, cell - 2.f}}, cloth);
     }
 }
 

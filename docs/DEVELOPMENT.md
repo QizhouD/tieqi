@@ -242,6 +242,9 @@ sudo apt install libxrandr-dev libxcursor-dev libxi-dev libudev-dev libfreetype-
 cmake --preset dev && cmake --build --preset dev && ctest --preset dev
 ```
 
+- The presets set `VSLANG=1033`, so MSVC prints its `/showIncludes` notes in English whatever the console code page;
+  Ninja matches that prefix to track header dependencies. This needs the English language pack of the Visual Studio
+  Build Tools; without it MSVC stays in the installed language and header changes may not trigger rebuilds.
 - Demo package (R1, Windows only): `cmake --preset release`, then `cmake --build --preset release --target package_demo`. The output is `build/release/dist/Afterglow-Imjin-1593-demo-<version>-win64.zip` and a folder of the same name; it stays local and is not published as a GitHub Release. The version is the VERSION of the top-level `project()` (currently 0.1.0) and is also written into replays. The packaging script `cmake/PackageDemo.cmake` first checks that the executable contains no ImGui and uses `dumpbin /dependents` to check that it depends only on system DLLs (it fails on MSVCP, VCRUNTIME, ucrtbase, or api-ms-win-crt), then adds `tieqi.exe`, `data/`, `assets/` (with the fonts and OFL licenses), `AI_ASSETS.md`, the Traditional Chinese and English `README.txt` (source `docs/demo/README.txt`, with `@VERSION@` replaced by the version and CRLF line endings), and `THIRD_PARTY_NOTICES.txt`. The third-party notices cover SFML, FreeType, HarfBuzz, SheenBidi, libogg, libvorbis, libFLAC, miniaudio, and nlohmann/json, with the full license texts and versions taken from the sources this build actually fetched.
 - After building, `data/` and `assets/` are copied next to the executable. The program looks for the resource root in this order: the `--data-root` command-line option, the current directory if it contains `data/`, and finally the executable's directory (following the framework's `chdirToAssets` idea).
 - `tieqi` command-line options: `--scenario <id>`, `--seed <n>`, `--time-scale <x>`, `--replay <file>`, `--script <file>` (scripted input and screenshots, as in the framework), `--data-root <dir>`, `--perf`, `--freeze-at <tick>`, `--dump-atlas <file>` (writes the placeholder soldier atlas and exits). `--perf` removes the frame rate cap, starts the battle automatically at 2× speed, runs to the result, prints the mean, p95, and maximum frame time (milliseconds) to standard output, and exits. `--freeze-at` stops advancing the simulation once it reaches that tick while rendering continues, which makes scripted screenshots easy; when given together with `--perf`, the freeze is ignored. Script lines are `<seconds> down|up|press <key>`, `<seconds> shot <file>`, `<seconds> quit`, and also `<seconds> resize <width> <height>`. An explicit `--scenario` or `--seed` overrides the field of the same name in a replay. Script timing starts at the first frame, not when the script is loaded.
@@ -1362,7 +1365,7 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 - Animation states, chosen from the unit: idle (some men look aside), marching (move cycle), charging (faster cycle, riders bob and raise dust puffs that drift back and fade), engaged (the front rank steps in and out of line in turn and strikes), wavering (men turn and shuffle), broken (each man turns about, some later than others, as the unit flips), routing (men run, scattering outward over 24 battlefield seconds, slightly darkened).
 - Animation runs on presentation time that stops while paused, during hit-stop, and when frozen.
 - All soldiers are sorted by y and drawn from one atlas in a single VertexArray, dust first. A cell spans 9 m on the map, larger than life so a figure reads at 2× to 4×.
-- Atlas layout (`src/app/SoldierAtlas.h`): 32-pixel cells; columns are frames (0 idle, 1–4 move cycle, 5–6 strike, 7 idle looking aside); row = (side × 5 + kind) × 8 + direction, with side 0 Ming and 1 Japanese, kinds in the order above, and directions 0 east then clockwise in 45° steps; the last row holds extras (column 0 dust puff, 1 Ming banner cloth, 2 Japanese vanguard (Tachibana) sashimono, 3 Japanese main body (Kobayakawa) sashimono; a cloth fills its cell). Feet stand at (16, 26) in the cell. The atlas is 256 × 2592 pixels.
+- Atlas layout (`src/app/SoldierAtlas.h`, mirrored in `tools/art/atlas_layout.py`): 32-pixel cells; columns are frames (0 idle, 1–4 move cycle, 5–6 strike, 7 idle looking aside, 8 fallen, added in V6 for bodies); row = (side × 5 + kind) × 8 + direction, with side 0 Ming and 1 Japanese, kinds in the order above, and directions 0 east then clockwise in 45° steps; the last row holds extras (column 0 dust puff, 1 Ming banner cloth, 2 Japanese vanguard sashimono cloth, 3 Japanese main body sashimono cloth; a cloth fills its cell). Standing figures have their feet at (16, 26) in the cell; the fallen frame is centred in the cell. The atlas is 288 × 2624 pixels. `tools/art/check_atlas.py` validates an atlas, and the code-drawn placeholder passes it.
 - The placeholder atlas is drawn in code at startup from simple projected shapes. A PNG at `assets/textures/soldiers/soldiers.png` with the same layout replaces it without code changes; a file of the wrong size is ignored with a warning. `tieqi --dump-atlas <file>` writes the placeholder as a template for artists.
 
 ### Formation deformation (V5)
@@ -1391,8 +1394,8 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 - Looseness: `unitLooseness` gives each unit one value from 0 to 1, estimated from its state for now; once the
   rules core has formation integrity (rules phase 2), that value replaces the estimate.
 - Casualties: when troops drop, the soldiers nearest the threat (the contact, the last attacker or shooter) fall and
-  the ranks close forward; routing desertion removes soldiers without bodies. Bodies are the idle figure lying flat
-  and darkened, fade to half opacity over 30 battlefield seconds, stay until the battle ends, and are capped at
+  the ranks close forward; routing desertion removes soldiers without bodies. Bodies use the atlas fallen frame (V6), slightly
+  darkened, fade to half opacity over 30 battlefield seconds, stay until the battle ends, and are capped at
   2400 (oldest removed first).
 - Readability: banners and counters stay at the rules position. A unit that has not been engaged, broken, routing,
   or rallying for 2 seconds keeps every soldier within a quarter of its depth outside the rules box; right after
@@ -1407,7 +1410,7 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 
 - In the near view every unit able to fight carries one banner; broken and routing units drop it. The pole stands 0.3 of the depth behind the unit centre and rises 16 m straight up the screen; banners are sorted by y and drawn over the soldiers.
 - Ming: a square 8 × 8 m flag from the top of the pole whose free edge waves, with one character in the brush font. The character is `glyph.flag.<scene id>` when that key exists (楊 for Yang Yuan's two units), otherwise `glyph.flag.<unit type id>`: 李 for the Li family retainers (`jiading`), 明 for the Liaodong cavalry, 帥 for the commander's guard. Like counter glyphs, these are Traditional Chinese in all three languages.
-- Japanese: a tall 3.6 × 10 m sashimono hanging from a crossbar, its bottom swinging. Units of the vanguard, and remnants or detachments whose source was in the vanguard, show the Tachibana crest; all others the Kobayakawa crest. Both crests are placeholders drawn in code.
+- Japanese: a tall 3.6 × 10 m sashimono hanging from a crossbar, its bottom swinging. Units of the vanguard, and remnants or detachments whose source was in the vanguard, show the Tachibana crest; all others the Kobayakawa crest. From V6 the crests follow research and are vector shapes drawn over the cloth at run time (`src/app/Crests.*`), so they stay sharp at any zoom: Tachibana Muneshige 中結祇園守 (naka-musubi gion mamori: two crossed amulet scrolls tied where they cross, cross-shaped finials) and Kobayakawa Takakage 左三つ巴 (hidari mitsudomoe: three tomoe, heads inside the circle, tails spiralling out counterclockwise as seen).
 - Banner cloths come from the extras row of the soldier atlas, so finished art replaces them through the same PNG.
 
 ### Events: effects, sound, and battle log
@@ -1871,6 +1874,9 @@ rally, the soldiers change shape the way troops on a real battlefield do. The ru
   the existing interface. AI_ASSETS.md gets a fixed registration format. Crests follow research: Tachibana Muneshige
   uses 中結祇園守 (naka-musubi gion mamori), Kobayakawa Takakage uses 左三つ巴 (hidari mitsudomoe).
 - If Blender is not installed on the machine, write the script but do not install it; stop and ask the author.
+- Status: done. `tools/art/` holds the render script, an example model builder, the assembler, the checker, a stdlib
+  PNG module, and the layout mirror; the atlas gains a fallen frame (centred in its cell); crests are research-based
+  vector shapes; AI_ASSETS.md has a registration format. The pipeline was verified end to end with Blender 4.5 LTS.
 
 ### V7 Near-view map
 

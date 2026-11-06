@@ -64,7 +64,8 @@ add_executable(tieqi
     src/app/Soldiers.cpp
     src/app/SoldierAtlas.cpp
     src/app/SoldierView.cpp
-    src/app/Formation.cpp)
+    src/app/Formation.cpp
+    src/app/Crests.cpp)
 target_link_libraries(tieqi PRIVATE tq_core tq_data SFML::Graphics SFML::Audio)
 add_custom_command(TARGET tieqi POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:tieqi>/data

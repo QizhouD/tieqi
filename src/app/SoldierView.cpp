@@ -1,5 +1,6 @@
 #include "app/SoldierView.h"
 
+#include "app/Crests.h"
 #include "app/TextCache.h"
 
 #include <SFML/Graphics/RenderStates.hpp>
@@ -80,16 +81,15 @@ void SoldierView::draw(sf::RenderTarget &target, const Battle &battle, const For
     std::stable_sort(soldiers_.begin(), soldiers_.end(),
                      [](const Soldier &left, const Soldier &right) { return left.pos.y < right.pos.y; });
     tris_.clear();
-    // Bodies lie under everything: the standing figure squashed flat and darkened.
+    // Bodies lie under everything, in the atlas's fallen frame, slightly darkened.
     const float cellScale = kAtlasCellMeters / static_cast<float>(kAtlasCellPx);
     for (const FallenSoldier &body : formation.bodies()) {
-        const float lying = 0.38f;
         const sf::IntRect cell = SoldierAtlas::cell(atlasRow(body.side, body.kind, soldierDirection(body.facing)),
-                                                    kFrameIdle);
-        const auto shade = static_cast<std::uint8_t>(150);
-        appendSprite(tris_,
-                     {body.pos.x - kAtlasAnchorX * cellScale, body.pos.y - kAtlasAnchorY * cellScale * lying},
-                     {kAtlasCellMeters, kAtlasCellMeters * lying}, cell,
+                                                    kFrameFallen);
+        const auto shade = static_cast<std::uint8_t>(190);
+        const float half = static_cast<float>(kAtlasCellPx) * 0.5f * cellScale;
+        appendSprite(tris_, {body.pos.x - half, body.pos.y - half},
+                     {kAtlasCellMeters, kAtlasCellMeters}, cell,
                      sf::Color{shade, shade, shade, fadeTo(formation.bodyAlpha(body))});
     }
     const sf::IntRect dust = SoldierAtlas::cell(kAtlasExtraRow, kAtlasDustColumn);
@@ -176,6 +176,26 @@ void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, co
     sf::RenderStates states;
     states.texture = &atlas.texture();
     target.draw(tris_, states);
+
+    // Japanese crests over their cloths: Tachibana on the vanguard, Kobayakawa on the main body.
+    sf::VertexArray crests(sf::PrimitiveType::Triangles);
+    const sf::Color ink = alphaOf({0x1b, 0x1b, 0x1f});
+    for (const Placed &item : placed) {
+        const Banner &banner = item.banner;
+        if (banner.kind != BannerKind::JpVanguard && banner.kind != BannerKind::JpMain) {
+            continue;
+        }
+        const float top = banner.base.y - kBannerPole + 0.3f;
+        const sf::Vector2f centre{banner.base.x + 0.25f + kJpBannerWidth * 0.5f + banner.sway * 0.15f,
+                                  top + kJpBannerHeight * 0.28f};
+        const float radius = kJpBannerWidth * 0.4f;
+        if (banner.kind == BannerKind::JpVanguard) {
+            appendGionMamori(crests, centre, radius, ink);
+        } else {
+            appendMitsudomoe(crests, centre, radius, ink);
+        }
+    }
+    target.draw(crests);
 
     // The character on each Ming banner in the brush font, shaped once at a fixed pixel size and scaled to the map.
     constexpr float kGlyphMeters = 5.5f;
