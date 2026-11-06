@@ -50,8 +50,6 @@ float smooth(float t) {
     return t * t * (3.f - 2.f * t);
 }
 
-bool fighting(UnitState state) { return state == UnitState::Steady || state == UnitState::Wavering; }
-
 bool routed(UnitState state) { return state == UnitState::Broken || state == UnitState::Routing; }
 
 // Noise that changes smoothly every `period` battlefield seconds.
