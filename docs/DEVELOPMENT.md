@@ -1365,7 +1365,7 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 - Animation states, chosen from the unit: idle (some men look aside), marching (move cycle), charging (faster cycle, riders bob and raise dust puffs that drift back and fade), engaged (the front rank steps in and out of line in turn and strikes), wavering (men turn and shuffle), broken (each man turns about, some later than others, as the unit flips), routing (men run, scattering outward over 24 battlefield seconds, slightly darkened).
 - Animation runs on presentation time that stops while paused, during hit-stop, and when frozen.
 - All soldiers are sorted by y and drawn from one atlas in a single VertexArray, dust first. A cell spans 9 m on the map, larger than life so a figure reads at 2× to 4×.
-- Atlas layout (`src/app/SoldierAtlas.h`, mirrored in `tools/art/atlas_layout.py`): 32-pixel cells; columns are frames (0 idle, 1–4 move cycle, 5–6 strike, 7 idle looking aside, 8 fallen, added in V6 for bodies); row = (side × 5 + kind) × 8 + direction, with side 0 Ming and 1 Japanese, kinds in the order above, and directions 0 east then clockwise in 45° steps; the last row holds extras (column 0 dust puff, 1 Ming banner cloth, 2 Japanese vanguard sashimono cloth, 3 Japanese main body sashimono cloth; a cloth fills its cell). Standing figures have their feet at (16, 26) in the cell; the fallen frame is centred on that point. The atlas is 288 × 2624 pixels. `tools/art/check_atlas.py` validates an atlas, and the code-drawn placeholder passes it.
+- Atlas layout (`src/app/SoldierAtlas.h`, mirrored in `tools/art/atlas_layout.py`): 32-pixel cells; columns are frames (0 idle, 1–4 move cycle, 5–6 strike, 7 idle looking aside, 8 fallen, added in V6 for bodies); row = (side × 5 + kind) × 8 + direction, with side 0 Ming and 1 Japanese, kinds in the order above, and directions 0 east then clockwise in 45° steps; the last row holds extras (column 0 dust puff, 1 Ming banner cloth, 2 Japanese vanguard sashimono cloth, 3 Japanese main body sashimono cloth; a cloth fills its cell). Standing figures have their feet at (16, 26) in the cell; the fallen frame is centred in the cell. The atlas is 288 × 2624 pixels. `tools/art/check_atlas.py` validates an atlas, and the code-drawn placeholder passes it.
 - The placeholder atlas is drawn in code at startup from simple projected shapes. A PNG at `assets/textures/soldiers/soldiers.png` with the same layout replaces it without code changes; a file of the wrong size is ignored with a warning. `tieqi --dump-atlas <file>` writes the placeholder as a template for artists.
 
 ### Formation deformation (V5)
@@ -1874,9 +1874,9 @@ rally, the soldiers change shape the way troops on a real battlefield do. The ru
   the existing interface. AI_ASSETS.md gets a fixed registration format. Crests follow research: Tachibana Muneshige
   uses 中結祇園守 (naka-musubi gion mamori), Kobayakawa Takakage uses 左三つ巴 (hidari mitsudomoe).
 - If Blender is not installed on the machine, write the script but do not install it; stop and ask the author.
-- Status: `tools/art/` holds the render script, the assembler, the checker, a stdlib PNG module, and the layout
-  mirror; the atlas gains a fallen frame; crests are research-based vector shapes; AI_ASSETS.md has a registration
-  format. Blender is not installed on the development machine, so the render script is unverified.
+- Status: done. `tools/art/` holds the render script, an example model builder, the assembler, the checker, a stdlib
+  PNG module, and the layout mirror; the atlas gains a fallen frame (centred in its cell); crests are research-based
+  vector shapes; AI_ASSETS.md has a registration format. The pipeline was verified end to end with Blender 4.5 LTS.
 
 ### V7 Near-view map
 

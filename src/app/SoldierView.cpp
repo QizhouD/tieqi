@@ -87,7 +87,8 @@ void SoldierView::draw(sf::RenderTarget &target, const Battle &battle, const For
         const sf::IntRect cell = SoldierAtlas::cell(atlasRow(body.side, body.kind, soldierDirection(body.facing)),
                                                     kFrameFallen);
         const auto shade = static_cast<std::uint8_t>(190);
-        appendSprite(tris_, {body.pos.x - kAtlasAnchorX * cellScale, body.pos.y - kAtlasAnchorY * cellScale},
+        const float half = static_cast<float>(kAtlasCellPx) * 0.5f * cellScale;
+        appendSprite(tris_, {body.pos.x - half, body.pos.y - half},
                      {kAtlasCellMeters, kAtlasCellMeters}, cell,
                      sf::Color{shade, shade, shade, fadeTo(formation.bodyAlpha(body))});
     }

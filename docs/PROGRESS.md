@@ -30,36 +30,20 @@
 | V4 | Done | #29 | Unit card: portrait box (placeholder figure from the soldier atlas, or `assets/textures/portraits/<type id>.png`) and a description per unit type from `desc.type.<type id>`; with nothing selected, clicking an enemy inspects it read-only | Descriptions written in zh-Hant and en as asked, plus a Korean draft so the Korean card does not fall back to Chinese; all listed for review in the next section. Japanese units cannot be selected, so inspection was added to show their descriptions: a left click on an enemy with nothing selected (which did nothing before) shows its card without order buttons. The card grows with the description; the battle log card gives up the space. Rules core unchanged. Full dev build with zero warnings, ctest passing, slow baseline passing, glyph and slur tests passing. release, seed 1, scripted, 2× to the result, with a unit selected: mean 0.4 ms, p95 0.5 ms, max 99.0 ms; near view for the whole run: mean 0.4 ms, p95 0.5 ms, max 102.9 ms |
 | M4 fixes | Done | #30 | M4 acceptance recorded; impact screenshot recaptured at tick 59, 3.8×; floating text keeps a fixed screen size and rise, shrinks to 0.75 in the near view, and stacks when texts overlap; near and far views cross-fade between 1.8× and 2.2× with the counter shrinking smoothly; Korean hidden (settings offer zh-Hant and en, a saved ko falls back to zh-Hant, ko.json and Noto Serif KR not packaged, glyph test checks shipped languages); V5–V8 and rules phase 2 written into DEVELOPMENT.md | Floating text was already a fixed screen size; it rose at a fixed world speed, so it moved faster when zoomed in, and it looked large next to the small soldiers. Both are fixed. Korean tests on ko.json content stay (the file stays in the repository). The demo README no longer lists Korean or the Korean font. V6–V8 are placed in a new milestone M5 (art). Rules core unchanged. The rebuilt demo package contains only zh-Hant.json and en.json and no Noto Serif KR. Full dev build with zero warnings, ctest passing, slow baseline passing. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.5 ms, max 107.4 ms; 1.95× (mid cross-fade, both layers drawn) mean 0.4 ms, p95 0.5 ms, max 97.7 ms; 4× mean 0.4 ms, p95 0.5 ms, max 121.1 ms |
 | V5 | Done (accepted 2026-11-06) | #31 | Formation deformation: stateful soldiers advanced once per tick in 4 sub-steps; charge, impact dents and thrust, melee band and curl, breakaway stragglers, wavering, rear-first turning when broken, shattering by direction, rout stream, gather and re-form, looser in paddies; casualties on the threat side with bodies; rules boxes (selected, Alt for all); clicking a soldier picks its unit; Formation sliders in the dev panel | Rules core unchanged; a test steps 400 ticks with and without the layer and the state hashes match, and the slow baseline passes. A test runs the same battle with three frame patterns (one tick per frame, frames without ticks, up to eight ticks per frame) and the soldier hashes match. Soldier speed is capped at 12 m/s (cavalry) and 5 m/s (infantry). The rules box bound is hard once a unit has been calm for 2 s and eased in at 6 m/s before that, so soldiers do not snap when a melee or rally ends. Looseness is the single per-unit interface (`unitLooseness`) for rules phase 2. Full dev build with zero warnings, ctest passing including the slow baseline. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.5 ms, max 109.8 ms; 2× near view mean 0.4 ms, p95 0.5 ms, max 110.5 ms; 4× mean 0.4 ms, p95 0.5 ms, max 107.3 ms |
-| V6 | In review | #32 | Art pipeline: Blender render script, strip assembler, atlas checker, stdlib PNG module, layout mirror; fallen frame in the atlas (used for bodies); research-based vector crests (中結祇園守, 左三つ巴); AI_ASSETS.md registration format; VSLANG=1033 in the presets | Blender is not installed, so the render script is unverified and the PR waits for the author (see "Stopped here"). The placeholder atlas passes the checker after small adjustments. A test keeps tools/art/atlas_layout.py in step with the C++ layout. The assembler was checked by cutting a strip out of the placeholder and joining it back: the result is byte-identical. Rules core unchanged. Full dev build with zero warnings, ctest passing including the slow baseline. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.5 ms, max 114.0 ms; 4× mean 0.4 ms, p95 0.6 ms, max 109.7 ms |
+| V6 | Done | #32 | Art pipeline: Blender render script, strip assembler, atlas checker, stdlib PNG module, layout mirror; fallen frame in the atlas (used for bodies); research-based vector crests (中結祇園守, 左三つ巴); AI_ASSETS.md registration format; VSLANG=1033 in the presets | Verified with Blender 4.5.10 LTS using `tools/art/example_model.py`, a primitive soldier with every action: render (about 12 s per strip), assemble, check (0 errors), and in game. Fixes found by the run: Eevee engine name differs by version; Freestyle needs a line style in files that never set one up; lines default to 0.5 px so they do not swamp 32-pixel figures; `--figure-scale` (default 2.8) scales real-scale models to the larger-than-life figure size; the fallen frame is centred in the cell (render script, placeholder, and game alike). The placeholder atlas passes the checker after small adjustments. A test keeps tools/art/atlas_layout.py in step with the C++ layout. The assembler was checked by cutting a strip out of the placeholder and joining it back: the result is byte-identical. Rules core unchanged. Full dev build with zero warnings, ctest passing including the slow baseline. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.5 ms, max 114.0 ms; 4× mean 0.4 ms, p95 0.6 ms, max 109.7 ms |
 
 The source language check (`tools/check_source_language.py`) scans src, tests, tools, cmake, CMakeLists.txt, .github/workflows, and .gitignore. tools/parity/anchors.json holds Chinese snippets used to match the prototype and is excluded; node_modules and tools/parity/work are skipped too.
 
-## Stopped here: V6 needs Blender
+## Stopped here: V6 merged, V7 and V8 not started
 
-V6 is done except the one part that needs Blender, which is not installed on this machine. As the card says, the
-render script is written but Blender was not installed; the PR is open and not merged.
+V6 is merged after the pipeline was verified end to end with Blender 4.5.10 LTS, installed at the author's request
+(the official site refused the download, so the signed MSI came from a mirror and was checked against the published
+SHA-256 from two mirrors and its Blender Foundation signature). Open points for the author:
 
-What is ready (PR #32):
-- `tools/art/`: `render_atlas.py` (Blender: orthographic three-quarter camera, Freestyle ink lines, 8 directions × 9
-  frames, supersampled and scaled down into a strip), `assemble_atlas.py` (joins strips, fills gaps from another
-  atlas, checks the result), `check_atlas.py` (size, empty cells, drawings touching a cell edge, feet at the
-  anchor), `pngio.py` (stdlib PNG), `atlas_layout.py` (layout mirror, kept in step with the C++ by a test), and a
-  README with the steps.
-- The atlas gains column 8, a fallen frame, now used for bodies; the atlas is 288 × 2624. The code-drawn placeholder
-  was adjusted until it passes the checker with no errors or warnings (shorter lances and banner poles, smaller
-  shadows, fallen figures centred).
-- Crests drawn as vectors over the sashimono, following the clans' mon: Tachibana 中結祇園守 and Kobayakawa 左三つ巴.
-  The direction of the 左 (left) tomoe varies between sources; I drew the tails sweeping counterclockwise as seen.
-  Please check both against the references you trust.
-- AI_ASSETS.md has a registration format (one row per file, tools and models with versions, prompt or notes, human
-  edits, status, kept when replaced).
-- Build: the presets now set `VSLANG=1033`, and the English language pack of the Build Tools was installed, so MSVC
-  prints its include notes in English; the garbled lines in the developer prompt are gone and Ninja tracks header
-  dependencies again.
-
-Suggested next step: install Blender 4.2 LTS (free, from blender.org, or `winget install BlenderFoundation.Blender`)
-and confirm; then I make one test model, render it through the script, check it in game, and merge V6. Alternatively
-merge V6 as it is and verify the script when the first real model exists.
+- The turning direction of 左三つ巴 differs between sources; the tails here sweep counterclockwise as seen. Please
+  check both crests against the references you trust.
+- The figures in the atlas are still placeholders; the next art step is real models (AI-generated, registered in
+  AI_ASSETS.md) rendered through `tools/art/`.
 
 ## V5 review (accepted 2026-11-06)
 

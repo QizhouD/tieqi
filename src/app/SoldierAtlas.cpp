@@ -259,7 +259,7 @@ void figure(sf::VertexArray &tris, sf::Vector2f anchor, Side side, SoldierKind k
         footman(parts, p, frame, kind, side);
     }
     if (frame == kFrameFallen) {
-        // A body: the standing figure laid on the ground, head toward the facing, centred on the anchor.
+        // A body: the standing figure laid on the ground, head toward the facing, centred in the cell.
         for (Part &part : parts) {
             for (Local *point : {&part.a, &part.b}) {
                 point->f = (point->f + point->z * 0.85f) * 0.55f - 5.f;
@@ -271,7 +271,9 @@ void figure(sf::VertexArray &tris, sf::Vector2f anchor, Side side, SoldierKind k
     // Ground shadow first, without outline.
     std::vector<Part> shadow{disc({0.f, 0.f, 0.f}, kind == SoldierKind::Cavalry || general ? 4.f : 3.f,
                                   sf::Color{0x20, 0x16, 0x10, 70}, false)};
-    const Painter painter(anchor, direction);
+    const sf::Vector2f placed =
+        frame == kFrameFallen ? anchor - sf::Vector2f{0.f, kAtlasAnchorY - kAtlasCellPx * 0.5f} : anchor;
+    const Painter painter(placed, direction);
     painter.paint(tris, shadow);
     painter.paint(tris, parts);
 }

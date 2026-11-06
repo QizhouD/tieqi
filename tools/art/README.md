@@ -8,6 +8,7 @@ They use only the Python standard library (plus Blender for rendering), so no pa
 | `atlas_layout.py` | any Python | The atlas layout, mirrored from `src/app/SoldierAtlas.h`; a test keeps the two in step |
 | `pngio.py` | any Python | Minimal PNG read and write, crop, blit, and box downscale |
 | `render_atlas.py` | Blender 4.x | Renders one side and kind (8 directions × 9 frames) with Freestyle ink lines into a strip |
+| `example_model.py` | Blender 4.x | Builds a simple primitive soldier with every action, to show the model structure and smoke-test the pipeline |
 | `assemble_atlas.py` | any Python | Joins strips into a full atlas, filling gaps from another atlas, and checks the result |
 | `check_atlas.py` | any Python | Validates an atlas: size, empty cells, drawings that touch a cell edge, feet near the anchor |
 
@@ -17,7 +18,22 @@ Cells are 32 pixels and span 9 m on the map. Columns are frames: 0 idle, 1–4 m
 looking aside, 8 fallen. Rows are (side × 5 + kind) × 8 + direction, with sides Ming then Japanese, kinds cavalry,
 spear, gun, samurai, general, and directions 0 east, then clockwise on screen in 45° steps (2 faces the viewer).
 The last row holds the dust puff and the banner cloths. The atlas is 288 × 2624 pixels. Standing figures have their
-feet at (16, 26) in the cell; the fallen frame is centred on that point.
+feet at (16, 26) in the cell; the fallen frame is centred in the cell.
+
+## Smoke test
+
+Verified with Blender 4.5.10 LTS:
+
+```text
+blender --background --factory-startup --python tools/art/example_model.py -- --side jp --out build/art/jp_samurai.blend
+blender --background build/art/jp_samurai.blend --python tools/art/render_atlas.py --     --side jp --kind samurai --out build/art/strips/jp_samurai.png
+build/dev/tieqi --dump-atlas build/art/placeholder.png
+python tools/art/assemble_atlas.py --strips build/art/strips --extras build/art/placeholder.png --out build/art/soldiers.png
+```
+
+Rendering one strip takes about 12 seconds. The result passes the checker, and copied to
+`assets/textures/soldiers/soldiers.png` it replaces the Japanese samurai in game while every other figure stays the
+placeholder.
 
 ## Steps
 

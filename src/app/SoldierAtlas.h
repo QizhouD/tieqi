@@ -20,7 +20,8 @@ namespace tq {
 //   run time), column 2 the Japanese vanguard (Tachibana) sashimono cloth, column 3 the Japanese main body
 //   (Kobayakawa) sashimono cloth; a banner cloth fills its whole cell, and the Japanese crests are vector shapes
 //   drawn over it at run time (Crests.h);
-// - the figure stands with its feet at (kAtlasAnchorX, kAtlasAnchorY) in the cell.
+// - a standing figure has its feet at (kAtlasAnchorX, kAtlasAnchorY) in the cell; the fallen frame is centred in the
+//   cell.
 inline constexpr int kAtlasCellPx = 32;
 inline constexpr float kAtlasCellMeters = 9.f;
 inline constexpr float kAtlasAnchorX = 16.f;
