@@ -26,3 +26,6 @@ Thumbs.db
 tools/parity/node_modules/
 tools/parity/work/
 __pycache__/
+
+# Agent collaboration threads stay on this machine; see collab/README.md.
+collab/threads/

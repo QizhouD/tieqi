@@ -23,3 +23,4 @@ src/core rules core · src/data data loading · src/app presentation · tools/he
 data unit types and scenarios · tests tests · reference prototype and reference material
 
 Process and stop conditions for continuous development are in docs/AGENT_LOOP.md
+Claude Code and Codex work together through Markdown messages in collab/; read collab/README.md before taking a turn there
