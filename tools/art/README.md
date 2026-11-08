@@ -62,3 +62,54 @@ placeholder.
 
 The game loads the PNG at startup when it has the right size; otherwise it falls back to the placeholder and prints
 a warning.
+
+## Near-view map art
+
+The V7 assets live in `assets/textures/map/`. Their contract is in `map_art_layout.py`, with dimensions and
+world spans for the C++ loader and its layout test:
+
+- `trees.png`: 1536 x 192 RGBA, eight 192-pixel cells in one row. Each cell spans 24 m, with its trunk/root
+  anchor at (96, 184), tolerances 8 pixels horizontally and 4 vertically. Cell order: tall pine, crooked pine,
+  bare deciduous, broad bare deciduous, bare willow, low shrub clump, young pine, bare sapling pair. The background
+  is transparent, with two clear pixels at each edge. Draw with ordinary alpha blending; the soft ink contact
+  wash is part of the sprite. Large silhouettes are 120-170 pixels high; the shrub is 50-80 pixels high.
+- `ground_detail.png`: 512 x 512, one repeating 64 m square. Silk weave, fibres, dry-brush marks, faint grass
+  ticks and pebbles. Draw with multiply blending over the existing base map: white leaves the map unchanged.
+- `paddy_detail.png`: 256 x 256, one repeating 32 m square. Harvested winter stubble in horizontal rows roughly
+  five pixels apart, with bare earth and pale frost/water sheen. Also multiply blended, restricted to paddies.
+
+Both tiles use 8 pixels per metre. Their alpha is ignored. Mean normalized RGB luminance must be 0.86-0.94 and
+the lower 1% quantile at least 0.45. This is Rec. 709 weighting of stored channel values, without a linear-light
+conversion. The near-view renderer controls fading; these files do not bake in that fade.
+
+Run the stdlib-only checker from the repository root:
+
+```text
+python tools/art/check_map_art.py assets/textures/map
+```
+
+Success prints exactly `map art ok` and exits 0. A failure prints one line per problem and exits 1. It checks
+sizes, nonempty trees, alpha-zero two-pixel padding and 12-pixel corner patches, and trunk anchors. Opaque means
+alpha at least 128: the lowest three opaque rows locate the trunk/root centre, excluding translucent contact
+wash. A sapling pair uses the joint centre. Tile checks compare RGB mean absolute differences across each wrap
+seam against all adjacent interior pixels on that axis, failing above 2x, and check the luminance limits.
+Visual review is still needed for silhouette identity, season, interior matte islands, halos and repeated motifs.
+
+The initial art was generated on 2026-11-07 with the built-in `image_gen.imagegen` tool; the tool did not expose
+a model name or version. Three separate prompts requested a transparent 4-by-2 tree source sheet, a near-white
+silk/earth tile, and a near-white harvested paddy tile. All requested Ming landscape brushwork, no text or seals,
+and late-winter vegetation. Prompt summaries and processing provenance are registered in `assets/AI_ASSETS.md`.
+No external reference image was supplied.
+
+Offline processing used `pngio.py` and numpy 1.26.4 already bundled with Blender 4.5; no package was installed.
+Trees were separated, residual near-transparent haze and disconnected neighbouring fragments removed, resized
+with a premultiplied-alpha area filter, placed on the anchors, and given a soft neutral ink contact wash.
+Tiles were area-filtered to size, converted to neutral grayscale, normalized to a 0.90 mean, and opposite edge
+bands blended toward each other with a quadratic falloff over 16 pixels. This preserves the drawn interior and
+makes both wrap seams continuous. Human edits: none; processed by script.
+
+Local scratch files (ignored by Git) are `build/codex/process_v7.py`, `build/codex/v7-prompts.json`, the three
+`build/codex/v7-*-source.png` images, and `build/codex/test_map_art_checker.py`. The latter exercises the checker
+with valid and deliberately broken fixtures. `build/codex/v7-contact.png` shows the atlas on silk and each tile
+repeated 3 x 3 at native pixel size, multiplied over silk. `build/codex/v7-trees-preview.png` shows the trees at
+half atlas size for readability review. These local files are review aids, not runtime dependencies.

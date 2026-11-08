@@ -54,6 +54,7 @@ add_executable(tieqi
     src/app/SaveData.cpp
     src/app/Script.cpp
     src/app/Synth.cpp
+    src/app/MapDetail.cpp
     src/app/MapView.cpp
     src/app/UnitView.cpp
     src/app/Orders.cpp
@@ -130,9 +131,11 @@ if(TQ_BUILD_TESTS)
         tests/app/dev.cpp
         tests/app/l10n.cpp
         tests/app/camera.cpp
+        tests/app/map_detail.cpp
         tests/app/soldiers.cpp
         tests/app/unitcard.cpp
         tests/app/soldier_formation.cpp
+        src/app/MapDetail.cpp
         src/app/TextCache.cpp
         src/app/dev/Intent.cpp
         src/app/Launch.cpp
