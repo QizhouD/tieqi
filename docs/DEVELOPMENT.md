@@ -1414,6 +1414,28 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 - Japanese: a tall 3.6 × 10 m sashimono hanging from a crossbar, its bottom swinging. Units of the vanguard, and remnants or detachments whose source was in the vanguard, show the Tachibana crest; all others the Kobayakawa crest. From V6 the crests follow research and are vector shapes drawn over the cloth at run time (`src/app/Crests.*`), so they stay sharp at any zoom: Tachibana Muneshige 中結祇園守 (naka-musubi gion mamori: two crossed amulet scrolls tied where they cross, cross-shaped finials) and Kobayakawa Takakage 左三つ巴 (hidari mitsudomoe: three tomoe, heads inside the circle, tails spiralling out counterclockwise as seen).
 - Banner cloths come from the extras row of the soldier atlas, so finished art replaces them through the same PNG.
 
+### Near-view map (V7)
+
+- `MapDetail` loads optional `assets/textures/map/trees.png`, `ground_detail.png`, and `paddy_detail.png`.
+  Missing or wrongly sized files warn and use code-drawn placeholders. All textures are smooth and mipmapped;
+  tiles repeat. `MapDetail.h` mirrors `tools/art/map_art_layout.py`: eight 192 px tree cells, 24 m per cell,
+  anchor (96, 184); ground 512 px / 64 m; paddy 256 px / 32 m. Tile alpha is ignored.
+- `nearBlend` fades the layer in from 1.8x to 2.2x. Below 1.8x no detail draw calls run, and the original base
+  texture and its random-number sequence are unchanged. Tiles use world coordinates at 8 px/m and blend factors
+  `(DstColor, OneMinusSrcAlpha, Add, Zero, One, Add)` with vertex RGBA `(a,a,a,a)`, producing
+  `dst * lerp(1, tile, a)`. `kMapDetailStrength` starts at 1. Ridges and trees use normal alpha.
+- Base painting records its jittered paddy quads and existing bund segments without adding random draws. Each
+  outline and bund receives a 1.4 m light top bank, a 0.5 m brown shadow towards the lower/right side, and three
+  dry-grass ticks from a separate presentation generator seeded by paddy index.
+- Pure, seeded tree placement targets 230 trees in groves, mainly pines on hills and trees near the side margins,
+  with a few near the station and road verges and sparse open ground. Trees vary from 0.85 to 1.15 scale and may
+  mirror. Whole atlas-cell bounds stay within the map and clear of paddies (including jitter and 3 m clearance),
+  the scenario exit, seal, scale bar, and conservative label boxes derived from position, size, and alignment.
+  The road and station clearances also allow for the canopy. The exit is an explicit optional argument because
+  it belongs to `ScenarioDef`, not `MapDef`.
+- Draw order: base, ground detail, paddy fill, ridges, scars, y-sorted trees, exit, then units. Geometry is built
+  once per scenario rebuild; only vertex colours change when the fade changes, with no per-frame allocation.
+
 ### Events: effects, sound, and battle log
 
 Game text is quoted from the zh-Hant string table, with an English gloss.
@@ -1883,6 +1905,7 @@ rally, the soldiers change shape the way troops on a real battlefield do. The ru
 
 - Do: at 3× to 4×, ground texture, paddy ridges, and trees hold up the picture, in the style of the silk-scroll base
   map.
+- Status: done. See "Near-view map (V7)" in the Presentation spec.
 
 ### V8 Near-view effects
 
