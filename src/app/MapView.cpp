@@ -15,6 +15,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace tq {
@@ -212,12 +213,14 @@ void MapView::build(const ScenarioDef &scenario, const StringTable &strings, con
     scars_.clear(sf::Color::Transparent);
     scars_.display();
     paintBase(strings, titleFont, titleBold);
+    detail_.build(map_, exit_, paddyDetails_);
 }
 
 void MapView::paintBase(const StringTable &strings, const sf::Font &titleFont, bool titleBold) {
     const float w = map_.width;
     const float h = map_.height;
     MapRng rng(1593);
+    paddyDetails_.clear();
 
     sf::VertexArray silk(sf::PrimitiveType::Triangles, 6);
     const sf::Color c0{0xeb, 0xdf, 0xc2};
@@ -256,6 +259,11 @@ void MapView::paintBase(const StringTable &strings, const sf::Font &titleFont, b
         quad.setPoint(1, {paddy.x + paddy.w + jitter(), paddy.y + jitter()});
         quad.setPoint(2, {paddy.x + paddy.w + jitter(), paddy.y + paddy.h + jitter()});
         quad.setPoint(3, {paddy.x + jitter(), paddy.y + paddy.h + jitter()});
+        PaddyDetail recorded;
+        for (std::size_t i = 0; i < 4; ++i) {
+            const auto p = quad.getPoint(i);
+            recorded.quad[i] = {p.x, p.y};
+        }
         quad.setFillColor(rgba(138, 158, 118, 0.36f));
         quad.setOutlineThickness(0.f);
         base_.draw(quad);
@@ -268,6 +276,11 @@ void MapView::paintBase(const StringTable &strings, const sf::Font &titleFont, b
         for (float gy = paddy.y + 14.f; gy < paddy.y + paddy.h; gy += 20.f + rng() * 8.f) {
             appendLine(bunds, {paddy.x - 4.f, gy}, {paddy.x + paddy.w + 4.f, gy + (rng() - 0.5f) * 6.f}, bund);
         }
+        for (std::size_t i = 0; i < bunds.getVertexCount(); i += 2) {
+            const auto a = bunds[i].position, b = bunds[i + 1].position;
+            recorded.bunds.push_back({{a.x, a.y}, {b.x, b.y}});
+        }
+        paddyDetails_.push_back(std::move(recorded));
         const sf::Color glint = rgba(250, 248, 232, 0.4f);
         const int glints = static_cast<int>(paddy.w * paddy.h / 450.f);
         for (int i = 0; i < glints; ++i) {
@@ -440,7 +453,7 @@ void MapView::drawExit(Window &window, float timeSec) const {
     }
 }
 
-void MapView::draw(Window &window, float timeSec, bool exitOpen) const {
+void MapView::draw(Window &window, float timeSec, bool exitOpen, float blend) const {
     const float sc = std::max(window.pixelsPerMeter(), 1e-3f);
     sf::RectangleShape ground({map_.width + 18.f, map_.height + 18.f});
     ground.setPosition({-9.f, -9.f});
@@ -457,10 +470,12 @@ void MapView::draw(Window &window, float timeSec, bool exitOpen) const {
     sf::Sprite mapSprite(base_.getTexture());
     mapSprite.setScale({1.f / kMapPixelsPerMeter, 1.f / kMapPixelsPerMeter});
     window.draw(mapSprite);
+    detail_.drawGround(window.target(), blend);
     sf::Sprite scarSprite(scars_.getTexture());
     scarSprite.setScale({1.f / kMapPixelsPerMeter, 1.f / kMapPixelsPerMeter});
     window.draw(scarSprite);
 
+    detail_.drawTrees(window.target(), blend);
     if (exitOpen) {
         drawExit(window, timeSec);
     }

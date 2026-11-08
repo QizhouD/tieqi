@@ -136,6 +136,7 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
     const TextStyle title = textStyle(active().language, TextRole::Title);
     mapView_.build(data_.scenario, active(), fontFor(active(), title.face), title.bold);
     soldierAtlas_.load(root_ / "assets");
+    mapView_.load(root_ / "assets");
     for (const UnitType &type : data_.defs.types) {
         const std::filesystem::path portrait = root_ / "assets" / "textures" / "portraits" / (type.id + ".png");
         std::error_code missing;
@@ -262,7 +263,7 @@ void App::drawFrame() {
     window_.setZoom(camera_.zoom());
     window_.beginWorld();
     const bool exitOpen = battle_ && battle_->exitOpen();
-    mapView_.draw(window_, soundTime_, exitOpen);
+    mapView_.draw(window_, soundTime_, exitOpen, nearBlend(camera_.zoom()));
     if (!battle_) {
         return;
     }
