@@ -27,6 +27,7 @@ import math
 import os
 import sys
 import tempfile
+from contextlib import nullcontext
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -179,7 +180,13 @@ def main():
     figure, target = animated_object()
     figure.scale = (options["figure-scale"],) * 3
     strip = pngio.Image(layout.CELL_PX * len(layout.FRAMES), layout.CELL_PX * layout.DIRECTIONS)
-    with tempfile.TemporaryDirectory() as scratch:
+    # An explicit directory also works in restricted Windows sessions where
+    # tempfile's private directory ACL is inaccessible to the renderer.
+    scratch_path = options.get("scratch")
+    if scratch_path:
+        scratch_path = os.path.abspath(scratch_path)
+        os.makedirs(scratch_path, exist_ok=True)
+    with nullcontext(scratch_path) if scratch_path else tempfile.TemporaryDirectory() as scratch:
         for direction in range(layout.DIRECTIONS):
             # Direction 0 faces east (+X); the atlas turns clockwise on screen, which is toward the camera (-Y).
             figure.rotation_euler[2] = -math.radians(45.0 * direction)
