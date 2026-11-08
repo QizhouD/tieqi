@@ -214,7 +214,7 @@ void App::stepSim() {
     formation_.tick(*battle_, events);
     noteEvents(orders_, *battle_, events);
     hud_.note(*battle_, active(), events);
-    effects_.onEvents(*battle_, active(), events, reducedMotion_, assaultPoint());
+    effects_.onEvents(*battle_, active(), events, reducedMotion_, nearBlend(camera_.zoom()), assaultPoint());
     for (const Event &event : events) {
         playEventAudio(audio_, event);
     }

@@ -46,12 +46,29 @@ inline int impactDustCount(float ratio) {
     return 6 + std::min(10, std::max(0, scaled));
 }
 
+// Near-view presentation tuning: finer particles and ratio-scaled impact debris.
+inline constexpr int kNearFxCountMul = 3;
+inline constexpr float kNearFxSizeMul = 0.45f;
+inline constexpr float kImpactClodRatioMul = 3.f;
+
+inline int nearFxCount(int base, float blend) {
+    return static_cast<int>(std::lround(static_cast<float>(base) *
+                                        (1.f + static_cast<float>(kNearFxCountMul - 1) * std::clamp(blend, 0.f, 1.f))));
+}
+
+inline float nearFxSize(float blend) { return 1.f + (kNearFxSizeMul - 1.f) * std::clamp(blend, 0.f, 1.f); }
+
+inline int impactClodCount(float ratio, float blend) {
+    const float count = 4.f + std::min(8.f, std::round(kImpactClodRatioMul * ratio));
+    return static_cast<int>(std::lround(count * std::clamp(blend, 0.f, 1.f)));
+}
+
 // Dust, smoke, chips, rings, floaters, and click marks. The generator is presentation-only.
 class Effects {
   public:
     void clear();
     void onEvents(const Battle &battle, const StringTable &strings, std::span<const Event> events, bool reducedMotion,
-                  std::optional<Vec2> assaultAt);
+                  float nearBlend, std::optional<Vec2> assaultAt);
     void marker(Vec2 pos, bool attack);
 
     bool blocking() const { return hitStop_ > 0.f; }
