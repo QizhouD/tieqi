@@ -6,6 +6,40 @@
 
 using namespace tq;
 
+TEST_CASE("near effect counts and sizes interpolate and clamp") {
+    for (const int base : {1, 6, 14, 16}) {
+        CHECK(nearFxCount(base, -1.f) == base);
+        CHECK(nearFxCount(base, 0.f) == base);
+        CHECK(nearFxCount(base, 1.f) == 3 * base);
+        CHECK(nearFxCount(base, 2.f) == 3 * base);
+        for (int step = 1; step <= 4; ++step) {
+            const float blend = static_cast<float>(step) * 0.25f;
+            CHECK(nearFxCount(base, blend) >= nearFxCount(base, blend - 0.25f));
+            CHECK(nearFxSize(blend) <= nearFxSize(blend - 0.25f));
+        }
+    }
+    CHECK(nearFxCount(1, 0.25f) == 2);
+    CHECK(nearFxCount(14, 0.5f) == 28);
+    CHECK(nearFxSize(-1.f) == doctest::Approx(1.f));
+    CHECK(nearFxSize(0.f) == doctest::Approx(1.f));
+    CHECK(nearFxSize(0.5f) == doctest::Approx(0.725f));
+    CHECK(nearFxSize(1.f) == doctest::Approx(0.45f));
+    CHECK(nearFxSize(2.f) == doctest::Approx(0.45f));
+}
+
+TEST_CASE("impact clods appear only toward the near view") {
+    for (const float ratio : {0.f, 0.5f, 1.f, 2.7f, 100.f}) {
+        CHECK(impactClodCount(ratio, 0.f) == 0);
+        CHECK(impactClodCount(ratio, -1.f) == 0);
+        CHECK(impactClodCount(ratio, 2.f) == impactClodCount(ratio, 1.f));
+    }
+    CHECK(impactClodCount(0.f, 1.f) == 4);
+    CHECK(impactClodCount(100.f, 1.f) == 12);
+    CHECK(impactClodCount(0.5f, 1.f) == 6);
+    CHECK(impactClodCount(1.f, 0.5f) == 4);
+    CHECK(impactClodCount(100.f, 0.5f) == 6);
+}
+
 TEST_CASE("impact shake and hit-stop follow the reduced-motion rule") {
     CHECK(impactShakePx(2.f, false) == doctest::Approx(9.f));
     CHECK(impactHitStopSec(2.f, false) == doctest::Approx(0.14f));

@@ -1436,6 +1436,23 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 - Draw order: base, ground detail, paddy fill, ridges, scars, y-sorted trees, exit, then units. Geometry is built
   once per scenario rebuild; only vertex colours change when the fade changes, with no per-frame allocation.
 
+### Near-view effects (V8)
+
+- Effects sample `nearBlend(camera.zoom())` at spawn time (0 below 1.8x, 1 above 2.2x). Existing particles keep
+  their count, size, growth, and velocity when zoom changes. Each helper clamps blend `b` to [0, 1].
+- `nearFxCount(base, b) = round(base * (1 + (kNearFxCountMul - 1) * b))`, with `kNearFxCountMul = 3`.
+  This scales impact dust counts, smoke puffs per muzzle for both volley kinds, and the 14 shattered chips.
+- `nearFxSize(b) = 1 + (kNearFxSizeMul - 1) * b`, with `kNearFxSizeMul = 0.45`. It scales dust and smoke
+  starting radii, growth rates, and velocities, and shattered chip sizes and speeds. Each muzzle still has one
+  flash, with stored radius `4 m * nearFxSize(b)`. Smoke spawns within `1.5 m * b` of each muzzle.
+- `impactClodCount(r, b) = round((4 + min(8, round(kImpactClodRatioMul * r))) * b)`, with
+  `kImpactClodRatioMul = 3`. Impact clods use the chip kind, ochre #a87e48 or dark earth #5c4630, sizes 0.3 to
+  0.8 m, outward speeds 8 to 20 m/s over a full circle, and lifetimes 0.4 to 0.7 s. These sizes and speeds
+  are already near-scale. Clods are heavy items under the unchanged 1600-item cap.
+- At blend 0 the effect stream, including the order and count of presentation random draws, is unchanged:
+  no clods spawn and no smoke jitter draws occur. Presentation randomness never uses the battle generator.
+  Rings, floaters, click marks, and reduced-motion behavior are unchanged.
+
 ### Events: effects, sound, and battle log
 
 Game text is quoted from the zh-Hant string table, with an English gloss.
@@ -1910,6 +1927,7 @@ rally, the soldiers change shape the way troops on a real battlefield do. The ru
 ### V8 Near-view effects
 
 - Do: dust, smoke, and debris scale their size and count with the zoom in the near view.
+- Status: done. See "Near-view effects (V8)" in the Presentation spec.
 
 ## Glossary
 

@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace tq {
 namespace {
@@ -121,25 +122,44 @@ void Effects::marker(Vec2 pos, bool attack) {
 }
 
 void Effects::onEvents(const Battle &battle, const StringTable &strings, std::span<const Event> events,
-                       bool reducedMotion, std::optional<Vec2> assaultAt) {
+                       bool reducedMotion, float nearBlend, std::optional<Vec2> assaultAt) {
+    const float blend = std::clamp(nearBlend, 0.f, 1.f);
+    const float size = nearFxSize(blend);
     for (const Event &event : events) {
         switch (event.type) {
         case Event::Type::Impact: {
             const float ratio = event.value;
             shake_ = impactShakePx(ratio, reducedMotion);
             hitStop_ = impactHitStopSec(ratio, reducedMotion);
-            const int count = impactDustCount(ratio);
+            const int count = nearFxCount(impactDustCount(ratio), blend);
             for (int i = 0; i < count; ++i) {
                 Item dust;
                 dust.kind = Kind::Dust;
                 dust.x = event.pos.x + (next() - 0.5f) * 24.f;
                 dust.y = event.pos.y + (next() - 0.5f) * 16.f;
-                dust.radius = 4.f + next() * 6.f;
-                dust.grow = 16.f + next() * 22.f;
-                dust.vx = (next() - 0.5f) * 22.f;
-                dust.vy = (next() - 0.5f) * 22.f;
+                dust.radius = (4.f + next() * 6.f) * size;
+                dust.grow = (16.f + next() * 22.f) * size;
+                dust.vx = (next() - 0.5f) * 22.f * size;
+                dust.vy = (next() - 0.5f) * 22.f * size;
                 dust.span = 0.9f + next() * 0.6f;
                 add(dust);
+            }
+            const int clods = impactClodCount(ratio, blend);
+            for (int i = 0; i < clods; ++i) {
+                const float angle = next() * 2.f * std::numbers::pi_v<float>;
+                const float speed = 8.f + next() * 12.f;
+                Item chip;
+                chip.kind = Kind::Chip;
+                chip.x = event.pos.x;
+                chip.y = event.pos.y;
+                chip.vx = std::cos(angle) * speed;
+                chip.vy = std::sin(angle) * speed;
+                chip.angle = next() * 2.f * std::numbers::pi_v<float>;
+                chip.spin = (next() - 0.5f) * 16.f;
+                chip.size = 0.3f + next() * 0.5f;
+                chip.span = 0.4f + next() * 0.3f;
+                chip.color = next() < 0.5f ? sf::Color{0xa8, 0x7e, 0x48} : sf::Color{0x5c, 0x46, 0x30};
+                add(chip);
             }
             const bool pike = (event.flags & kPikeFront) != 0;
             const bool breaks = (event.flags & kBreaks) != 0;
@@ -178,28 +198,43 @@ void Effects::onEvents(const Battle &battle, const StringTable &strings, std::sp
                     shooter->pos.x + along * (shooter->depth * 0.5f + 4.f) - across * static_cast<float>(i) * spread;
                 const float y =
                     shooter->pos.y + across * (shooter->depth * 0.5f + 4.f) + along * static_cast<float>(i) * spread;
-                Item smoke;
-                smoke.kind = Kind::Smoke;
-                smoke.x = x;
-                smoke.y = y;
-                if (three) {
-                    smoke.radius = 2.f + next() * 2.f;
-                    smoke.grow = 7.f + next() * 5.f;
-                    smoke.vx = along * 14.f;
-                    smoke.vy = across * 14.f;
-                    smoke.span = 1.4f + next() * 0.6f;
-                } else {
-                    smoke.radius = 3.f + next() * 3.f;
-                    smoke.grow = 8.f + next() * 6.f;
-                    smoke.vx = along * 10.f + (next() - 0.5f) * 6.f;
-                    smoke.vy = across * 10.f + (next() - 0.5f) * 6.f;
-                    smoke.span = 2.f + next();
+                const int puffs = nearFxCount(1, blend);
+                for (int puff = 0; puff < puffs; ++puff) {
+                    Item smoke;
+                    smoke.kind = Kind::Smoke;
+                    smoke.x = x;
+                    smoke.y = y;
+                    // The far view must consume exactly the original random sequence.
+                    if (blend > 0.f) {
+                        const float angle = next() * 2.f * std::numbers::pi_v<float>;
+                        const float offset = next() * 1.5f * blend;
+                        smoke.x += std::cos(angle) * offset;
+                        smoke.y += std::sin(angle) * offset;
+                    }
+                    if (three) {
+                        smoke.radius = 2.f + next() * 2.f;
+                        smoke.grow = 7.f + next() * 5.f;
+                        smoke.vx = along * 14.f;
+                        smoke.vy = across * 14.f;
+                        smoke.span = 1.4f + next() * 0.6f;
+                    } else {
+                        smoke.radius = 3.f + next() * 3.f;
+                        smoke.grow = 8.f + next() * 6.f;
+                        smoke.vx = along * 10.f + (next() - 0.5f) * 6.f;
+                        smoke.vy = across * 10.f + (next() - 0.5f) * 6.f;
+                        smoke.span = 2.f + next();
+                    }
+                    smoke.radius *= size;
+                    smoke.grow *= size;
+                    smoke.vx *= size;
+                    smoke.vy *= size;
+                    add(smoke);
                 }
-                add(smoke);
                 Item flash;
                 flash.kind = Kind::Flash;
                 flash.x = x;
                 flash.y = y;
+                flash.radius = 4.f * size;
                 flash.span = 0.12f;
                 add(flash);
             }
@@ -224,9 +259,10 @@ void Effects::onEvents(const Battle &battle, const StringTable &strings, std::sp
             const Unit *unit = findUnit(battle, event.a);
             const float base = unit != nullptr ? unit->facing : 0.f;
             const sf::Color body = unit != nullptr ? sideInk(unit->side) : cinnabar();
-            for (int i = 0; i < 14; ++i) {
+            const int count = nearFxCount(14, blend);
+            for (int i = 0; i < count; ++i) {
                 const float angle = base + (next() - 0.5f) * 2.6f;
-                const float speed = 60.f + next() * 110.f;
+                const float speed = (60.f + next() * 110.f) * size;
                 Item chip;
                 chip.kind = Kind::Chip;
                 chip.x = event.pos.x;
@@ -235,7 +271,7 @@ void Effects::onEvents(const Battle &battle, const StringTable &strings, std::sp
                 chip.vy = std::sin(angle) * speed;
                 chip.angle = next() * 6.f;
                 chip.spin = (next() - 0.5f) * 16.f;
-                chip.size = 3.f + next() * 4.f;
+                chip.size = (3.f + next() * 4.f) * size;
                 chip.span = 0.8f + next() * 0.5f;
                 chip.color = next() < 0.7f ? body : gold();
                 add(chip);
@@ -377,7 +413,7 @@ void Effects::drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold,
             break;
         }
         case Kind::Flash:
-            drawBlob(target, blob_, {item.x, item.y}, 4.f, withAlpha({255, 206, 120}, 1.f - age));
+            drawBlob(target, blob_, {item.x, item.y}, item.radius, withAlpha({255, 206, 120}, 1.f - age));
             break;
         case Kind::Chip: {
             sf::RectangleShape chip({item.size, item.size * 0.7f});
