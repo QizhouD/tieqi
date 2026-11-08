@@ -33,6 +33,17 @@
 | V6 | Done | #32 | Art pipeline: Blender render script, strip assembler, atlas checker, stdlib PNG module, layout mirror; fallen frame in the atlas (used for bodies); research-based vector crests (中結祇園守, 左三つ巴); AI_ASSETS.md registration format; VSLANG=1033 in the presets | Verified with Blender 4.5.10 LTS using `tools/art/example_model.py`, a primitive soldier with every action: render (about 12 s per strip), assemble, check (0 errors), and in game. Fixes found by the run: Eevee engine name differs by version; Freestyle needs a line style in files that never set one up; lines default to 0.5 px so they do not swamp 32-pixel figures; `--figure-scale` (default 2.8) scales real-scale models to the larger-than-life figure size; the fallen frame is centred in the cell (render script, placeholder, and game alike). The placeholder atlas passes the checker after small adjustments. A test keeps tools/art/atlas_layout.py in step with the C++ layout. The assembler was checked by cutting a strip out of the placeholder and joining it back: the result is byte-identical. Rules core unchanged. Full dev build with zero warnings, ctest passing including the slow baseline. release, seed 1, scripted, 2× to the result: 1× mean 0.4 ms, p95 0.5 ms, max 114.0 ms; 4× mean 0.4 ms, p95 0.6 ms, max 109.7 ms |
 | V7 | Done | #34 | Near-view map: ground and paddy multiply tiles, raised banks with shadows and grass ticks built from the base map's own paddy quads and bunds, 230 deterministic grove trees (pines on hills, margins, station and road verges), optional textures with code-drawn placeholders; the layer fades in with the near view (1.8x to 2.2x) | Implemented by Codex, finished by Claude after Codex hit a usage limit. Rules core unchanged; base map painting and its random sequence unchanged: the 1600 x 1000 far view at 1x has 0 differing pixels against the pre-change shot. Full dev build with zero warnings, ctest passing (129 cases) including the slow baseline. Map art and source language checks pass. release, seed 1, scripted, run to the result, measured alone: 1x mean 0.4 ms, p95 0.5 ms, max 103.1 ms; 4x mean 0.4 ms, p95 0.6 ms, max 206.5 ms; 4x with --time-scale 4 mean 0.4 ms, p95 0.6 ms, max 86.8 ms |
 
+M5 soldier atlas (2026-11-07, #35): ten procedural Blender figures now replace all 720
+placeholder figure cells in `assets/textures/soldiers/soldiers.png`. Four family scripts share geometry, rigid-part
+rigs, gait/strike/aside/fallen actions; `python tools/art/build_atlas.py` rebuilds and installs the atlas. Existing
+dust and banner cloths are preserved. Strict atlas check: 0 errors and 0 warnings; dev build: no compiler warnings;
+regular tests and the separate slow baseline pass. Contact sheets and 3x charge, pike line, volley and post-melee
+body screenshots are in `build/codex/atlas/`. Provenance is in `assets/AI_ASSETS.md`. Equipment simplifications,
+mounted commanders, plain personal sashimono, palette and proportions await author review. Rules core unchanged. Perf, release, seed 1, scripted, run to the result, measured alone: 1x mean 0.4 ms, p95 0.6 ms, max 108.4 ms;
+4x mean 0.5 ms, p95 0.7 ms, max 101.1 ms; 4x with `--time-scale 4` mean 0.4 ms, p95 0.7 ms, max 98.3 ms (placeholder atlas
+before: 4x p95 0.5 to 0.6 ms). Known limit: ranged volleys do not yet select the gunners' aim/fire frames; the game uses
+strike frames only in melee, so that needs a presentation-code change in a later card.
+
 The source language check (`tools/check_source_language.py`) scans src, tests, tools, cmake, CMakeLists.txt, .github/workflows, and .gitignore. tools/parity/anchors.json holds Chinese snippets used to match the prototype and is excluded; node_modules and tools/parity/work are skipped too.
 
 ## Stopped here: V7 done, V8 not started
@@ -43,7 +54,7 @@ V7 adds the near-view map layer. Open points for the author:
   density are taste calls. The textures were approved in review; the layer is off below 1.8x, so the far view is
   pixel-identical to before.
 - Still open from V6: the turning direction of 左三つ巴 differs between sources; the tails here sweep counterclockwise
-  as seen. The finished soldier atlas (M5) is in review on its own branch.
+  as seen. The finished soldier atlas (M5, #35) is merged; its art and history choices await review (see the M5 note above).
 
 ## V7 review (2026-11-08)
 
