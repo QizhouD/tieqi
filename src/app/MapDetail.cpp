@@ -196,6 +196,15 @@ sf::VertexArray buildRidges(const std::vector<PaddyDetail> &paddies) {
     }
     return out;
 }
+sf::BlendMode mapDetailBlendMode() {
+    return sf::BlendMode(sf::BlendMode::Factor::DstColor, sf::BlendMode::Factor::OneMinusSrcAlpha,
+                         sf::BlendMode::Equation::Add, sf::BlendMode::Factor::Zero, sf::BlendMode::Factor::One,
+                         sf::BlendMode::Equation::Add);
+}
+sf::Color mapDetailTileColor(float blend) {
+    const auto tile = static_cast<std::uint8_t>(255.f * std::clamp(blend, 0.f, 1.f) * kMapDetailStrength + 0.5f);
+    return {tile, tile, tile, tile};
+}
 void MapDetail::load(const std::filesystem::path &assetRoot) {
     const auto root = assetRoot / "textures" / "map";
     loadTexture(treesTexture_, root / "trees.png", kTreeCellPx, true, false);
@@ -237,10 +246,10 @@ void MapDetail::fade(float blend) const {
         return;
     blend_ = blend;
     const auto alpha = static_cast<std::uint8_t>(255.f * blend + 0.5f);
-    const auto tile = static_cast<std::uint8_t>(255.f * blend * kMapDetailStrength + 0.5f);
+    const sf::Color tile = mapDetailTileColor(blend);
     for (auto *array : {&ground_, &paddies_})
         for (std::size_t i = 0; i < array->getVertexCount(); ++i)
-            (*array)[i].color = {tile, tile, tile, tile};
+            (*array)[i].color = tile;
     for (std::size_t i = 0; i < trees_.getVertexCount(); ++i)
         trees_[i].color = {255, 255, 255, alpha};
     for (std::size_t i = 0; i < ridges_.getVertexCount(); ++i) {
@@ -254,9 +263,7 @@ void MapDetail::drawGround(sf::RenderTarget &target, float blend) const {
         return;
     fade(blend);
     sf::RenderStates states;
-    states.blendMode = sf::BlendMode(sf::BlendMode::Factor::DstColor, sf::BlendMode::Factor::OneMinusSrcAlpha,
-                                     sf::BlendMode::Equation::Add, sf::BlendMode::Factor::Zero,
-                                     sf::BlendMode::Factor::One, sf::BlendMode::Equation::Add);
+    states.blendMode = mapDetailBlendMode();
     states.texture = &groundTexture_;
     target.draw(ground_, states);
     states.texture = &paddyTexture_;

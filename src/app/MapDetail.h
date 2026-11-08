@@ -1,5 +1,7 @@
 #pragma once
 #include "core/defs/MapDef.h"
+#include <SFML/Graphics/BlendMode.hpp>
+#include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/VertexArray.hpp>
 #include <array>
@@ -35,6 +37,9 @@ struct PaddyDetail {
 bool treeAllowed(const MapDef &map, const MapTree &tree, Aabb exit = {});
 std::vector<MapTree> placeTrees(const MapDef &map, std::uint32_t seed, Aabb exit = {});
 sf::VertexArray buildRidges(const std::vector<PaddyDetail> &paddies);
+// Tiles multiply the map: with the vertex colour below, the result is dst * lerp(1, tile, blend * strength).
+sf::BlendMode mapDetailBlendMode();
+sf::Color mapDetailTileColor(float blend);
 class MapDetail {
   public:
     void load(const std::filesystem::path &assetRoot);

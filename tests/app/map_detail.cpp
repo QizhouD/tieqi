@@ -1,8 +1,6 @@
 #include "app/MapDetail.h"
 #include "app/Viewport.h"
 #include "data/Load.h"
-#include <SFML/Graphics/Image.hpp>
-#include <SFML/Graphics/RenderTexture.hpp>
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
@@ -132,31 +130,44 @@ TEST_CASE("map tree exclusions cover canopies as well as anchors") {
     CHECK(allowed({440.f, 300.f}));
 }
 TEST_CASE("map detail multiply fade interpolates without brightening the base") {
-    MapDetail detail;
-    detail.load(std::filesystem::path(TQ_SOURCE_DIR) / "assets");
-    MapDef map;
-    map.width = 8.f;
-    map.height = 8.f;
-    detail.build(map, {}, {});
-    sf::RenderTexture target({64, 64});
-    target.setView(sf::View({4.f, 4.f}, {8.f, 8.f}));
-    const sf::Color base{180, 160, 130};
-    const auto sample = [&](float blend) {
-        target.clear(base);
-        detail.drawGround(target, blend);
-        target.display();
-        return target.getTexture().copyToImage().getPixel({32, 32});
+    // Evaluates the blend equation on the CPU (CI has no display for a render target). Tile alpha is forced
+    // opaque at load, so the source is tile * vertex colour with alpha equal to the vertex alpha.
+    const sf::BlendMode mode = mapDetailBlendMode();
+    REQUIRE(mode.colorEquation == sf::BlendMode::Equation::Add);
+    const auto factor = [](sf::BlendMode::Factor f, float src, float srcA, float dst) {
+        switch (f) {
+        case sf::BlendMode::Factor::Zero:
+            return 0.f;
+        case sf::BlendMode::Factor::One:
+            return 1.f;
+        case sf::BlendMode::Factor::DstColor:
+            return dst;
+        case sf::BlendMode::Factor::OneMinusSrcAlpha:
+            return 1.f - srcA;
+        case sf::BlendMode::Factor::SrcColor:
+            return src;
+        case sf::BlendMode::Factor::SrcAlpha:
+            return srcA;
+        default:
+            FAIL("unexpected blend factor");
+            return 0.f;
+        }
     };
-    const auto far = sample(0.f), full = sample(1.f);
-    CHECK(far == base);
-    CHECK(full.r < base.r);
-    CHECK(full.g < base.g);
-    CHECK(full.b < base.b);
-    for (const float blend : {0.25f, 0.5f, 0.75f, 1.f, 0.f}) {
-        const auto color = sample(blend);
-        CHECK(std::abs(static_cast<float>(color.r) - (base.r * (1.f - blend) + full.r * blend)) <= 2.f);
-        CHECK(std::abs(static_cast<float>(color.g) - (base.g * (1.f - blend) + full.g * blend)) <= 2.f);
-        CHECK(std::abs(static_cast<float>(color.b) - (base.b * (1.f - blend) + full.b * blend)) <= 2.f);
-        CHECK(color.a == 255);
-    }
+    const auto apply = [&](float tile, float base, float blend) {
+        const sf::Color vertex = mapDetailTileColor(blend);
+        const float src = tile * static_cast<float>(vertex.r) / 255.f;
+        const float srcA = static_cast<float>(vertex.a) / 255.f;
+        return src * factor(mode.colorSrcFactor, src, srcA, base) + base * factor(mode.colorDstFactor, src, srcA, base);
+    };
+    for (const float tile : {0.45f, 0.9f, 1.f})
+        for (const float base : {0.2f, 0.7f, 1.f}) {
+            CHECK(apply(tile, base, 0.f) == doctest::Approx(base));
+            for (const float blend : {0.25f, 0.5f, 0.75f, 1.f}) {
+                const float expected = base * (1.f + (tile - 1.f) * blend * kMapDetailStrength);
+                CHECK(apply(tile, base, blend) == doctest::Approx(expected).epsilon(0.01));
+                CHECK(apply(tile, base, blend) <= base + 1e-4f);
+            }
+        }
+    CHECK(mapDetailTileColor(-1.f) == sf::Color(0, 0, 0, 0));
+    CHECK(mapDetailTileColor(2.f) == mapDetailTileColor(1.f));
 }
