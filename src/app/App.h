@@ -11,6 +11,7 @@
 #include "app/Orders.h"
 #include "app/ResourceManager.h"
 #include "app/SoldierAtlas.h"
+#include "app/MingFlags.h"
 #include "app/SoldierView.h"
 #include "app/TextCache.h"
 #include "app/TextStyle.h"
@@ -71,6 +72,7 @@ class App {
     MapView mapView_;
     UnitView unitView_;
     SoldierAtlas soldierAtlas_;
+    MingFlags mingFlags_;
     SoldierView soldierView_;
     // Soldiers with state (V5); advanced once per simulation tick.
     FormationLayer formation_;

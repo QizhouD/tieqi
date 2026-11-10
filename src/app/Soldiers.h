@@ -77,12 +77,15 @@ SoldierGrid soldierGrid(const UnitType &type, const Unit &unit);
 // Local slot position: x along the facing (front positive), y across the frontage.
 Vec2 soldierSlot(const SoldierGrid &grid, int index);
 
-enum class BannerKind : std::uint8_t { None, Ming, JpVanguard, JpMain };
+// MingStandard is the Ming general's own unit (Li Rusong's guard); every other Ming unit carries a pennant (V9).
+enum class BannerKind : std::uint8_t { None, Ming, MingStandard, JpVanguard, JpMain };
 
 // Banner geometry in metres: the pole stands in the rear half of the formation and rises straight up the screen.
 inline constexpr float kBannerPole = 16.f;
-inline constexpr float kMingBannerWidth = 8.f;
-inline constexpr float kMingBannerHeight = 8.f;
+inline constexpr float kMingPennantWidth = 8.f;
+inline constexpr float kMingPennantHeight = 5.f;
+inline constexpr float kMingStandardWidth = 8.f;
+inline constexpr float kMingStandardHeight = 9.3f; // the banner photograph's aspect, 1172 x 1363
 inline constexpr float kJpBannerWidth = 3.6f;
 inline constexpr float kJpBannerHeight = 10.f;
 

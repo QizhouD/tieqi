@@ -136,6 +136,7 @@ App::App(std::filesystem::path root, LaunchOptions options, std::filesystem::pat
     const TextStyle title = textStyle(active().language, TextRole::Title);
     mapView_.build(data_.scenario, active(), fontFor(active(), title.face), title.bold);
     soldierAtlas_.load(root_ / "assets");
+    mingFlags_.load(root_ / "assets");
     mapView_.load(root_ / "assets");
     for (const UnitType &type : data_.defs.types) {
         const std::filesystem::path portrait = root_ / "assets" / "textures" / "portraits" / (type.id + ".png");
@@ -278,8 +279,8 @@ void App::drawFrame() {
         orders_,
         [&] {
             if (blend > 0.f) {
-                soldierView_.draw(window_.target(), *battle_, formation_, soldierAtlas_, alpha, animTime_, active(),
-                                  fontFor(active(), glyph.face), blend);
+                soldierView_.draw(window_.target(), *battle_, formation_, soldierAtlas_, mingFlags_, alpha, animTime_,
+                                  blend);
             }
             effects_.drawDust(window_.target());
         },
