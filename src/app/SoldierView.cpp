@@ -1,13 +1,11 @@
 #include "app/SoldierView.h"
 
 #include "app/Crests.h"
-#include "app/TextCache.h"
 
 #include <SFML/Graphics/RenderStates.hpp>
 
 #include <algorithm>
-#include <string>
-#include <string_view>
+#include <cmath>
 
 namespace tq {
 namespace {
@@ -47,32 +45,24 @@ void appendQuad(sf::VertexArray &tris, const sf::Vector2f (&corner)[4], sf::IntR
     tris.append(d);
 }
 
-bool hasKey(const StringTable &strings, const std::string &key) {
-    for (const StringTable *table = &strings; table != nullptr; table = table->fallback) {
-        if (table->entries.find(key) != table->entries.end()) {
-            return true;
-        }
+// A small filled polygon (a fan) for the tassel under a Ming spear tip.
+void appendDisc(sf::VertexArray &tris, sf::Vector2f centre, sf::Vector2f radius, sf::Color color) {
+    constexpr int kSteps = 10;
+    constexpr float kTau = 6.2831853f;
+    for (int i = 0; i < kSteps; ++i) {
+        const float a0 = kTau * static_cast<float>(i) / kSteps;
+        const float a1 = kTau * static_cast<float>(i + 1) / kSteps;
+        tris.append({centre, color});
+        tris.append({{centre.x + std::cos(a0) * radius.x, centre.y + std::sin(a0) * radius.y}, color});
+        tris.append({{centre.x + std::cos(a1) * radius.x, centre.y + std::sin(a1) * radius.y}, color});
     }
-    return false;
-}
-
-std::string flagText(const StringTable &strings, const Unit &unit, const UnitType &type) {
-    constexpr std::string_view kUnitPrefix = "unit.";
-    if (unit.labelKey.rfind(kUnitPrefix, 0) == 0) {
-        const std::string key = "glyph.flag." + unit.labelKey.substr(kUnitPrefix.size());
-        if (hasKey(strings, key)) {
-            return strings.text(key);
-        }
-    }
-    const std::string key = "glyph.flag." + type.id;
-    return hasKey(strings, key) ? strings.text(key) : std::string{};
 }
 
 } // namespace
 
 void SoldierView::draw(sf::RenderTarget &target, const Battle &battle, const FormationLayer &formation,
-                       const SoldierAtlas &atlas, float alpha, float animTime, const StringTable &strings,
-                       const sf::Font &brush, float opacity) {
+                       const SoldierAtlas &atlas, const MingFlags &flags, float alpha, float animTime,
+                       float opacity) {
     const auto fadeTo = [opacity](float alpha) {
         return static_cast<std::uint8_t>(std::clamp(alpha * opacity, 0.f, 1.f) * 255.f + 0.5f);
     };
@@ -112,11 +102,11 @@ void SoldierView::draw(sf::RenderTarget &target, const Battle &battle, const For
     sf::RenderStates states;
     states.texture = &atlas.texture();
     target.draw(tris_, states);
-    drawBanners(target, battle, atlas, alpha, animTime, strings, brush, opacity);
+    drawBanners(target, battle, atlas, flags, alpha, animTime, opacity);
 }
 
-void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, const SoldierAtlas &atlas, float alpha,
-                              float animTime, const StringTable &strings, const sf::Font &brush, float opacity) {
+void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, const SoldierAtlas &atlas,
+                              const MingFlags &flags, float alpha, float animTime, float opacity) {
     const auto alphaOf = [opacity](sf::Color color) {
         color.a = static_cast<std::uint8_t>(std::clamp(opacity, 0.f, 1.f) * static_cast<float>(color.a) + 0.5f);
         return color;
@@ -136,7 +126,10 @@ void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, co
                      [](const Placed &left, const Placed &right) { return left.banner.base.y < right.banner.base.y; });
 
     sf::VertexArray poles(sf::PrimitiveType::Triangles);
+    sf::VertexArray cloths(sf::PrimitiveType::Triangles);
     tris_.clear();
+    const sf::Color steel = alphaOf({0xcf, 0xc8, 0xb8});
+    const sf::Color tassel = alphaOf({0xc8, 0x32, 0x1e});
     const sf::Color wood = alphaOf({0x4a, 0x36, 0x24});
     for (const Placed &item : placed) {
         const Banner &banner = item.banner;
@@ -149,16 +142,21 @@ void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, co
         poles.append({{x - 0.25f, top}, wood});
         poles.append({{x + 0.25f, y}, wood});
         poles.append({{x - 0.25f, y}, wood});
-        if (banner.kind == BannerKind::Ming) {
-            // A square flag from the top of the pole; the free edge waves.
-            const float w = kMingBannerWidth;
-            const float h = kMingBannerHeight;
+        if (banner.kind == BannerKind::Ming || banner.kind == BannerKind::MingStandard) {
+            // Spear tip and red tassel at the top of the pole, then the cloth from the pole; its free edge waves.
+            poles.append({{x, top - 2.2f}, steel});
+            poles.append({{x - 0.45f, top - 0.2f}, steel});
+            poles.append({{x + 0.45f, top - 0.2f}, steel});
+            appendDisc(poles, {x, top + 0.15f}, {0.6f, 0.45f}, tassel);
+            const bool standard = banner.kind == BannerKind::MingStandard;
+            const float w = standard ? kMingStandardWidth : kMingPennantWidth;
+            const float h = standard ? kMingStandardHeight : kMingPennantHeight;
+            const sf::IntRect cell = standard ? mingStandardRect() : mingPennantRect(mingPennantVariant(item.unit));
             const sf::Vector2f cloth[4] = {{x + 0.25f, top + 0.4f},
                                            {x + 0.25f + w, top + 0.4f + banner.sway},
                                            {x + 0.25f + w, top + 0.4f + h + banner.sway},
                                            {x + 0.25f, top + 0.4f + h}};
-            appendQuad(tris_, cloth, SoldierAtlas::cell(kAtlasExtraRow, kAtlasMingBannerColumn),
-                       alphaOf(sf::Color::White));
+            appendQuad(cloths, cloth, cell, alphaOf(sf::Color::White));
         } else {
             // A tall sashimono hanging from a crossbar; the bottom swings.
             const float w = kJpBannerWidth;
@@ -176,6 +174,9 @@ void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, co
     sf::RenderStates states;
     states.texture = &atlas.texture();
     target.draw(tris_, states);
+    sf::RenderStates clothStates;
+    clothStates.texture = &flags.texture();
+    target.draw(cloths, clothStates);
 
     // Japanese crests over their cloths: Tachibana on the vanguard, Kobayakawa on the main body.
     sf::VertexArray crests(sf::PrimitiveType::Triangles);
@@ -196,28 +197,6 @@ void SoldierView::drawBanners(sf::RenderTarget &target, const Battle &battle, co
         }
     }
     target.draw(crests);
-
-    // The character on each Ming banner in the brush font, shaped once at a fixed pixel size and scaled to the map.
-    constexpr float kGlyphMeters = 5.5f;
-    constexpr unsigned kGlyphPixels = 48;
-    const float scale = kGlyphMeters / static_cast<float>(kGlyphPixels);
-    for (const Placed &item : placed) {
-        if (item.banner.kind != BannerKind::Ming) {
-            continue;
-        }
-        const Unit &unit = battle.unit(item.unit);
-        const std::string text = flagText(strings, unit, battle.typeOf(unit));
-        if (text.empty()) {
-            continue;
-        }
-        const sf::FloatRect bounds = textBounds(brush, kGlyphPixels, false, text);
-        const sf::Vector2f center{item.banner.base.x + 0.25f + kMingBannerWidth * 0.5f,
-                                  item.banner.base.y - kBannerPole + 0.4f + kMingBannerHeight * 0.5f +
-                                      item.banner.sway * 0.5f};
-        drawText(target, brush, kGlyphPixels, false, text, alphaOf({0xf4, 0xdb, 0xa4}), center,
-                 {bounds.position.x + bounds.size.x * 0.5f, bounds.position.y + bounds.size.y * 0.5f},
-                 {scale, scale});
-    }
 }
 
 } // namespace tq

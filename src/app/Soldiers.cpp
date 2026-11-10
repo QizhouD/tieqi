@@ -133,7 +133,8 @@ BannerKind bannerKind(const Battle &battle, const Unit &unit) {
         return BannerKind::None;
     }
     if (unit.side == Side::Ming) {
-        return BannerKind::Ming;
+        // The general's own unit (Li Rusong's guard) carries the standard.
+        return battle.typeOf(unit).general ? BannerKind::MingStandard : BannerKind::Ming;
     }
     bool vanguard = unit.vanguard;
     if (!vanguard && unit.origin != kNoUnit && unit.origin < battle.units().size()) {

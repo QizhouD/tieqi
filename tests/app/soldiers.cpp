@@ -1,5 +1,6 @@
-#include "app/SoldierAtlas.h"
 #include "app/Soldiers.h"
+#include "app/MingFlags.h"
+#include "app/SoldierAtlas.h"
 #include "core/sim/Battle.h"
 #include "data/Load.h"
 
@@ -193,7 +194,8 @@ TEST_CASE("banners: Ming units carry one, Japanese crests follow the source unit
     const GameData data = loadByeok();
     const Battle battle = makeBattle(data);
     const Unit &li = named(battle, "li_rusong");
-    CHECK(bannerKind(battle, li) == BannerKind::Ming);
+    CHECK(bannerKind(battle, li) == BannerKind::MingStandard);
+    CHECK(bannerKind(battle, named(battle, "jiading_left")) == BannerKind::Ming);
     CHECK(bannerKind(battle, named(battle, "van_teppo_left")) == BannerKind::JpVanguard);
 
     Unit fragment = named(battle, "van_yari");
@@ -216,17 +218,48 @@ TEST_CASE("banners: Ming units carry one, Japanese crests follow the source unit
     CHECK(std::hypot(offset.x, offset.y) == doctest::Approx(still.depth * 0.3f));
 }
 
-TEST_CASE("every Ming unit type has a banner character in every language") {
-    const GameData data = loadByeok();
-    for (const UnitType &type : data.defs.types) {
-        if (type.side != Side::Ming) {
-            continue;
+TEST_CASE("Ming banners carry no characters: no glyph.flag keys in any language") {
+    const std::filesystem::path dir = std::filesystem::path(TQ_SOURCE_DIR) / "data" / "strings";
+    for (const char *language : {"zh-Hant.json", "en.json", "ko.json"}) {
+        const StringTable table = loadStrings(dir / language);
+        for (const auto &[key, value] : table.entries) {
+            CHECK_MESSAGE(key.rfind("glyph.flag.", 0) != 0, key);
         }
-        const std::string key = "glyph.flag." + type.id;
-        CHECK_MESSAGE(data.zhHant.entries.count(key) == 1, key);
     }
-    CHECK(data.zhHant.entries.count("glyph.flag.yang_left") == 1);
-    CHECK(data.zhHant.entries.count("glyph.flag.yang_right") == 1);
+}
+
+TEST_CASE("Ming flag cloths: a standard and three pennants built from the banner photograph") {
+    const std::filesystem::path file =
+        std::filesystem::path(TQ_SOURCE_DIR) / "assets" / "textures" / "flags" / "gyoryonggi.png";
+    sf::Image photo;
+    REQUIRE(photo.loadFromFile(file));
+    const sf::Image *const sources[] = {&photo, nullptr};
+    for (const sf::Image *source : sources) {
+        const sf::Image sheet = buildMingFlagSheet(source);
+        REQUIRE(sheet.getSize() == sf::Vector2u{kMingFlagSheetWidth, kMingFlagSheetHeight});
+        const sf::IntRect standard = mingStandardRect();
+        // The standard is opaque in its middle.
+        CHECK(sheet
+                  .getPixel({static_cast<unsigned>(standard.position.x + standard.size.x / 2),
+                             static_cast<unsigned>(standard.position.y + standard.size.y / 2)})
+                  .a == 255);
+        for (int variant = 0; variant < kMingPennantVariants; ++variant) {
+            const sf::IntRect cell = mingPennantRect(variant);
+            const auto at = [&](float u, float v) {
+                return sheet.getPixel({static_cast<unsigned>(cell.position.x + u * (cell.size.x - 1)),
+                                       static_cast<unsigned>(cell.position.y + v * (cell.size.y - 1))});
+            };
+            CHECK(at(0.25f, 0.5f).a == 255); // the painted field
+            CHECK(at(0.95f, 0.05f).a == 0);  // outside the triangle, near the point
+            CHECK(at(0.95f, 0.95f).a == 0);
+            const sf::Color sleeve = at(0.01f, 0.5f);
+            CHECK(sleeve.a == 255);
+            CHECK(sleeve.r > 200);
+        }
+    }
+    CHECK(mingPennantVariant(0) == 0);
+    CHECK(mingPennantVariant(4) == 1);
+    CHECK(mingPennantVariant(8) == 2);
 }
 
 TEST_CASE("the art tools use the same atlas layout as the game") {

@@ -16,8 +16,8 @@ namespace tq {
 // - column = frame (see Soldiers.h: 0 idle, 1-4 move cycle, 5-6 strike, 7 idle looking aside, 8 fallen);
 // - row = (side * kSoldierKinds + kind) * 8 + direction, side 0 Ming and 1 Japanese, kind in SoldierKind order,
 //   direction 0 east, then clockwise in 45 degree steps (2 south, 4 west, 6 north);
-// - the last row holds extras: column 0 a dust puff, column 1 the Ming unit banner cloth (its character is drawn at
-//   run time), column 2 the Japanese vanguard (Tachibana) sashimono cloth, column 3 the Japanese main body
+// - the last row holds extras: column 0 a dust puff, column 1 the old Ming banner cloth (unused since V9: Ming
+//   cloths come from MingFlags.h), column 2 the Japanese vanguard (Tachibana) sashimono cloth, column 3 the Japanese main body
 //   (Kobayakawa) sashimono cloth; a banner cloth fills its whole cell, and the Japanese crests are vector shapes
 //   drawn over it at run time (Crests.h);
 // - a standing figure has its feet at (kAtlasAnchorX, kAtlasAnchorY) in the cell; the fallen frame is centred in the

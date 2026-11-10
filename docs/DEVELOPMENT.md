@@ -1366,7 +1366,7 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 - Animation states, chosen from the unit: idle (some men look aside), marching (move cycle), charging (faster cycle, riders bob and raise dust puffs that drift back and fade), engaged (the front rank steps in and out of line in turn and strikes), wavering (men turn and shuffle), broken (each man turns about, some later than others, as the unit flips), routing (men run, scattering outward over 24 battlefield seconds, slightly darkened).
 - Animation runs on presentation time that stops while paused, during hit-stop, and when frozen.
 - All soldiers are sorted by y and drawn from one atlas in a single VertexArray, dust first. A cell spans 9 m on the map, larger than life so a figure reads at 2× to 4×.
-- Atlas layout (`src/app/SoldierAtlas.h`, mirrored in `tools/art/atlas_layout.py`): 32-pixel cells; columns are frames (0 idle, 1–4 move cycle, 5–6 strike, 7 idle looking aside, 8 fallen, added in V6 for bodies); row = (side × 5 + kind) × 8 + direction, with side 0 Ming and 1 Japanese, kinds in the order above, and directions 0 east then clockwise in 45° steps; the last row holds extras (column 0 dust puff, 1 Ming banner cloth, 2 Japanese vanguard sashimono cloth, 3 Japanese main body sashimono cloth; a cloth fills its cell). Standing figures have their feet at (16, 26) in the cell; the fallen frame is centred in the cell. The atlas is 288 × 2624 pixels. `tools/art/check_atlas.py` validates an atlas, and the code-drawn placeholder passes it.
+- Atlas layout (`src/app/SoldierAtlas.h`, mirrored in `tools/art/atlas_layout.py`): 32-pixel cells; columns are frames (0 idle, 1–4 move cycle, 5–6 strike, 7 idle looking aside, 8 fallen, added in V6 for bodies); row = (side × 5 + kind) × 8 + direction, with side 0 Ming and 1 Japanese, kinds in the order above, and directions 0 east then clockwise in 45° steps; the last row holds extras (column 0 dust puff, 1 the old Ming banner cloth, unused since V9, 2 Japanese vanguard sashimono cloth, 3 Japanese main body sashimono cloth; a cloth fills its cell). Standing figures have their feet at (16, 26) in the cell; the fallen frame is centred in the cell. The atlas is 288 × 2624 pixels. `tools/art/check_atlas.py` validates an atlas, and the code-drawn placeholder passes it.
 - The placeholder atlas is drawn in code at startup from simple projected shapes. A PNG at `assets/textures/soldiers/soldiers.png` with the same layout replaces it without code changes; a file of the wrong size is ignored with a warning. `tieqi --dump-atlas <file>` writes the placeholder as a template for artists.
 
 ### Formation deformation (V5)
@@ -1410,9 +1410,9 @@ The presentation layer (`src/app/`) only reads `Battle` snapshots and events and
 ### Banners (V3)
 
 - In the near view every unit able to fight carries one banner; broken and routing units drop it. The pole stands 0.3 of the depth behind the unit centre and rises 16 m straight up the screen; banners are sorted by y and drawn over the soldiers.
-- Ming: a square 8 × 8 m flag from the top of the pole whose free edge waves, with one character in the brush font. The character is `glyph.flag.<scene id>` when that key exists (楊 for Yang Yuan's two units), otherwise `glyph.flag.<unit type id>`: 李 for the Li family retainers (`jiading`), 明 for the Liaodong cavalry, 帥 for the commander's guard. Like counter glyphs, these are Traditional Chinese in all three languages.
+- Ming (V9): no characters. Every Ming pole ends in a spear tip with a red tassel. The general's own unit (Li Rusong's guard, the unit type with the `general` flag) carries the standard, an 8 × 9.3 m cloth that is the whole photograph of a real dragon banner (`assets/textures/flags/gyoryonggi.png`, 蛟龍旗, National Palace Museum of Korea, public domain; provenance in its README); every other Ming unit carries an 8 × 5 m triangular pennant: a crop of the banner's painted silk inside a red border cut into tabs, with a white hoist sleeve, in one of three crops chosen by `UnitId % 3`. The free edge of either cloth waves as before. The cloths are built once at load into their own 768 × 600 texture (`src/app/MingFlags.*`, smoothed and mipmapped), not the 32-pixel atlas; without the photograph they fall back to plain placeholder cloths in the same layout.
 - Japanese: a tall 3.6 × 10 m sashimono hanging from a crossbar, its bottom swinging. Units of the vanguard, and remnants or detachments whose source was in the vanguard, show the Tachibana crest; all others the Kobayakawa crest. From V6 the crests follow research and are vector shapes drawn over the cloth at run time (`src/app/Crests.*`), so they stay sharp at any zoom: Tachibana Muneshige 中結祇園守 (naka-musubi gion mamori: two crossed amulet scrolls tied where they cross, cross-shaped finials) and Kobayakawa Takakage 左三つ巴 (hidari mitsudomoe: three tomoe, heads inside the circle, tails spiralling out counterclockwise as seen).
-- Banner cloths come from the extras row of the soldier atlas, so finished art replaces them through the same PNG.
+- Japanese banner cloths come from the extras row of the soldier atlas, so finished art replaces them through the same PNG; the Ming cloths come from MingFlags (above).
 
 ### Near-view map (V7)
 
@@ -1728,6 +1728,7 @@ Each card is one PR's worth of work. The author opens an issue per card on GitHu
 | V6 | Art pipeline | V5 | M5 |
 | V7 | Near-view map | V5 | M5 |
 | V8 | Near-view effects | V5 | M5 |
+| V9 | Ming banner art: a real dragon banner, no characters | V6 | M5 |
 
 Milestones: M1 the rules core is complete and passes parity; M2 a full battle can be played; M3 the demo package; M4 visual upgrade: each unit reads as a body of soldiers, and the body changes shape in battle; M5 art: finished soldier atlas, crests, near-view map and effects. M4 never touches the rules core (`src/core`): the 100-battle baseline and the tick-by-tick comparison must stay exactly as they are. After B0, C1, D1, and A0 can proceed in parallel; after C2 the rules track and the presentation track run in parallel.
 
@@ -1928,6 +1929,35 @@ rally, the soldiers change shape the way troops on a real battlefield do. The ru
 
 - Do: dust, smoke, and debris scale their size and count with the zoom in the near view.
 - Status: done. See "Near-view effects (V8)" in the Presentation spec.
+
+### V9 Ming banner art
+
+- Why: the prologue film (projects/films/imjin-prologue, round 3) redrew the Byeokjegwan banners after research
+  notes from the author, and its last shot cuts straight into the demo level, so the game's Ming banners should
+  match the film. The Japanese side already matches: the film uses the game's 中結祇園守 for Tachibana and 左三つ巴
+  for Kobayakawa (shapes ported from `src/app/Crests.cpp`).
+- Research: 出警圖 (Departure Herald, Jiajing era, National Palace Museum, public domain) shows Ming cavalry with
+  triangular pennants on lances (spear-tip finial, red tassel) and large rectangular banners with tabbed borders.
+  Drawn emblems (a code-drawn tiger and dragon) read as cartoons and were rejected by the author; the film instead
+  uses a photograph of a real banner as the cloth: 蛟龍旗 (Gyoryonggi), National Palace Museum of Korea, public
+  domain (Wikimedia Commons "File:Gyoryonggi.jpg"): twin dragons and clouds painted on pale silk, a red border cut
+  into tabs, a white hoist sleeve. It is a Joseon royal banner standing in for a Ming one (Joseon followed the Ming
+  system); no public-domain Ming army banner was found.
+- Do: Ming banners carry no characters any more (the author's decision) and no code-drawn emblems.
+  - the commander's guard (today 帥): the real banner, whole, on a pole with a spear tip and a red tassel;
+  - every other Ming unit (today 李, 明, 楊): a triangular pennant, its field cut from the real banner's painted
+    silk (a different crop per unit, by ascending UnitId), inside a red border cut into tabs, a white hoist sleeve,
+    the same spear tip and tassel.
+  The source photograph is `assets/textures/flags/gyoryonggi.png` (provenance in its README, not AI-generated); the
+  cloths are built from it at load; remove the `glyph.flag.*` lookups and their string keys; update "Banners (V3)"
+  in the Presentation spec.
+- Reference: the film's stills and drawing code are copied into the task thread
+  (`collab/threads/V9-ming-banner-art/ref/`): the 1:34 banner, the pennants on the map, and the game's opening frame
+  with the new flags.
+- Acceptance: `tools/art/check_atlas.py` passes; a near-view screenshot at the opening frame shows no characters on
+  Ming banners, pennants on the units and the real banner on the guard; the cloths stay readable from 2× to 4× zoom;
+  the 100-battle baseline and the tick-by-tick comparison are unchanged (presentation only, `src/core` untouched).
+- Status: done. Implemented directly by Claude at the author's request. See "Banners (V3)" in the Presentation spec.
 
 ## Glossary
 
