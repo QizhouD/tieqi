@@ -3,6 +3,7 @@
 #include <doctest/doctest.h>
 
 #include <algorithm>
+#include <cmath>
 
 using namespace tq;
 
@@ -25,6 +26,25 @@ TEST_CASE("near effect counts and sizes interpolate and clamp") {
     CHECK(nearFxSize(0.5f) == doctest::Approx(0.725f));
     CHECK(nearFxSize(1.f) == doctest::Approx(0.45f));
     CHECK(nearFxSize(2.f) == doctest::Approx(0.45f));
+}
+
+TEST_CASE("floating text is rasterised at its on-screen device size") {
+    for (const float pixelsPerMeter : {0.83f, 1.66f, 3.32f}) {
+        for (const float device : {1.f, 1.2f, 2.f}) {
+            for (const float pixels : {11.25f, 15.f, 33.f, 44.f}) {
+                const FloaterRaster raster = floaterRaster(pixels, pixelsPerMeter, device);
+                // Glyphs are drawn at the size they appear on screen, never smaller and magnified.
+                CHECK(raster.size == static_cast<unsigned>(std::lround(pixels * device)));
+                // One unit of character size, placed in the world, spans the requested logical pixels.
+                const float logical = static_cast<float>(raster.size) * raster.worldScale * pixelsPerMeter;
+                CHECK(logical == doctest::Approx(pixels));
+            }
+        }
+    }
+    // The near view used to rasterise "Three-eyed guns" at 4 pixels and magnify it about four times.
+    CHECK(floaterRaster(11.25f, 3.32f, 1.2f).size == 14u);
+    CHECK(floaterRaster(0.1f, 1.f, 1.f).size == 1u);
+    CHECK(floaterRaster(15.f, 0.f, 0.f).size >= 1u);
 }
 
 TEST_CASE("impact clods appear only toward the near view") {

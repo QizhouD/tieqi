@@ -287,7 +287,7 @@ void App::drawFrame() {
         [&] {
             // In the near view the floating text shrinks a little so it covers fewer soldiers.
             effects_.drawAir(window_.target(), fontFor(active(), floater.face), floater.bold, window_.pixelsPerMeter(),
-                             1.f - 0.25f * blend);
+                             1.f - 0.25f * blend, window_.pixelMap().scale);
         },
         blend, chitScaleFor(camera_.zoom()), window_.isKeyDown(sf::Keyboard::Key::LAlt));
 #ifdef TQ_DEV_TOOLS
