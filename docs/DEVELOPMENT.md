@@ -1728,6 +1728,7 @@ Each card is one PR's worth of work. The author opens an issue per card on GitHu
 | V6 | Art pipeline | V5 | M5 |
 | V7 | Near-view map | V5 | M5 |
 | V8 | Near-view effects | V5 | M5 |
+| V9 | Ming banner art: a real dragon banner, no characters | V6 | M5 |
 
 Milestones: M1 the rules core is complete and passes parity; M2 a full battle can be played; M3 the demo package; M4 visual upgrade: each unit reads as a body of soldiers, and the body changes shape in battle; M5 art: finished soldier atlas, crests, near-view map and effects. M4 never touches the rules core (`src/core`): the 100-battle baseline and the tick-by-tick comparison must stay exactly as they are. After B0, C1, D1, and A0 can proceed in parallel; after C2 the rules track and the presentation track run in parallel.
 
@@ -1928,6 +1929,32 @@ rally, the soldiers change shape the way troops on a real battlefield do. The ru
 
 - Do: dust, smoke, and debris scale their size and count with the zoom in the near view.
 - Status: done. See "Near-view effects (V8)" in the Presentation spec.
+
+### V9 Ming banner art
+
+- Why: the prologue film (projects/films/imjin-prologue, round 3) redrew the Byeokjegwan banners after research
+  notes from the author, and its last shot cuts straight into the demo level, so the game's Ming banners should
+  match the film. The Japanese side already matches: the film uses the game's 中結祇園守 for Tachibana and 左三つ巴
+  for Kobayakawa (shapes ported from `src/app/Crests.cpp`).
+- Research: 出警圖 (Departure Herald, Jiajing era, National Palace Museum, public domain) shows Ming cavalry with
+  triangular pennants on lances (spear-tip finial, red tassel) and large rectangular banners with tabbed borders.
+  Drawn emblems (a code-drawn tiger and dragon) read as cartoons and were rejected by the author; the film instead
+  uses a photograph of a real banner as the cloth: 蛟龍旗 (Gyoryonggi), National Palace Museum of Korea, public
+  domain (Wikimedia Commons "File:Gyoryonggi.jpg"): twin dragons and clouds painted on pale silk, a red border cut
+  into tabs, a white hoist sleeve. It is a Joseon royal banner standing in for a Ming one (Joseon followed the Ming
+  system); no public-domain Ming army banner was found.
+- Do: Ming banners carry no characters any more (the author's decision) and no code-drawn emblems.
+  - the commander's guard (today 帥): the real banner, whole, on a pole with a spear tip and a red tassel;
+  - every other Ming unit (today 李, 明, 楊): a triangular pennant, its field cut from the real banner's painted
+    silk (a different crop per unit, by ascending UnitId), inside a red border cut into tabs, a white hoist sleeve,
+    the same spear tip and tassel.
+  The source photograph is `assets/textures/flags/gyoryonggi.png` (provenance in its README, not AI-generated); the
+  cloths are built from it into the extras row of the soldier atlas; remove the `glyph.flag.*` lookups and- Reference: the film's stills and drawing code are copied into the task thread (`collab/threads/V9-ming-banner-art/ref/`):
+  the 1:34 banner, the pennants on the map, and the game's opening frame with the new flags.
+awMingStandard()` in `projects/films/imjin-prologue/engine/film.mjs`.
+- Acceptance: `tools/art/check_atlas.py` passes; a near-view screenshot at the opening frame shows no characters on
+  Ming banners, pennants on the units and the real banner on the guard; the cloths stay readable from 2× to 4× zoom;
+  the 100-battle baseline and the tick-by-tick comparison are unchanged (presentation only, `src/core` untouched).
 
 ## Glossary
 
