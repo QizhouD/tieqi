@@ -63,6 +63,22 @@ inline int impactClodCount(float ratio, float blend) {
     return static_cast<int>(std::lround(count * std::clamp(blend, 0.f, 1.f)));
 }
 
+// Floating text is drawn in world units but keeps a fixed screen size. It is rasterised at its size in device pixels
+// and scaled into the world, so zooming in never magnifies small glyphs. A glyph of character size `size`, scaled by
+// `worldScale`, spans `screenPixels` logical pixels on screen.
+struct FloaterRaster {
+    unsigned size = 1;
+    float worldScale = 1.f;
+};
+
+inline FloaterRaster floaterRaster(float screenPixels, float pixelsPerMeter, float deviceScale) {
+    const float logical = std::max(screenPixels, 1e-3f);
+    const float device = logical * std::max(deviceScale, 1e-3f);
+    const long rounded = std::lround(device);
+    const unsigned size = rounded > 1 ? static_cast<unsigned>(rounded) : 1u;
+    return {size, logical / (static_cast<float>(size) * std::max(pixelsPerMeter, 1e-3f))};
+}
+
 // Dust, smoke, chips, rings, floaters, and click marks. The generator is presentation-only.
 class Effects {
   public:
@@ -78,9 +94,10 @@ class Effects {
 
     void drawDust(sf::RenderTarget &target) const;
     // Floating text keeps a fixed screen size (times textScale) and rises at a fixed screen speed whatever the zoom;
-    // texts that would overlap are stacked upward in the order they appeared.
-    void drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold, float pixelsPerMeter,
-                 float textScale = 1.f) const;
+    // texts that would overlap are stacked upward in the order they appeared. deviceScale is window pixels per
+    // logical pixel, so the glyphs are rasterised at the size they appear.
+    void drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold, float pixelsPerMeter, float textScale,
+                 float deviceScale) const;
 
   private:
     enum class Kind : std::uint8_t { Dust, Smoke, Flash, Chip, Ring, Mark, Text };

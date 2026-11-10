@@ -1479,7 +1479,7 @@ Game text is quoted from the zh-Hant string table, with an English gloss.
 | GrandAssault | Floating text 總攻 "general assault" at the commander (indigo, 32) | None | Key event; a different sentence when it fails to launch |
 | BattleEnded | Result overlay | None | None |
 
-Effect parameters (in effect time): dust radius 4–10 m, growing 16–38 per second, life 0.9–1.5 s; smoke radius 2–6 m, drifting along the facing at 10–14 m/s, life 1.4–3 s; muzzle flash 0.12 s; debris 3–7 pixels, flying out at 60–170, life 0.8–1.3 s; rings growing from 20 to 170 m in radius, life 1.1 s; floating text life 1.5 s, starting at 1.35× scale, with an off-white outline, a fixed screen size (shrinking to 0.75 in the near view so it covers fewer soldiers) and a fixed screen rise of 15 logical pixels per second (the prototype's 18 m/s at 1×); texts that would overlap are stacked upward in the order they appeared; particle velocity multiplied by 0.4 each second.
+Effect parameters (in effect time): dust radius 4–10 m, growing 16–38 per second, life 0.9–1.5 s; smoke radius 2–6 m, drifting along the facing at 10–14 m/s, life 1.4–3 s; muzzle flash 0.12 s; debris 3–7 pixels, flying out at 60–170, life 0.8–1.3 s; rings growing from 20 to 170 m in radius, life 1.1 s; floating text life 1.5 s, starting at 1.35× scale, with an off-white outline, a fixed screen size (shrinking to 0.75 in the near view so it covers fewer soldiers) and a fixed screen rise of 15 logical pixels per second (the prototype's 18 m/s at 1×), rasterised at its on-screen size in window pixels and scaled into the world, so zooming in never magnifies small glyphs (V10); texts that would overlap are stacked upward in the order they appeared; particle velocity multiplied by 0.4 each second.
 
 ### Input
 
@@ -1729,6 +1729,7 @@ Each card is one PR's worth of work. The author opens an issue per card on GitHu
 | V7 | Near-view map | V5 | M5 |
 | V8 | Near-view effects | V5 | M5 |
 | V9 | Ming banner art: a real dragon banner, no characters | V6 | M5 |
+| V10 | Crisp floating text in the near view | V8 | M5 |
 
 Milestones: M1 the rules core is complete and passes parity; M2 a full battle can be played; M3 the demo package; M4 visual upgrade: each unit reads as a body of soldiers, and the body changes shape in battle; M5 art: finished soldier atlas, crests, near-view map and effects. M4 never touches the rules core (`src/core`): the 100-battle baseline and the tick-by-tick comparison must stay exactly as they are. After B0, C1, D1, and A0 can proceed in parallel; after C2 the rules track and the presentation track run in parallel.
 
@@ -1958,6 +1959,21 @@ rally, the soldiers change shape the way troops on a real battlefield do. The ru
   Ming banners, pennants on the units and the real banner on the guard; the cloths stay readable from 2× to 4× zoom;
   the 100-battle baseline and the tick-by-tick comparison are unchanged (presentation only, `src/core` untouched).
 - Status: done. Implemented directly by Claude at the author's request. See "Banners (V3)" in the Presentation spec.
+
+### V10 Crisp floating text in the near view
+
+- Why: found while recording the portfolio trailer. From about 2× zoom, floating text such as 三眼銃 "three-eyed
+  guns" turns into an unreadable smear. It is drawn in the world view with a character size of its screen size
+  divided by pixels per metre, so at 4× the glyphs are rasterised at about 4 pixels and the camera magnifies them
+  about four times (more in a window larger than 1600 × 1000).
+- Do: rasterise floating text at the size it appears on screen in window pixels and scale it into world units
+  (`floaterRaster` in `src/app/Effects.h`); on-screen size, rise, outline, pop, and stacking stay as they were.
+  Presentation only, `src/core` untouched.
+- Acceptance: a unit test that the character size equals the on-screen size in window pixels and that the drawn
+  text spans the requested logical pixels at every zoom and window scale; before and after screenshots at 4×
+  (seed 1, tick 56, the Liaodong Right's three-eyed guns) and at 1×; the 100-battle baseline and the tick-by-tick
+  comparison are unchanged; perf within budget.
+- Status: done. See "Events: effects, sound, and battle log" in the Presentation spec.
 
 ## Glossary
 

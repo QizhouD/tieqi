@@ -387,8 +387,8 @@ void Effects::drawDust(sf::RenderTarget &target) const {
     }
 }
 
-void Effects::drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold, float pixelsPerMeter,
-                      float textScale) const {
+void Effects::drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold, float pixelsPerMeter, float textScale,
+                      float deviceScale) const {
     ensureBlob();
     const float scale = std::max(pixelsPerMeter, 1e-3f);
     // Screen rectangles of the texts placed so far this frame, in world units.
@@ -459,13 +459,13 @@ void Effects::drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold,
             }
             const float pop = 1.f + 0.35f * std::max(0.f, 1.f - item.life * 6.f);
             const float pixels = item.pixels * textScale;
-            const auto size = static_cast<unsigned>(std::max(1, static_cast<int>(std::lround(pixels / scale))));
-            const sf::FloatRect bounds = textBounds(font, size, bold, item.text);
-            const sf::Vector2f origin{bounds.position.x + bounds.size.x * 0.5f,
-                                      bounds.position.y + bounds.size.y * 0.5f};
+            const FloaterRaster raster = floaterRaster(pixels, scale, deviceScale);
+            const sf::FloatRect local = textBounds(font, raster.size, bold, item.text);
+            const sf::Vector2f origin{local.position.x + local.size.x * 0.5f, local.position.y + local.size.y * 0.5f};
+            const sf::Vector2f extent = local.size * raster.worldScale;
             float y = item.y - kFloatRisePixels * item.life / scale;
             // Stack upward past any text already placed this frame.
-            sf::FloatRect box({item.x - bounds.size.x * 0.5f, y - bounds.size.y * 0.5f}, bounds.size);
+            sf::FloatRect box({item.x - extent.x * 0.5f, y - extent.y * 0.5f}, extent);
             for (int attempt = 0; attempt < 8; ++attempt) {
                 const auto hit = std::find_if(placed.begin(), placed.end(), [&](const sf::FloatRect &other) {
                     return box.findIntersection(other).has_value();
@@ -478,9 +478,11 @@ void Effects::drawAir(sf::RenderTarget &target, const sf::Font &font, bool bold,
                 box.position.y -= step;
             }
             placed.push_back(box);
-            const float thickness = std::max(2.f, pixels * 0.14f) / scale;
-            drawOutlinedText(target, font, size, bold, item.text, withAlpha(item.color, fade), {item.x, y}, origin,
-                             {pop, pop}, withAlpha({239, 229, 203}, fade * 0.9f), thickness);
+            // The outline is in the text's own units, which the scale below maps to world units.
+            const float thickness = std::max(2.f, pixels * 0.14f) / scale / raster.worldScale;
+            const float shown = pop * raster.worldScale;
+            drawOutlinedText(target, font, raster.size, bold, item.text, withAlpha(item.color, fade), {item.x, y},
+                             origin, {shown, shown}, withAlpha({239, 229, 203}, fade * 0.9f), thickness);
             break;
         }
         case Kind::Dust:
