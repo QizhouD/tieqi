@@ -63,6 +63,7 @@ cmake --build --preset release --target package_demo
 ```text
 tieqi/
 ├─ README.md                    this page
+├─ LICENSE                      PolyForm Noncommercial 1.0.0
 ├─ AGENTS.md  CLAUDE.md         agent entry notes (identical)
 ├─ .gitignore  .gitattributes  .clang-format
 ├─ CMakeLists.txt  CMakePresets.json
@@ -137,3 +138,11 @@ The scope and acceptance criteria of each card are in the "Task breakdown" chapt
 ## Links
 
 Framework origin: [QizhouD/2D-action-game](https://github.com/QizhouD/2D-action-game).
+
+## License
+
+Copyright © 2026 Masterjim. The source is available under the [PolyForm Noncommercial License 1.0.0](LICENSE): you
+may read, run, and modify it for noncommercial purposes; commercial use needs written permission. Third-party
+components keep their own licenses: fonts in `assets/fonts/` (SIL OFL 1.1), the banner photograph in
+`assets/textures/flags/` (public domain), and the libraries fetched at build time (listed in the demo package's
+`THIRD_PARTY_NOTICES.txt`). AI-generated assets are registered in [assets/AI_ASSETS.md](assets/AI_ASSETS.md).
