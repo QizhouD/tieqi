@@ -4,14 +4,13 @@
 
 ## Overview
 
-The game is titled Afterglow: Imjin 1593 (Traditional Chinese 餘暉：壬辰 1593), codename Tieqi, and the demo scenario is the Battle of Byeokjegwan. The demo uses this one battle to test whether "pausable real time plus counters" tactics is fun to play, and whether people want to watch it and play it.
+The game is titled Afterglow: Imjin 1593 (Traditional Chinese 餘暉：壬辰 1593), codename Tieqi, and the demo scenario is the Battle of Byeokjegwan. The demo uses this one battle to test whether "pausable real time plus counters" tactics is fun to play.
 
 - **Positioning**: a land-battle tactics game about the Imjin War (1592–1598), played mainly from the side of the Ming army's Liaodong cavalry. A personal hobby project.
 - **Reference**: the mechanical framework draws on Sengoku Jidai: Shadow of the Shogun, but in real time; all numbers, rule wording, and art are original, and none of its data, scripts, or assets are used.
 - **Demo scope**: one scenario (Byeokjegwan), two sides (Ming and Japanese), five unit types and three generals, single player against the AI, PC.
 - **Out of scope**: naval battles, a Joseon faction, a campaign layer, multiplayer.
-- **Market test**: publish development logs on Bilibili and open a Steam page, and measure interest by views, comments, and wishlists.
-- **Prototype**: the [Byeokjegwan HTML playable prototype](https://claude.ai/artifact/GEGVr72yHEmDop4MWd4fDy) is the reference implementation of the rules, and the port follows it.
+- **Prototype**: the Byeokjegwan HTML playable prototype ([reference/prototype/byeokjegwan.html](../reference/prototype/byeokjegwan.html), open it in a browser) is the reference implementation of the rules, and the port follows it.
 
 ## Design pillars
 
@@ -200,7 +199,7 @@ There are no soldier animations, so the feel comes from the counters' dynamic fe
 - One fixed style guide (palette, line work, composition) and one set of models and prompt templates keep the output consistent.
 - AI assets live in their own folder with consistent names, so each can be replaced when an artist is hired later.
 - Research points: Liaodong cavalry wear brigandine, Ming helmets, and carry three-eyed guns, bows, and sabres; the Japanese wear gusoku and jingasa and carry arquebuses, spears, and sashimono.
-- A Steam release must disclose AI-generated art on the store page.
+- AI-generated assets are disclosed and registered in [assets/AI_ASSETS.md](../assets/AI_ASSETS.md).
 
 ## Technical architecture
 
@@ -265,61 +264,14 @@ The cost is mainly in the interface and localization: SFML has no UI framework o
 
 SFML 3 was released at the end of 2024 and is incompatible with 2.6; the framework is on 2.6, and the decision is to move to SFML 3.1 while the code base is small.
 
-Migration notes, interfaces, rule formulas, data formats, and the task breakdown are in the [development spec](https://claude.ai/artifact/6uRaYbNkV5QtLEZohtZ12b) (docs/DEVELOPMENT.md in the repository).
+Migration notes, interfaces, rule formulas, data formats, and the task breakdown are in the development spec, [docs/DEVELOPMENT.md](DEVELOPMENT.md).
 
-## Market positioning and localization
+## Localization
 
-Languages come in the order Chinese (Traditional), English, Korean, with Japanese on hold; Western historical wargamers may be the overseas audience most open to a Ming perspective.
-
-The angle for English promotion: a great East Asian war that involved China, Japan, and Korea, shaped the decline of the Ming and the rise of the Manchus, and is almost unknown in the West.
-
-| Market | Priority | Opportunity | Risks and responses |
-|---|---|---|---|
-| Chinese | First | Ming-era subjects are popular, and Bilibili development logs are the main channel | Audiences expect rigorous historical research: use contemporary court paintings as references and make the research a selling point |
-| English | Second | Western wargamers are looking for subjects outside Europe and carry no historical baggage about China, Japan, or Korea; conversations with American wargamers and history enthusiasts confirmed interest; Western publishers have already released a computer game and a [board wargame](https://www.avalon-digital.com/imjin-war/) on the same subject | Players lack background knowledge: add short historical notes and character profiles in the game |
-| Korean | Third | The Imjin War is widely popular in Korea, and a mobile game on the same subject topped the popularity charts in 2026 ([source](https://www.inews24.com/view/1967550)) | A Ming-centred perspective may be controversial: show Ming setbacks honestly and add a Joseon land perspective later; "Imjin War" is trademarked by a Korean developer ([source](https://labs.invenglobal.com/articles/19730/legendary-korean-game-developers-new-title-project-imjin-reveals-combat-footage)), so the title must avoid it |
-| Japanese | On hold | Large audience for Sengoku-era subjects | The subject is little loved and sensitive in Japan ([source](https://books.bunshun.jp/articles/-/2709?page=3)): portray the Japanese army with respect, never as cardboard villains |
-
+- **Languages**: Traditional Chinese is the source text; English ships with the demo; a Korean string table exists and is held back until it is reviewed.
 - **Technical preparation**: all interface text goes through string tables; CJK and Latin fonts are prepared together; the interface leaves extra room for longer English text.
 - **Name glossary**: keep one list of Chinese, English, and Korean names for people, places, and unit types, for example 李如松 Li Rusong, 碧蹄館 Byeokjegwan, 立花宗茂 Tachibana Muneshige; personal names are transliterated by their own language, and Korean place names use Revised Romanization.
-- **Naming**: the Chinese and English titles are chosen separately, and the English title does not use "Imjin War" directly.
-- **Channels**: a bilingual Chinese and English Steam page; development logs on both Bilibili and YouTube; English wargaming and history communities as early feedback.
-
-### Market positioning
-
-One set of content and one set of numbers; each market only changes the promotional angle and emphasis of the copy. Two sets of numbers would invite accusations of double standards and double the maintenance.
-
-- **Domestic promotion**: the main thread is the Ming army coming to Korea's aid against the Japanese invasion, highlighting the charges of the Liaodong cavalry, three-eyed gun volleys, and researched Ming armour; the Ming army's strength shows through presentation, not through inflated numbers.
-- **Content boundaries**: promotion and content stay focused on the Imjin War itself and do not touch the Ming–Qing transition or ethnic conflict; a formal release in mainland China would need a publishing licence and content review.
-- **International promotion**: the hook is "a forgotten great East Asian war", telling the story of a war against invasion going from disadvantage to counterattack.
-
-### International narrative: three acts
-
-1. **Invasion and collapse (1592)**: the Japanese army lands at Busan and takes Hanseong in about twenty days; Joseon is close to falling, an underdog opening.
-2. **Relief and counterattack**: the Ming army enters Korea and retakes Pyongyang; the arrival of the Liaodong cavalry is the first climax.
-3. **Setback and final victory**: the setback at Byeokjegwan, a stalemate and peace talks, and after the second invasion the war ends with the Battle of Noryang; the setback in the middle gives the final victory more weight.
-
-The underdog opening is mainly Joseon's story, so a Joseon land perspective may need to come earlier than planned.
-
-### Principles for portraying the Japanese side
-
-- The war is driven by Toyotomi Hideyoshi's ambition, not by casting the Japanese as a whole as villains.
-- Generals have rounded motives: Konishi Yukinaga quietly pushes for peace and is at odds with the hawkish Katō Kiyomasa; Tachibana Muneshige is known for his courage.
-- Neither demonize nor whitewash: wartime atrocities are stated as historical fact in campaign text, without gory images.
-
-## Milestones and market test plan
-
-First prove that the feel of charges and morale collapse works, then invest in content and art; each milestone is done when it can be demonstrated.
-
-1. **Rules prototype (done)**: the [HTML playable prototype](https://claude.ai/artifact/GEGVr72yHEmDop4MWd4fDy) has proven breakthroughs, the pike counter to cavalry, chained morale, scattering, splitting and joining, and the reinforcement event.
-2. **Framework cleanup**: create a new repository, keep the main loop, build, CI, configuration, and scripted replays from 2D-action-game, remove the action game content, and move to SFML 3.
-3. **Rules core port**: port the prototype rules one by one into the C++ core library, with unit tests covering impact calculation and typical duels, and headless AI battles running a whole battle.
-4. **SFML presentation layer**: base map, counters, selection, box selection and orders, pause and speed, odds preview, battle report.
-5. **Feel and pacing**: port the impact feedback and sound, and settle the time compression factor and map size.
-6. **Demo content and art**: AI-generated counters and maps, research checks, Chinese and English text.
-7. **Market test**: record a clip of "cavalry breaking a whole line", publish development logs on Bilibili and YouTube, open a Steam page, and collect views, comments, and wishlists.
-
-Development logs can start from step 1; the rough visuals of the prototype stage are attractive material too.
+- **Naming**: the Chinese and English titles are chosen separately.
 
 ## Open questions
 
@@ -332,7 +284,7 @@ Development logs can start from step 1; the rough visuals of the prototype stage
 - [ ] The range of each coefficient in the impact formula
 - [x] SFML version: decided, move to SFML 3.1
 - [x] Chinese in the game: decided, always Traditional
-- [ ] Whether to add the Joseon land perspective earlier (needed for the international underdog opening)
+- [ ] Whether to add a Joseon land perspective
 - [ ] Time compression factor (4×–6×) and map size (2–3 km)
 - [ ] Whether to keep a fatigue system (not implemented in the prototype)
 
