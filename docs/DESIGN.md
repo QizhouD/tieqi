@@ -21,15 +21,6 @@ The core goal is that it feels great to play: good positioning should pay off in
 3. **Thrills are earned by positioning**: cavalry charging a steady pike block head-on must lose; disrupt first, then hit the flank, and breaking the line is the reward.
 4. **Exaggerated feedback**: there are no soldier animations, so the feel comes entirely from the sound and visuals of moments like impacts and routs.
 
-### Answers to the pain points of SJ
-
-| Pain point in SJ | What this game does |
-|---|---|
-| Too much randomness; an advantage is wiped out by one bad roll | Combat resolves every 0.5 seconds, so an engagement is the sum of dozens of small resolutions and single rolls even out; random variation is held in a narrow range, with no single check that decides life or death |
-| Opaque combat resolution | Hovering before an order shows the predicted odds and a breakdown of modifiers; unit states are shown as icons; a battle report afterwards points out what decided the outcome |
-| Slow melee that takes many turns to decide | Morale, not strength, decides; units break before they are destroyed; the longer an engagement lasts, the faster morale drains; attacks on the flank and rear speed up collapse sharply; the goal is a frontal melee decided in 10–20 seconds |
-| Fiddly AP and facing micromanagement | No AP; turning is automatic and costs only time; orders stay high level and units face threats on their own |
-
 ## Core mechanics
 
 Each counter is one logical unit moving in real time on a continuous map; combat resolves at a fixed interval, and morale decides the outcome. The rules and numbers below come from the playable prototype and are the starting point for the full version, not the final values.
@@ -200,6 +191,12 @@ There are no soldier animations, so the feel comes from the counters' dynamic fe
 - AI assets live in their own folder with consistent names, so each can be replaced when an artist is hired later.
 - Research points: Liaodong cavalry wear brigandine, Ming helmets, and carry three-eyed guns, bows, and sabres; the Japanese wear gusoku and jingasa and carry arquebuses, spears, and sashimono.
 - AI-generated assets are disclosed and registered in [assets/AI_ASSETS.md](../assets/AI_ASSETS.md).
+
+### Historical portrayal
+
+- The war is driven by Toyotomi Hideyoshi's ambition; the Japanese as a whole are not cast as villains.
+- Generals have rounded motives: Konishi Yukinaga quietly pushes for peace and is at odds with the hawkish Katō Kiyomasa; Tachibana Muneshige is known for his courage.
+- Neither demonize nor whitewash: wartime atrocities are stated as historical fact in campaign text, without gory images.
 
 ## Technical architecture
 
