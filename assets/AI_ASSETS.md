@@ -1,6 +1,6 @@
 # AI-generated assets
 
-A Steam release must disclose AI-generated content on the store page. Every asset generated or modified with AI
+AI-generated assets are disclosed and registered here. Every asset generated or modified with AI
 tools gets one row below when it is committed, in the same commit. An asset replaced later (for example by an
 artist's work) keeps its row, marked as replaced, so the history stays complete.
 

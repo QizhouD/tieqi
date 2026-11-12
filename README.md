@@ -9,7 +9,7 @@ Afterglow: Imjin 1593 (Traditional Chinese title 餘暉：壬辰 1593) is a tact
 | File | Contents | When to read it |
 |---|---|---|
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Engineering spec: working agreement, dependencies and build, architecture, API, rule formulas, data formats, AI, presentation, tests and acceptance, task cards | Before starting any work; it wins over every other source |
-| [docs/DESIGN.md](docs/DESIGN.md) | Design intent: pillars, factions and unit types, scenario, presentation, market and localization | To learn why something is designed the way it is |
+| [docs/DESIGN.md](docs/DESIGN.md) | Design intent: pillars, rules, factions and unit types, the Byeokjegwan scenario and its history, presentation and research, architecture | To learn why something is designed the way it is |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | Status of every card, measured numbers, open questions, translations awaiting review | Before picking up the next card |
 | [docs/AGENT_LOOP.md](docs/AGENT_LOOP.md) | Process and stop conditions for continuous agent work | When running several cards in a row |
 | [docs/adr/](docs/adr/) | Architecture decisions: 0001 move to SFML 3.1, 0002 Traditional Chinese in game | Before overturning a major decision |
@@ -26,7 +26,7 @@ Priority when sources disagree: the "Rule spec" and "Data formats" chapters of D
 - **Time**: one tick is 0.8 battlefield seconds; `time_scale` defaults to 8, matching the prototype's pace. Changing the pace means changing only this number, and balance stays the same.
 - **Determinism**: the same seed and the same sequence of player commands give the same result on every tick, so a replay stores only the seed and the commands.
 - **Data**: unit types, scenarios, configuration, and string tables are JSON; rule constants live only in `src/core/rules/Constants.h`.
-- **Text**: Chinese in the game is always Traditional (zh-Hant), with English and Korean as well; fonts are Noto Serif TC / KR and LXGW WenKai TC.
+- **Text**: Chinese in the game is always Traditional (zh-Hant), with English as well (a Korean table is held back until it is reviewed); fonts are Noto Serif TC and LXGW WenKai TC.
 - **Acceptance**: formula expectations, seven duels, and whole-battle baselines were all measured on the prototype, and the port must land within the allowed tolerance.
 
 ## Build and run
@@ -63,6 +63,7 @@ cmake --build --preset release --target package_demo
 ```text
 tieqi/
 ├─ README.md                    this page
+├─ LICENSE                      PolyForm Noncommercial 1.0.0
 ├─ AGENTS.md  CLAUDE.md         agent entry notes (identical)
 ├─ .gitignore  .gitattributes  .clang-format
 ├─ CMakeLists.txt  CMakePresets.json
@@ -88,7 +89,10 @@ tieqi/
 │  └─ schema/                   JSON Schema
 ├─ assets/
 │  ├─ fonts/                    fonts and their licenses
-│  ├─ textures/{chits,map,ui}/  AI-generated art
+│  ├─ textures/map/             near-view ground, paddy, and tree textures (AI-generated)
+│  ├─ textures/soldiers/        soldier atlas rendered in Blender from procedural models
+│  ├─ textures/flags/           public-domain banner photograph (Gyoryonggi)
+│  ├─ textures/{chits,ui}/      empty; the base map, counters, and interface are drawn in code
 │  ├─ audio/                    sound effects
 │  └─ AI_ASSETS.md              register of AI-generated assets
 ├─ src/
@@ -127,12 +131,18 @@ flowchart LR
 | M2 A full battle | A0, A1, A2, A3, A4, A5 | A whole Byeokjegwan battle can be played in the game window |
 | M3 Demo package | A6, L1, R1 | Unzips and plays on a Windows PC without a development environment, in all three languages |
 | M4 Visual upgrade | V1, V2, V3, V4, V5 | Zoomed in, each unit reads as a body of soldiers with banners whose formation deforms in battle; the rules core is unchanged |
-| M5 Art | V6, V7, V8 | Finished soldier atlas and crests, near-view map and effects |
+| M5 Art | V6, V7, V8, V9, V10 | Finished soldier atlas and crests, near-view map and effects |
 
 The scope and acceptance criteria of each card are in the "Task breakdown" chapter of DEVELOPMENT.md.
 
 ## Links
 
-The online versions are private links that only the author can open: [development spec](https://claude.ai/artifact/6uRaYbNkV5QtLEZohtZ12b), [design document](https://claude.ai/artifact/377hQjkSfs6krJiTqJUM5s), [playable prototype](https://claude.ai/artifact/GEGVr72yHEmDop4MWd4fDy). The `docs/` folder in this repository is authoritative; the online versions are archives only.
-
 Framework origin: [QizhouD/2D-action-game](https://github.com/QizhouD/2D-action-game).
+
+## License
+
+Copyright © 2026 Masterjim. The source is available under the [PolyForm Noncommercial License 1.0.0](LICENSE): you
+may read, run, and modify it for noncommercial purposes; commercial use needs written permission. Third-party
+components keep their own licenses: fonts in `assets/fonts/` (SIL OFL 1.1), the banner photograph in
+`assets/textures/flags/` (public domain), and the libraries fetched at build time (listed in the demo package's
+`THIRD_PARTY_NOTICES.txt`). AI-generated assets are registered in [assets/AI_ASSETS.md](assets/AI_ASSETS.md).

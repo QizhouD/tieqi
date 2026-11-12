@@ -29,3 +29,6 @@ __pycache__/
 
 # Agent collaboration threads stay on this machine; see collab/README.md.
 collab/threads/
+
+# Private notes (market and promotion plans) stay on this machine.
+docs/private/

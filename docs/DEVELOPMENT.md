@@ -16,10 +16,10 @@ The game is titled Afterglow: Imjin 1593 (Traditional Chinese 餘暉：壬辰 15
 | Document | Location in the repository | Covers |
 | --- | --- | --- |
 | This development spec | `docs/DEVELOPMENT.md` | Engineering spec: architecture, interfaces, rule formulas, data formats, tasks and acceptance |
-| Design document | `docs/DESIGN.md` (exported from the [design document](https://claude.ai/artifact/377hQjkSfs6krJiTqJUM5s)) | Gameplay intent, faction design, market and art direction |
+| Design document | `docs/DESIGN.md` | Gameplay intent, faction design, presentation and art direction |
 | HTML prototype | `reference/prototype/byeokjegwan.html` | Reference implementation of the rules; open it in a browser to play |
 
-The online versions of the two documents are private links that agents cannot open, so the copies in the repository are authoritative.
+The copies in the repository are authoritative.
 
 ### Priority of sources
 
@@ -142,7 +142,7 @@ tieqi/
 │  ├─ fonts/                    # fonts and OFL licenses
 │  ├─ textures/{chits,map,ui}/
 │  ├─ audio/
-│  └─ AI_ASSETS.md              # register of AI-generated assets, for the Steam disclosure
+│  └─ AI_ASSETS.md              # register of AI-generated assets, for disclosure
 ├─ src/
 │  ├─ core/                     # target tq_core: rules core, standard library only
 │  │  ├─ math/                  # Vec2, angles, oriented rectangles and separating-axis tests
