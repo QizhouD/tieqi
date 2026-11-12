@@ -196,7 +196,8 @@ There are no soldier animations, so the feel comes from the counters' dynamic fe
 
 - The war is driven by Toyotomi Hideyoshi's ambition; the Japanese as a whole are not cast as villains.
 - Generals have rounded motives: Konishi Yukinaga quietly pushes for peace and is at odds with the hawkish Katō Kiyomasa; Tachibana Muneshige is known for his courage.
-- Neither demonize nor whitewash: wartime atrocities are stated as historical fact in campaign text, without gory images.
+- Neither demonize nor whitewash.
+- Historical portrayal is grounded in sources, including accounts of wartime atrocities.
 
 ## Technical architecture
 
